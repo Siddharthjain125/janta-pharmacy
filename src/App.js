@@ -1,9 +1,10 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import './App.css';
 import { Navbar } from './components/navbar/navbar';
-import { Products } from './containers/products/products';
+
 import { About } from './containers/aboutUs/aboutUs';
 import { ContactUs } from './containers/contactUs/contactUs';
+import { Products } from './containers/Products/Product';
 
 function App() {
   return (
