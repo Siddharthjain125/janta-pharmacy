@@ -1,61 +1,20 @@
-import React, { useCallback, useState } from "react";
-import {
-  Card,
-  CardActionArea,
-  CardActions,
-  CardContent,
-  CardMedia,
-  Grid,
-  Typography,
-} from "@mui/material";
-import { mockData } from "../../mockData/Products";
+import React, { useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Card, CardActionArea, CardActions, CardContent, CardMedia, Grid, Typography} from "@mui/material";
 import { ProductsFooter } from "./ProductsFooter";
+import { updateProductQuantity } from "../../redux/counterSlice";
 
 export function Products() {
-
-const [products,updateProducts]= useState(mockData);
-
-
-  const handleAddClick = useCallback((productId) => {
-    const clonedProducts = [...products];
-    const updatedProductsData=  clonedProducts.map(data=>{
-     
-      if(data.productId === productId)
-          return {...data, quantity:1}
-       else return data;
-      
-    });
-    updateProducts(updatedProductsData);
-  },[products]);
-
-
+const products = useSelector(state=> state.counter.products);
+const dispatch = useDispatch();
 
   const handleIncreaseQuantity = useCallback((productId)=>{
-   const clonedProducts = [...products];
-    const updatedProductsData=  clonedProducts.map(data=>{
-   
-      if(data.productId === productId)
-      return {...data, quantity: data.quantity +1};
-      
-      else return data;
-    });
- 
-    updateProducts(updatedProductsData);
-
-  
-  },[products])
+    dispatch(updateProductQuantity({productId, change: 1}))
+  },[dispatch])
 
   const handleDecreaseQuantity = useCallback((productId) => {
-    const clonedProducts = [...products];
-    const updatedProductsData=  clonedProducts.map(data=>{
-   
-      if(data.productId === productId)
-      return {...data, quantity: data.quantity - 1};
-      
-      else return data;
-    });
-    updateProducts(updatedProductsData);
-  },[products]);
+    dispatch(updateProductQuantity({productId, change: -1}))
+  },[dispatch])
 
 
   return (
@@ -76,7 +35,7 @@ const [products,updateProducts]= useState(mockData);
             </CardActionArea>
             <CardActions>
               <ProductsFooter productQuantity={data.quantity }
-              onAdd={()=>handleAddClick(data.productId)}
+              onAdd={()=>handleIncreaseQuantity(data.productId)}
               onDecreaseQuantity={()=>handleDecreaseQuantity(data.productId)}
               onIncreaseQuantity={()=>handleIncreaseQuantity(data.productId)}   
               />

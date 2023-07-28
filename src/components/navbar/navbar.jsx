@@ -9,15 +9,19 @@ import MenuIcon from "@mui/icons-material/Menu";
 import Container from "@mui/material/Container";
 import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
-import AdbIcon from "@mui/icons-material/Adb";
 import { Link } from "react-router-dom";
 import { Badge } from "@mui/material";
 import { ShoppingCart } from "@mui/icons-material";
+import { useSelector } from "react-redux";
+import { cartItemsCalculator } from "../../helper/navbar.helper";
 
 const pages = ["Products"];
-const cartItemsCount = 4;
+
+
 
 export function Navbar() {
+  const products = useSelector(state=> state.counter.products);
+  const cartItemsCount = cartItemsCalculator(products);
   const [anchorElNav, setAnchorElNav] = React.useState(null);
 
   const handleOpenNavMenu = (event) => {
