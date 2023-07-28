@@ -1,8 +1,6 @@
 import styled from '@emotion/styled';
 
 export const FooterWrapper= styled.div`
-
-//background-color: #383737;
 `;
 
 export const FooterTextWrapper= styled.div`
