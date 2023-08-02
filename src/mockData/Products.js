@@ -31,7 +31,7 @@ export const mockData = [
     quantity: 0,
   },
   {
-    title: "Calciquick Gemz",
+    title: "Calciquick Gemz 3000 Vitamin Tablets",
     mrp: 232,
     ourPrice: 100,
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
