@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@mui/material";
 import { ShoppingCart } from "@mui/icons-material";
 import { useSelector } from "react-redux";
+
 import { cartItemsCalculator } from "../../helper/navbar.helper";
 
 const pages = ["Products"];
@@ -20,7 +21,7 @@ const pages = ["Products"];
 
 
 export function Navbar() {
-  const products = useSelector(state=> state.counter.products);
+  const products = useSelector(state=> state.productsData.products);
   const cartItemsCount = cartItemsCalculator(products);
   const [anchorElNav, setAnchorElNav] = React.useState(null);
 

@@ -2,8 +2,8 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { mockData } from '../mockData/Products';
 
-const counterSlice = createSlice({
-  name: 'counter',
+const productsSlice = createSlice({
+  name: 'productsSlice',
   initialState: {
     products: [...mockData],
   },
@@ -21,6 +21,6 @@ const counterSlice = createSlice({
   },
 });
 
-export const { updateProductQuantity } = counterSlice.actions;
+export const { updateProductQuantity } = productsSlice.actions;
 
-export default counterSlice.reducer;
+export default productsSlice.reducer;
