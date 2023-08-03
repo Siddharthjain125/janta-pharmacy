@@ -4,6 +4,7 @@ export const mockData = [
     category: "Gut health",
     mrp: 232,
     ourPrice: 100,
+    packaging: "1 strip of 10 tablets each",
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     composition: {
       "key1": "value1",
@@ -20,6 +21,7 @@ export const mockData = [
     mrp: 232,
     ourPrice: 100,
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
+    packaging: "1 strip of 10 tablets each",
     composition: {
       "key1": "value1",
       "key2": "value2"
@@ -34,6 +36,7 @@ export const mockData = [
     title: "Calciquick Gemz 3000 Vitamin Tablets",
     mrp: 232,
     ourPrice: 100,
+    packaging: "1 strip of 10 tablets each",
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     composition: {
       "key1": "value1",
@@ -49,6 +52,7 @@ export const mockData = [
     title: "Limcee",
     mrp: 232,
     ourPrice: 100,
+    packaging: "1 strip of 10 tablets each",
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     composition: {
       "key1": "value1",
@@ -64,6 +68,7 @@ export const mockData = [
     title: "Rabesec DSR",
     mrp: 232,
     ourPrice: 100,
+    packaging: "1 strip of 10 tablets each",
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     composition: {
       "key1": "value1",

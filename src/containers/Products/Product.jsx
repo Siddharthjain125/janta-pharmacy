@@ -44,7 +44,7 @@ export function Products() {
               </CardTitleContainer>
               <CardDescription>
                 <Typography variant='body2' color='text.secondary'>
-                  {data.description}
+                  {data.packaging}
                 </Typography>
               </CardDescription>
             </CardContentWrapper>

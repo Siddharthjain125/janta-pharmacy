@@ -14,11 +14,16 @@ export const FooterWrapper = styled.div`
 export const FooterButtons = styled.div`
   display: flex;
   width: 100%;
-  margin-right: 10px;
 
   .product-quantity-btn {
     border: 1px solid;
     margin-left: 30px;
+  }
+
+  .go-to-cart {
+    font-size: 14px;
+    text-decoration: none;
+    color: secondary;
   }
 `;
 

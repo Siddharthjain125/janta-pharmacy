@@ -108,7 +108,12 @@ export function Navbar() {
           ))}
         </Box>
 
-        <IconButton size="large" aria-label="show cart items" color="inherit">
+        <IconButton 
+          component={Link}
+          to='/cart'
+          size="large" 
+          aria-label="show cart items" 
+          color="inherit">
           <Badge badgeContent={cartItemsCount} color="error">
             <ShoppingCart />
           </Badge>
