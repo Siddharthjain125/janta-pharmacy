@@ -36,6 +36,7 @@ export function Navbar() {
             fontWeight: 700,
             color: "inherit",
             textDecoration: "none",
+            marginLeft: "10px"
           }}
         >
           Janta Pharmacy
