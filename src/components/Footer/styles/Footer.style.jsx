@@ -1,6 +1,7 @@
 import styled from '@emotion/styled';
 
 export const FooterWrapper= styled.div`
+margin-top: 50px;
 `;
 
 export const FooterTextWrapper= styled.div`
