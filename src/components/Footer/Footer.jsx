@@ -1,21 +1,11 @@
-import React, { useCallback } from 'react';
 import { FooterTextWrapper, FooterWrapper } from './styles/Footer.style';
 import { Box, Button, Typography } from '@mui/material';
 import { Divider } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import { whatsAppConnection } from '../../helper/whatsapp.helper';
 
 export function Footer() {
-  const phoneNumber = '919009090467';
   const encodedMessage = 'Hi-Siddharth';
-
-  const whatsAppSupport = useCallback(() => {
-    const url =
-      'https://api.whatsapp.com/send?phone=' +
-      phoneNumber +
-      '&text=' +
-      encodedMessage;
-    window.open(url, '_blank');
-  }, []);
 
   return (
     <FooterWrapper>
@@ -26,7 +16,7 @@ export function Footer() {
             Let us help with your medicines.
           </Typography>
           <Button
-            onClick={whatsAppSupport}
+            onClick={() => whatsAppConnection(encodedMessage)}
             variant='contained'
             className='footer-contactUs-btn'>
             <WhatsAppIcon className='footer-whatsapp-icon' />

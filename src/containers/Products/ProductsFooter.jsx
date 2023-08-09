@@ -3,7 +3,6 @@ import { Button, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { FooterButtons, FooterWrapper, PriceDiscount, PriceInfo } from "./styles/ProductsFooter.style";
-import { Link } from "react-router-dom";
 
 export function ProductsFooter(props) {
   const { productQuantity, onAdd, onDecreaseQuantity, onIncreaseQuantity, mrp, ourPrice } = props;
@@ -49,12 +48,6 @@ export function ProductsFooter(props) {
             >
               <AddIcon fontSize="small"/>
             </Button>
-          <Typography className="go-to-cart"
-          component={Link}
-          to='/cart'
-          color="text.primary"
-        //  sx={{alignSelf: 'end'}}
-          >Go To Cart</Typography>
           </>
         )}
       </FooterButtons>

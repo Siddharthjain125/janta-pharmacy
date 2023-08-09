@@ -7,11 +7,12 @@ import {
   Typography,
 } from '@mui/material';
 import { ProductsFooter } from './ProductsFooter';
-import { updateProductQuantity } from '../../redux/productsSlice';
+import { addFirstProductQuantity, deleteProductsQuantity, updateProductQuantity } from '../../redux/productsSlice';
 import { CardContainer, CardContentWrapper, CardDescription, CardTitleContainer, ProductsWrapper } from './styles/Products.style';
 
 export function Products() {
   const products = useSelector((state) => state.productsData.products);
+  const productsQuantity = useSelector(state => state.productsData.productsQuantity);
   const dispatch = useDispatch();
 
   const handleIncreaseQuantity = useCallback(
@@ -24,9 +25,36 @@ export function Products() {
   const handleDecreaseQuantity = useCallback(
     (productId) => {
       dispatch(updateProductQuantity({ productId, change: -1 }));
+     // dispatch(deleteProductsQuantity({productId}))
     },
     [dispatch],
   );
+
+  const handleAddQuantity = useCallback(
+    (productId) => {
+      dispatch(addFirstProductQuantity({productId}));
+    },
+    [dispatch],
+  );
+
+  const getProductsQuantity = useCallback(
+    (productId) => {
+      if(productsQuantity) {
+        const item = productsQuantity.find(item => item.productId === productId);
+
+        if(item) 
+            return item.quantity;    
+        else 
+          return 0;
+      }
+      else {
+        return 0;
+      }
+
+    },
+    [productsQuantity],
+  );
+  
 
   return (
     <ProductsWrapper>
@@ -49,8 +77,8 @@ export function Products() {
               </CardDescription>
             </CardContentWrapper>
             <ProductsFooter
-              productQuantity={data.quantity}
-              onAdd={() => handleIncreaseQuantity(data.productId)}
+              productQuantity={getProductsQuantity(data.productId)}
+              onAdd={() => handleAddQuantity(data.productId)}
               onDecreaseQuantity={() => handleDecreaseQuantity(data.productId)}
               onIncreaseQuantity={() => handleIncreaseQuantity(data.productId)}
               mrp={data.mrp}

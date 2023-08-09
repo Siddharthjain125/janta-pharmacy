@@ -1,24 +1,27 @@
-// src/redux/store.js
-import { configureStore } from '@reduxjs/toolkit';
-import productsSlice from './productsSlice';
+import { configureStore } from "@reduxjs/toolkit";
+import productsSlice from "./productsSlice";
 
-// Retrieve data from local storage
-const getStoredState = () => {
-  const storedState = localStorage.getItem('reduxState');
-  return storedState ? JSON.parse(storedState) : undefined;
-};
+// const getStoredProductsQuantity = () => {
+//   const storedProductsQuantity = localStorage.getItem("productsQuantity");
+//   return storedProductsQuantity
+//     ? { productsData: { productsQuantity: JSON.parse(storedProductsQuantity) } }
+//     : { productsData: { productsQuantity: [] } };
+// };
 
 const store = configureStore({
   reducer: {
-    productsData: productsSlice, // Add the productsSlice reducer to the store under the 'productsData' slice
+    productsData: productsSlice,
   },
-  preloadedState: getStoredState(), // Initialize store with stored data if available
+//  preloadedState: getStoredProductsQuantity(),
 });
 
-// Save data to local storage whenever store state changes
 store.subscribe(() => {
-  const state = store.getState();
-  localStorage.setItem('reduxState', JSON.stringify(state));
+  const productsQuantity = store.getState();
+  localStorage.setItem(
+    "productsQuantity",
+    JSON.stringify(productsQuantity.productsData.productsQuantity)
+  );
+
 });
 
 export default store;

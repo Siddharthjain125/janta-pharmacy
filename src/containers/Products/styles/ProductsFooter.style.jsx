@@ -23,7 +23,6 @@ export const FooterButtons = styled.div`
   .go-to-cart {
     font-size: 14px;
     text-decoration: none;
-    color: secondary;
   }
 `;
 

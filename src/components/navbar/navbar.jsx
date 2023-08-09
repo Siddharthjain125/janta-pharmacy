@@ -9,8 +9,8 @@ import { cartItemsCalculator } from "../../helper/navbar.helper";
 const pages = ["Products"];
 
 export function Navbar() {
-  const products = useSelector((state) => state.productsData.products);
-  const cartItemsCount = cartItemsCalculator(products);
+  const productsQuantity = useSelector(state => state.productsData.productsQuantity);
+  const cartItemsCount = cartItemsCalculator(productsQuantity);
   const [anchorElNav, setAnchorElNav] = useState(null);
 
   const handleOpenNavMenu = (event) => {
@@ -113,7 +113,8 @@ export function Navbar() {
           to='/cart'
           size="large" 
           aria-label="show cart items" 
-          color="inherit">
+          color="inherit"
+          style={{ marginRight: "10px" }}>
           <Badge badgeContent={cartItemsCount} color="error">
             <ShoppingCart />
           </Badge>

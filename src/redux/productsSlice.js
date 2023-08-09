@@ -1,31 +1,57 @@
-// productSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 import { mockData } from '../mockData/Products';
 
 // Retrieve data from local storage
-const getStoredProducts = () => {
-  const storedData = localStorage.getItem('productsData');
-  return storedData ? JSON.parse(storedData) : [...mockData];
+const getStoredProductsQuantity = () => {
+  const storedProductsQuantity = localStorage.getItem('productsQuantity');
+  return storedProductsQuantity ? JSON.parse(storedProductsQuantity) : [];
 };
 
 const productsSlice = createSlice({
   name: 'productsSlice',
   initialState: {
-    products: getStoredProducts(),
+    products: [...mockData],
+    productsQuantity: getStoredProductsQuantity()
   },
   reducers: {
     updateProductQuantity: (state, action) => {
       const { productId, change } = action.payload;
-      const clonedProducts = [...state.products];
-      const updatedProductsData = clonedProducts.map((data) => {
-        if (data.productId === productId) return { ...data, quantity: data.quantity + change };
+      const clonedProductsQuantity = [...state.productsQuantity];
+      const updatedProductsData = clonedProductsQuantity.map((data) => {
+        if (data.productId === productId) {
+          const newQuantity = data.quantity + change;
+          if(newQuantity === 0) {
+              return undefined;
+          }
+          else
+          return { ...data, quantity: newQuantity};
+        }
         else return data;
       });
-      state.products = updatedProductsData;
+      state.productsQuantity = updatedProductsData.filter(Boolean); 
     },
+    addFirstProductQuantity: (state, action) => {
+      const {productId} = action.payload;
+      const clonedProductsQuantity = state.productsQuantity;
+      const updatedProductsData =[
+        ...clonedProductsQuantity,
+        {
+          'productId': productId,
+          quantity: 1
+        }
+      ];
+      state.productsQuantity = updatedProductsData;
+    },
+    deleteProductsQuantity: (state, action) => {
+      const {productId} = action.payload;
+      const indexToDelete = state.productsQuantity.findIndex(item => item.productId === productId);
+      if (indexToDelete !== -1) {
+        state.productsQuantity.splice(indexToDelete, 1);
+      }
+    }
   },
 });
 
-export const { updateProductQuantity } = productsSlice.actions;
+export const { updateProductQuantity, addFirstProductQuantity,deleteProductsQuantity } = productsSlice.actions;
 
 export default productsSlice.reducer;

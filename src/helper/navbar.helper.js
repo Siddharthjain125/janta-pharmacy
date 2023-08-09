@@ -1,6 +1,6 @@
-export const cartItemsCalculator = (products)  => {
+export const cartItemsCalculator = (productsQuantity)  => {
     let cartCount = 0;
-    products.forEach(product => {
+    productsQuantity.forEach(product => {
         if( product.quantity >0) {
             cartCount += 1;
         }
