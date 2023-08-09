@@ -2,17 +2,19 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
+import store from './redux/store';
 
-const store  = configureStore({
-  reducer: {},
-})
+const rootElement = document.getElementById('root');
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+// Use createRoot to asynchronously render the React application
+const root = ReactDOM.createRoot(rootElement);
+
+// Wrap the App component with the Provider and pass the Redux store
 root.render(
-  <Provider store={store}>
-    <App />
-  </Provider>
+  <React.StrictMode>
+    <Provider store={store}>
+      <App />
+    </Provider>
+  </React.StrictMode>
 );
-
