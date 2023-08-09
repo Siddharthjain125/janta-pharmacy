@@ -7,7 +7,7 @@ import {
   Typography,
 } from '@mui/material';
 import { ProductsFooter } from './ProductsFooter';
-import { addFirstProductQuantity, deleteProductsQuantity, updateProductQuantity } from '../../redux/productsSlice';
+import { addFirstProductQuantity, updateProductQuantity } from '../../redux/productsSlice';
 import { CardContainer, CardContentWrapper, CardDescription, CardTitleContainer, ProductsWrapper } from './styles/Products.style';
 
 export function Products() {
