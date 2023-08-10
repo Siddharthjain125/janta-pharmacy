@@ -32,4 +32,9 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@4.1.2
         with:
           branch: gh-pages
-          folder: docs
+          folder: build
+
+      - name: Move Build Output to docs Folder
+        run: |
+          mkdir docs
+          mv build/* docs/
