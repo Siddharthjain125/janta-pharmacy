@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/janta-pharamcy/static/css/main.073c9b0a.css",
-    "main.js": "/janta-pharamcy/static/js/main.d71c4d3b.js",
-    "index.html": "/janta-pharamcy/index.html",
-    "main.073c9b0a.css.map": "/janta-pharamcy/static/css/main.073c9b0a.css.map",
-    "main.d71c4d3b.js.map": "/janta-pharamcy/static/js/main.d71c4d3b.js.map"
+    "main.css": "/janta-pharmacy/static/css/main.073c9b0a.css",
+    "main.js": "/janta-pharmacy/static/js/main.d6189e54.js",
+    "index.html": "/janta-pharmacy/index.html",
+    "main.073c9b0a.css.map": "/janta-pharmacy/static/css/main.073c9b0a.css.map",
+    "main.d6189e54.js.map": "/janta-pharmacy/static/js/main.d6189e54.js.map"
   },
   "entrypoints": [
     "static/css/main.073c9b0a.css",
-    "static/js/main.d71c4d3b.js"
+    "static/js/main.d6189e54.js"
   ]
 }
