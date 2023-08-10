@@ -20,7 +20,7 @@ jobs:
 
       - name: Set Git User Identity
         run: |
-          git config user.email "${{ secrets.GH_EMAIL }}"
+          git config user.email "siddharthjain125@gmail.com"
 
       - name: Set Up Node.js
         uses: actions/setup-node@v2

@@ -29,7 +29,7 @@ export function Dashboard() {
             <CardMedia
               component="img"
               height="100%"
-              image="/images/Banner.png"
+              image="./janta-pharmacy/images/Banner.png"
               alt="Pharmacy Image"
             />
             <CardContent>
