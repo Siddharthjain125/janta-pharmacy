@@ -3,8 +3,8 @@ export const mockData = [
     title: "Rzole DSR",
     category: "Gut health",
     type: "Medicines",
-    mrp: 232,
-    ourPrice: 100,
+    mrp: 105,
+    ourPrice: 50,
     packaging: "1 strip of 10 tablets each",
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     composition: {
@@ -13,7 +13,7 @@ export const mockData = [
     },
     description:
       "Rzole DSR Capsule is a combination medicine used to treat gastroesophageal reflux disease (Acid reflux) and peptic ulcer disease by relieving the symptoms of acidity such as heartburn, stomach pain, or irritation. It also neutralizes the acid and promotes easy passage of gas to reduce stomach discomfort.",
-    image: "./janta-pharmacy/images/Rzole.jpeg",
+    image: "images/Rzole.jpeg",
     productId: 1,
     status: "available",
     //quantity: 0,
@@ -21,8 +21,8 @@ export const mockData = [
   },
   {
     title: "Cipcal 500",
-    mrp: 232,
-    ourPrice: 100,
+    mrp: 80,
+    ourPrice: 30,
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     packaging: "1 strip of 10 tablets each",
     composition: {
@@ -31,14 +31,14 @@ export const mockData = [
     },
     description:
       "Cipcal 500 Tablet is a dietary supplement formulated with calcium and vitamin D3 that promotes bone and joint health. It helps in muscle contraction, muscle building and flexibility of joints. It may help improve bone health and lower osteoporosis risk.",
-    image: "./janta-pharmacy/images/Cipcal.jpeg",
+    image: "images/Cipcal.jpeg",
     productId: 2,
     // quantity: 0,
   },
   {
     title: "Calciquick Gemz 3000 Vitamin Tablets",
-    mrp: 232,
-    ourPrice: 100,
+    mrp: 240,
+    ourPrice: 90,
     packaging: "1 strip of 10 tablets each",
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     composition: {
@@ -47,14 +47,14 @@ export const mockData = [
     },
     description:
       "These tablets normalize calcium levels in the body by increasing the absorption of calcium and phosphate from the gastrointestinal tract. Calcitriol is also frequently used in the treatment of hypocalcaemia and osteoporosis. Calcium carbonate could also be taken as a nutritional supplement. Calcium is very important nutrient for the body, which helps the brain, bones, cells, and nerve to function properly. If there is not enough calcium in the blood, then the body will take it from the bones and weaken them.",
-    image: "./janta-pharmacy/images/Calciquick.jpeg",
+    image: "images/Calciquick.jpeg",
     productId: 3,
     // quantity: 0,
   },
   {
     title: "Limcee",
-    mrp: 667,
-    ourPrice: 100,
+    mrp: 25,
+    ourPrice: 22,
     packaging: "1 strip of 10 tablets each",
     searchable: ["Rabsesec DSR", "Rabimol DSR"],
     composition: {
@@ -63,7 +63,7 @@ export const mockData = [
     },
     description:
       "These tablets normalize calcium levels in the body by increasing the absorption of calcium and phosphate from the gastrointestinal tract. Calcitriol is also frequently used in the treatment of hypocalcaemia and osteoporosis. Calcium carbonate could also be taken as a nutritional supplement. Calcium is very important nutrient for the body, which helps the brain, bones, cells, and nerve to function properly. If there is not enough calcium in the blood, then the body will take it from the bones and weaken them.",
-    image: "./janta-pharmacy/images/Limcee.jpeg",
+    image: "images/Limcee.jpeg",
     productId: 4,
     // quantity: 0,
   },
@@ -79,7 +79,7 @@ export const mockData = [
     },
     description:
       "These tablets normalize calcium levels in the body by increasing the absorption of calcium and phosphate from the gastrointestinal tract. Calcitriol is also frequently used in the treatment of hypocalcaemia and osteoporosis. Calcium carbonate could also be taken as a nutritional supplement. Calcium is very important nutrient for the body, which helps the brain, bones, cells, and nerve to function properly. If there is not enough calcium in the blood, then the body will take it from the bones and weaken them.",
-    image: "./janta-pharmacy/images/Rzole.jpeg",
+    image: "images/Rabesec.jpeg",
     productId: 5,
     // quantity: 0,
   },
