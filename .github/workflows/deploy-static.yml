@@ -33,8 +33,3 @@ jobs:
         with:
           branch: gh-pages
           folder: build
-
-      - name: Move Build Output to docs Folder
-        run: |
-          mkdir docs
-          mv build/* docs/
