@@ -1,31 +1,35 @@
-name: Deploy to GitHub Pages
+# name: Deploy to GitHub Pages
 
-on:
-  push:
-    branches:
-      - dev.Siddharth
+# on:
+#   push:
+#     branches:
+#       - dev/Siddharth
+#       - main
+#       - gh-pages
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+# permissions:
+#   contents: write
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
 
-      - name: Set Up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 18.14.9
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v2
 
-      - name: Install Dependencies
-        run: npm install
+#       - name: Set Git User Identity
+#         run: |
+#           git config user.email "siddharthjain125@gmail.com"
+#           git config user.name "Siddharthjain125"
 
-      - name: Build
-        run: npm run build
+#       - name: Set Up Node.js
+#         uses: actions/setup-node@v2
+#         with:
+#           node-version: 18.14
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.1.2
-        with:
-          branch: gh-pages
-          folder: build
+#       - name: Install Dependencies
+#         run: npm install
+
+#       - name: Deploy
+#         run: npm run deploy
