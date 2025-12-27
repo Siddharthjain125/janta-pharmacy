@@ -55,10 +55,34 @@ A single backend system that:
 
 ## System Context Diagram
 
-(To be added)
+The diagram below shows the high-level context of Janta Pharmacy,
+including users, the core platform, and external systems.
 
-The diagram will represent:
-- Actors
-- The Janta Pharmacy Platform
-- External systems
-- Interaction boundaries
+```mermaid
+flowchart LR
+    Customer[Customer]
+    Admin[Pharmacy Admin]
+    Delivery[Delivery Partner]
+    
+    WebApp[Web Application]
+    MobileApp[Mobile Application]
+    
+    Core[Janta Pharmacy Platform]
+    
+    Payment[Payment Gateway]
+    Notification[Notification Service]
+    DeliverySvc[Delivery Service]
+
+    Customer --> WebApp
+    Customer --> MobileApp
+
+    Admin --> WebApp
+
+    WebApp --> Core
+    MobileApp --> Core
+
+    Core --> Payment
+    Core --> Notification
+    Core --> DeliverySvc
+
+    Delivery --> DeliverySvc
