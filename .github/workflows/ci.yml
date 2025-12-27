@@ -38,7 +38,7 @@ jobs:
           done
           
           # Check required documentation files
-          for doc in docs/architecture.md docs/infra.md docs/security.md docs/decisions.md; do
+          for doc in docs/architecture.md docs/infrastructure.md docs/security.md docs/decisions.md; do
             if [ -f "$doc" ]; then
               echo "✅ Document exists: $doc"
             else
