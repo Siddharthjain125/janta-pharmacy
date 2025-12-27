@@ -56,16 +56,21 @@ This project embraces **AI-assisted development** as a core methodology:
 
 ```
 janta-pharmacy/
-├── .github/workflows/     # CI/CD pipelines
-├── docs/                  # Architecture & decision documentation
-│   ├── architecture.md    # System architecture overview
-│   ├── infra.md          # Infrastructure design
-│   ├── security.md       # Security patterns & policies
-│   └── decisions.md      # ADRs and branching strategy
-├── backend/              # Backend services (planned)
-├── frontend/             # Web application (planned)
-├── mobile/               # Mobile application (planned)
-└── infra/                # Infrastructure as Code (planned)
+├── .github/workflows/        # CI/CD pipelines
+├── docs/                     # Architecture & decision documentation
+│   ├── architecture.md       # System architecture overview
+│   ├── system-context.md     # System context and boundaries
+│   ├── api-interactions.md   # API design and interactions
+│   ├── data-ownership.md     # Data ownership and flow
+│   ├── transactions.md       # Transaction patterns
+│   ├── infrastructure.md     # Infrastructure design
+│   ├── security.md           # Security patterns & policies
+│   ├── observability.md      # Monitoring and observability
+│   └── decisions.md          # ADRs and branching strategy
+├── backend/                  # Backend services (planned)
+├── frontend/                 # Web application (planned)
+├── mobile/                   # Mobile application (planned)
+└── infra/                    # Infrastructure as Code (planned)
 ```
 
 ---
@@ -75,8 +80,13 @@ janta-pharmacy/
 | Document | Description |
 |----------|-------------|
 | [Architecture](docs/architecture.md) | System design, components, and data flow |
-| [Infrastructure](docs/infra.md) | Cloud architecture and deployment strategy |
+| [System Context](docs/system-context.md) | System boundaries and external integrations |
+| [API Interactions](docs/api-interactions.md) | API design patterns and interactions |
+| [Data Ownership](docs/data-ownership.md) | Data ownership, flow, and governance |
+| [Transactions](docs/transactions.md) | Transaction patterns and consistency |
+| [Infrastructure](docs/infrastructure.md) | Cloud architecture and deployment strategy |
 | [Security](docs/security.md) | Security model and compliance considerations |
+| [Observability](docs/observability.md) | Monitoring, logging, and tracing |
 | [Decisions](docs/decisions.md) | Architectural Decision Records (ADRs) |
 
 ---
