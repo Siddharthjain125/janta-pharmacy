@@ -1,72 +1,248 @@
-# Backend
+# Janta Pharmacy - Backend
 
-> **Status**: 🚧 Not Yet Implemented
-> **Component**: Backend Services
+> **Status**: 🏗️ Skeleton Implementation
+> **Architecture**: Modular Monolith
 
 ---
 
 ## Overview
 
-This directory will contain the backend services for Janta Pharmacy.
+This is the backend service for Janta Pharmacy, built with **NestJS** and **TypeScript**. The architecture follows a **modular monolith** pattern, designed for clarity, maintainability, and future scalability.
 
-## Planned Structure
+### What This Is
+
+- ✅ Clean, production-grade project structure
+- ✅ Modular architecture with clear boundaries
+- ✅ Placeholder endpoints and services
+- ✅ Common utilities (logging, error handling, correlation IDs)
+- ✅ Configuration management foundation
+
+### What This Is NOT
+
+- ❌ A complete, working application
+- ❌ Database or persistence layer
+- ❌ Authentication/authorization implementation
+- ❌ Business logic or validation rules
+- ❌ External service integrations
+
+---
+
+## Architecture
+
+### Modular Monolith Approach
+
+The backend is organized into **self-contained modules**, each responsible for a specific domain:
+
+```
+src/
+├── user/           # User management domain
+├── catalog/        # Product catalog domain
+├── order/          # Order management domain
+├── prescription/   # Prescription handling domain
+├── payment/        # Payment processing (cross-cutting)
+├── notification/   # Notification delivery (cross-cutting)
+└── audit/          # Audit logging (cross-cutting)
+```
+
+### Key Principles
+
+1. **Module Independence**: Each module owns its data and logic
+2. **No Cross-Module Data Access**: Modules communicate via services, not direct data access
+3. **Clean Interfaces**: Well-defined APIs between modules
+4. **Future-Ready**: Easy to extract into microservices if needed
+
+### Directory Structure
 
 ```
 backend/
 ├── src/
-│   ├── api/           # API routes and controllers
-│   ├── services/      # Business logic
-│   ├── models/        # Data models
-│   ├── middleware/    # Express/framework middleware
-│   └── utils/         # Utility functions
-├── tests/
-│   ├── unit/
-│   └── integration/
-├── config/
+│   ├── main.ts                 # Application entry point
+│   ├── app.module.ts           # Root module
+│   │
+│   ├── config/                 # Configuration
+│   │   ├── app.config.ts       # Application settings
+│   │   └── security.config.ts  # Security settings
+│   │
+│   ├── common/                 # Shared utilities
+│   │   ├── api/                # API response/error structures
+│   │   ├── filters/            # Exception filters
+│   │   ├── interceptors/       # Request interceptors
+│   │   └── logging/            # Logger implementation
+│   │
+│   ├── user/                   # User module
+│   ├── catalog/                # Catalog module
+│   ├── order/                  # Order module
+│   ├── prescription/           # Prescription module
+│   ├── payment/                # Payment service
+│   ├── notification/           # Notification service
+│   └── audit/                  # Audit service
+│
+├── test/                       # Test files
 ├── package.json
-└── README.md
+├── tsconfig.json
+└── nest-cli.json
 ```
 
-## Technology Stack
+---
 
-> **Decision Pending** - See [/docs/decisions.md](/docs/decisions.md)
+## Alignment with Architecture Docs
 
-### Candidates Under Consideration
+This implementation aligns with the project's architecture documentation:
 
-| Option | Language | Framework | Pros | Cons |
-|--------|----------|-----------|------|------|
-| Node.js | JavaScript/TypeScript | Express/Fastify | Team familiarity, ecosystem | Single-threaded |
-| Python | Python | FastAPI/Django | ML integration, readability | GIL limitations |
-| Go | Go | Gin/Echo | Performance, concurrency | Smaller ecosystem |
+| Document | Alignment |
+|----------|-----------|
+| [architecture.md](/docs/architecture.md) | Modular structure, separation of concerns |
+| [api-interactions.md](/docs/api-interactions.md) | REST API design, standard responses |
+| [security.md](/docs/security.md) | Security config placeholders, CORS setup |
+| [observability.md](/docs/observability.md) | Logging, correlation IDs |
+
+---
 
 ## Getting Started
 
-Instructions will be added once the technology stack is selected.
+### Prerequisites
+
+- Node.js >= 18.0.0
+- npm or yarn
+
+### Installation
 
 ```bash
-# Placeholder - commands will vary based on stack
 cd backend
-# npm install / pip install / go mod download
-# npm run dev / uvicorn main:app / go run .
+npm install
 ```
 
-## API Design
+### Running the Application
 
-API specifications will be documented using OpenAPI/Swagger.
+```bash
+# Development mode
+npm run start:dev
 
-See [/docs/architecture.md](/docs/architecture.md) for API design principles.
+# Production mode
+npm run build
+npm run start:prod
+```
+
+### API Base URL
+
+```
+http://localhost:3000/api/v1
+```
+
+---
+
+## API Endpoints
+
+All endpoints return placeholder responses.
+
+### Users
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users` | List all users |
+| GET | `/api/v1/users/:id` | Get user by ID |
+| POST | `/api/v1/users` | Create user |
+| PUT | `/api/v1/users/:id` | Update user |
+| DELETE | `/api/v1/users/:id` | Delete user |
+
+### Catalog
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/catalog/products` | List products |
+| GET | `/api/v1/catalog/products/:id` | Get product |
+| GET | `/api/v1/catalog/categories` | List categories |
+| GET | `/api/v1/catalog/search` | Search products |
+
+### Orders
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/orders` | List orders |
+| GET | `/api/v1/orders/:id` | Get order |
+| POST | `/api/v1/orders` | Create order |
+| PUT | `/api/v1/orders/:id/status` | Update status |
+| POST | `/api/v1/orders/:id/cancel` | Cancel order |
+
+### Prescriptions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/prescriptions` | List prescriptions |
+| GET | `/api/v1/prescriptions/:id` | Get prescription |
+| POST | `/api/v1/prescriptions` | Upload prescription |
+| PUT | `/api/v1/prescriptions/:id/verify` | Verify prescription |
+
+---
+
+## Configuration
+
+Configuration is managed via environment variables:
+
+```bash
+# .env.example
+NODE_ENV=development
+PORT=3000
+CORS_ORIGIN=*
+
+# Security (placeholders)
+JWT_SECRET=change-me-in-production
+JWT_EXPIRES_IN=1h
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX=100
+```
+
+---
 
 ## Next Steps
 
-1. [ ] Select technology stack
-2. [ ] Initialize project structure
-3. [ ] Set up development environment
-4. [ ] Implement core API scaffolding
-5. [ ] Add authentication integration
+The following will be implemented in subsequent phases:
+
+1. **Database Integration**
+   - PostgreSQL setup
+   - TypeORM/Prisma integration
+   - Entity definitions
+
+2. **Authentication**
+   - JWT implementation
+   - Role-based access control
+   - Session management
+
+3. **Business Logic**
+   - Validation rules
+   - Domain logic
+   - Error handling
+
+4. **External Integrations**
+   - Payment gateway
+   - Email/SMS services
+   - File storage
+
+5. **Testing**
+   - Unit tests
+   - Integration tests
+   - E2E tests
+
+---
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run start` | Start application |
+| `npm run start:dev` | Start with hot reload |
+| `npm run start:debug` | Start with debugger |
+| `npm run build` | Build for production |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run unit tests |
+| `npm run test:e2e` | Run E2E tests |
 
 ---
 
 ## Contributing
 
-Please read the main [README.md](/README.md) for contribution guidelines.
+Please refer to the main [README.md](/README.md) for contribution guidelines.
 
+---
+
+## License
+
+MIT - See [LICENSE](/LICENSE)
