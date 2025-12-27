@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =============================================================================
+  # Validation Job - Runs on all PRs and pushes
+  # =============================================================================
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate repository structure
+        run: |
+          echo "🔍 Validating project structure..."
+          
+          # Check required directories exist
+          for dir in docs backend frontend mobile infra; do
+            if [ -d "$dir" ]; then
+              echo "✅ Directory exists: $dir"
+            else
+              echo "❌ Missing directory: $dir"
+              exit 1
+            fi
+          done
+          
+          # Check required documentation files
+          for doc in docs/architecture.md docs/infra.md docs/security.md docs/decisions.md; do
+            if [ -f "$doc" ]; then
+              echo "✅ Document exists: $doc"
+            else
+              echo "❌ Missing document: $doc"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All structure validations passed!"
+
+      - name: Check for trailing whitespace
+        run: |
+          echo "🔍 Checking for trailing whitespace in markdown files..."
+          if find . -name "*.md" -type f -exec grep -l '[[:space:]]$' {} \; | grep -q .; then
+            echo "⚠️ Warning: Some files have trailing whitespace"
+            find . -name "*.md" -type f -exec grep -l '[[:space:]]$' {} \;
+          else
+            echo "✅ No trailing whitespace found"
+          fi
+
+      - name: Validate markdown links (placeholder)
+        run: |
+          echo "📝 Markdown link validation placeholder"
+          echo "TODO: Add markdown-link-check when content is complete"
+
+  # =============================================================================
+  # Documentation Job - Validates documentation
+  # =============================================================================
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check documentation completeness
+        run: |
+          echo "📚 Checking documentation..."
+          
+          # Ensure docs have content (not just placeholders)
+          for doc in docs/*.md; do
+            lines=$(wc -l < "$doc")
+            if [ "$lines" -lt 5 ]; then
+              echo "⚠️ Warning: $doc appears to be a placeholder (< 5 lines)"
+            else
+              echo "✅ $doc has content ($lines lines)"
+            fi
+          done
+
+  # =============================================================================
+  # Security Job - Basic security checks
+  # =============================================================================
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for secrets (placeholder)
+        run: |
+          echo "🔐 Security scan placeholder"
+          echo "TODO: Add gitleaks or similar secret scanning"
+          
+          # Basic check for common secret patterns
+          if grep -r -E "(password|secret|api_key)\s*=" --include="*.md" --include="*.yml" --include="*.yaml" .; then
+            echo "⚠️ Warning: Potential secrets found in files"
+          else
+            echo "✅ No obvious secrets detected"
+          fi
+
+  # =============================================================================
+  # Summary Job - Provides build summary
+  # =============================================================================
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [validate, docs, security]
+    if: always()
+    
+    steps:
+      - name: Build Summary
+        run: |
+          echo "## 📊 CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validation | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | ${{ needs.docs.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Pipeline will be extended as components are added*" >> $GITHUB_STEP_SUMMARY
+

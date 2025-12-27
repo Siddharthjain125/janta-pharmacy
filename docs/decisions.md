@@ -1,0 +1,312 @@
+# Architectural Decision Records (ADRs)
+
+> **Status**: 📝 Active Document
+> **Last Updated**: December 2025
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Decision Log](#decision-log)
+- [ADR-001: Architecture-First Approach](#adr-001-architecture-first-approach)
+- [ADR-002: Git Branching Strategy](#adr-002-git-branching-strategy)
+- [ADR-003: Branch Protection Rules](#adr-003-branch-protection-rules)
+- [ADR-004: Monorepo Structure](#adr-004-monorepo-structure)
+- [Pending Decisions](#pending-decisions)
+
+---
+
+## Overview
+
+This document records significant architectural decisions made for the Janta Pharmacy project. Each decision follows the ADR format:
+
+- **Status**: Proposed, Accepted, Deprecated, Superseded
+- **Context**: What situation led to this decision?
+- **Decision**: What did we decide?
+- **Consequences**: What are the trade-offs?
+
+---
+
+## Decision Log
+
+| ID | Title | Status | Date |
+|----|-------|--------|------|
+| ADR-001 | Architecture-First Approach | Accepted | 2025-12 |
+| ADR-002 | Git Branching Strategy | Accepted | 2025-12 |
+| ADR-003 | Branch Protection Rules | Accepted | 2025-12 |
+| ADR-004 | Monorepo Structure | Accepted | 2025-12 |
+
+---
+
+## ADR-001: Architecture-First Approach
+
+### Status
+**Accepted**
+
+### Context
+The project previously had experimental code without clear architecture. Starting fresh provides an opportunity to establish solid foundations before writing application code.
+
+### Decision
+We will follow an architecture-first approach:
+1. Document system architecture before implementation
+2. Make and record technology decisions upfront
+3. Establish security and infrastructure patterns early
+4. Create placeholder structure for all components
+
+### Consequences
+
+**Positive:**
+- Clear direction for all contributors
+- Reduced technical debt
+- Better onboarding experience
+- AI-assisted development is more effective with documentation
+
+**Negative:**
+- Slower initial progress
+- Architecture may need revision as we learn
+- Requires discipline to maintain documentation
+
+**Mitigations:**
+- Regular architecture reviews
+- Living documentation that evolves with the project
+
+---
+
+## ADR-002: Git Branching Strategy
+
+### Status
+**Accepted**
+
+### Context
+Need a branching model that supports:
+- Stable production releases
+- Continuous integration of features
+- Safe experimentation
+- Clear contribution workflow
+
+### Decision
+Adopt a simplified GitFlow model:
+
+```
+main (protected)
+  │
+  ├── Production-ready code only
+  ├── Tagged releases
+  └── Deployed automatically
+        │
+develop (protected)
+  │
+  ├── Integration branch
+  ├── Feature branches merge here
+  └── Deployed to staging
+        │
+feature/* (developer branches)
+  │
+  ├── Created from develop
+  ├── Short-lived (< 1 week ideal)
+  └── Merged via PR to develop
+        │
+hotfix/* (emergency fixes)
+  │
+  ├── Created from main
+  ├── Merged to main AND develop
+  └── For critical production issues only
+```
+
+### Branch Naming Conventions
+
+| Pattern | Purpose | Example |
+|---------|---------|---------|
+| `feature/` | New features | `feature/user-authentication` |
+| `bugfix/` | Bug fixes | `bugfix/cart-calculation` |
+| `hotfix/` | Production emergencies | `hotfix/security-patch` |
+| `docs/` | Documentation updates | `docs/api-documentation` |
+| `refactor/` | Code improvements | `refactor/order-service` |
+
+### Consequences
+
+**Positive:**
+- Clear separation between stable and development code
+- Safe experimentation in feature branches
+- Predictable release process
+
+**Negative:**
+- Slightly more complex than trunk-based development
+- Potential for long-lived branches (mitigated by guidelines)
+
+---
+
+## ADR-003: Branch Protection Rules
+
+### Status
+**Accepted**
+
+### Context
+Protected branches prevent accidental or unauthorized changes to critical branches. This is essential for:
+- Maintaining code quality
+- Ensuring review processes are followed
+- Preventing direct pushes to production
+
+### Decision
+Implement the following branch protection rules:
+
+### Main Branch Protection
+
+| Rule | Setting | Rationale |
+|------|---------|-----------|
+| Require pull request | ✅ Enabled | No direct pushes |
+| Required approvals | 1 (minimum) | Code review required |
+| Dismiss stale approvals | ✅ Enabled | Re-review after changes |
+| Require status checks | ✅ Enabled | CI must pass |
+| Required checks | `validate`, `security` | Core pipeline jobs |
+| Require branches up-to-date | ✅ Enabled | Must be current with main |
+| Require conversation resolution | ✅ Enabled | All feedback addressed |
+| Restrict pushes | ✅ Enabled | Only via PR |
+| Allow force pushes | ❌ Disabled | Preserve history |
+| Allow deletions | ❌ Disabled | Cannot delete main |
+
+### Develop Branch Protection
+
+| Rule | Setting | Rationale |
+|------|---------|-----------|
+| Require pull request | ✅ Enabled | No direct pushes |
+| Required approvals | 1 | At least one review |
+| Dismiss stale approvals | ✅ Enabled | Re-review after changes |
+| Require status checks | ✅ Enabled | CI must pass |
+| Required checks | `validate` | Basic validation |
+| Require branches up-to-date | ❌ Disabled | Allow parallel merges |
+| Allow force pushes | ❌ Disabled | Preserve history |
+| Allow deletions | ❌ Disabled | Cannot delete develop |
+
+### Implementation Steps
+
+#### GitHub Settings Path
+```
+Repository → Settings → Branches → Add branch protection rule
+```
+
+#### For `main` branch:
+1. Branch name pattern: `main`
+2. Enable all rules as specified above
+3. Save changes
+
+#### For `develop` branch:
+1. Branch name pattern: `develop`
+2. Enable rules as specified above
+3. Save changes
+
+### Consequences
+
+**Positive:**
+- Code quality enforcement
+- Audit trail for all changes
+- Prevents accidental production issues
+
+**Negative:**
+- Slower merge process
+- Requires at least two contributors for review
+- Can block urgent fixes (mitigated by hotfix process)
+
+**Mitigations:**
+- Clear hotfix process for emergencies
+- Automated checks run quickly
+- Admin bypass for true emergencies (logged)
+
+---
+
+## ADR-004: Monorepo Structure
+
+### Status
+**Accepted**
+
+### Context
+Need to decide between:
+1. **Monorepo**: All components in single repository
+2. **Polyrepo**: Separate repository per component
+
+### Decision
+Use a **monorepo** structure with clear component boundaries:
+
+```
+janta-pharmacy/
+├── backend/      # Backend services
+├── frontend/     # Web application
+├── mobile/       # Mobile application
+├── infra/        # Infrastructure as Code
+└── docs/         # Shared documentation
+```
+
+### Rationale
+
+| Factor | Monorepo | Polyrepo |
+|--------|----------|----------|
+| Code sharing | Easy | Complex |
+| Refactoring | Atomic | Coordinated |
+| CI/CD | Single pipeline | Multiple pipelines |
+| Dependency management | Centralized | Distributed |
+| Team scaling | Needs tooling | Natural separation |
+
+For our team size and project scope, monorepo advantages outweigh disadvantages.
+
+### Consequences
+
+**Positive:**
+- Simplified code sharing
+- Atomic refactoring across components
+- Single source of truth
+- Easier onboarding
+
+**Negative:**
+- Larger repository size over time
+- Need selective CI/CD triggers
+- All contributors see all code
+
+**Mitigations:**
+- Use sparse checkout for large repos
+- Path-based CI/CD triggers
+- CODEOWNERS file for review routing
+
+---
+
+## Pending Decisions
+
+The following decisions need to be made:
+
+| Topic | Priority | Target Date |
+|-------|----------|-------------|
+| Frontend framework selection | High | TBD |
+| Backend technology stack | High | TBD |
+| Database selection | High | TBD |
+| Cloud provider | High | TBD |
+| Mobile framework selection | Medium | TBD |
+| Authentication provider | Medium | TBD |
+| Monitoring/observability stack | Medium | TBD |
+
+---
+
+## Template for New ADRs
+
+```markdown
+## ADR-XXX: [Title]
+
+### Status
+Proposed | Accepted | Deprecated | Superseded by ADR-XXX
+
+### Context
+[What is the issue that we're seeing that is motivating this decision?]
+
+### Decision
+[What is the change that we're proposing and/or doing?]
+
+### Consequences
+[What becomes easier or more difficult to do because of this change?]
+```
+
+---
+
+## References
+
+- [ADR GitHub Organization](https://adr.github.io/)
+- [Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
+
