@@ -4,7 +4,7 @@
 
 **A modern, scalable pharmacy management platform**
 
-[![CI](https://github.com/YOUR_USERNAME/janta-pharmacy/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/janta-pharmacy/actions/workflows/ci.yml)
+[![CI](https://github.com/Siddharthjain125/janta-pharmacy/actions/workflows/ci.yml/badge.svg)](https://github.com/Siddharthjain125/janta-pharmacy/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Architecture First](https://img.shields.io/badge/approach-architecture--first-purple.svg)](#architecture-first-approach)
 
@@ -101,7 +101,7 @@ See [decisions.md](docs/decisions.md) for complete branching and protection rule
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/janta-pharmacy.git
+git clone https://github.com/Siddharthjain125/janta-pharmacy.git
 cd janta-pharmacy
 ```
 
