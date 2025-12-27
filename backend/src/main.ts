@@ -6,13 +6,12 @@ import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.i
 import { Logger } from './common/logging/logger';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
-  });
+  const logger = new Logger();
+  logger.setContext('Bootstrap');
 
-  // Custom logger
-  const logger = app.get(Logger);
-  app.useLogger(logger);
+  const app = await NestFactory.create(AppModule, {
+    logger: logger,
+  });
 
   // Global prefix for all routes
   app.setGlobalPrefix('api/v1');
@@ -30,7 +29,7 @@ async function bootstrap(): Promise<void> {
   );
 
   // Global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter(logger));
+  app.useGlobalFilters(new HttpExceptionFilter(new Logger()));
 
   // Global interceptors
   app.useGlobalInterceptors(new CorrelationIdInterceptor());

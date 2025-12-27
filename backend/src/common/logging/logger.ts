@@ -1,4 +1,4 @@
-import { Injectable, LoggerService, Scope } from '@nestjs/common';
+import { Injectable, LoggerService } from '@nestjs/common';
 
 /**
  * Application Logger
@@ -6,7 +6,7 @@ import { Injectable, LoggerService, Scope } from '@nestjs/common';
  * Provides structured logging with consistent formatting.
  * Can be extended to integrate with external logging services.
  */
-@Injectable({ scope: Scope.TRANSIENT })
+@Injectable()
 export class Logger implements LoggerService {
   private context?: string;
 
