@@ -10,6 +10,11 @@
 
 </div>
 
+> 🔄 **Project Reset (2025)**
+> This repository has been re-purposed to document the design and
+> development of a production-grade pharmacy platform.
+> Earlier experiments have been archived in git history.
+
 ---
 
 ## 📖 Overview
