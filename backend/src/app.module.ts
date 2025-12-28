@@ -9,6 +9,9 @@ import securityConfig from './config/security.config';
 import { Logger } from './common/logging/logger';
 import { HealthController } from './health/health.controller';
 
+// Auth Module
+import { AuthModule } from './auth/auth.module';
+
 // Domain Modules
 import { UserModule } from './user/user.module';
 import { CatalogModule } from './catalog/catalog.module';
@@ -28,6 +31,9 @@ import { AuditService } from './audit/audit.service';
       load: [appConfig, securityConfig],
       envFilePath: ['.env.local', '.env'],
     }),
+
+    // Auth Module
+    AuthModule,
 
     // Domain Modules
     UserModule,

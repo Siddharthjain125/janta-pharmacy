@@ -87,10 +87,7 @@ export class AuditService {
   /**
    * Log a system event
    */
-  async logSystemEvent(
-    action: string,
-    details: Record<string, unknown>,
-  ): Promise<void> {
+  async logSystemEvent(action: string, details: Record<string, unknown>): Promise<void> {
     await this.log({
       userId: 'system',
       action,
@@ -111,10 +108,7 @@ export class AuditService {
   /**
    * Get audit logs for a specific resource
    */
-  async getResourceAuditTrail(
-    resource: string,
-    resourceId: string,
-  ): Promise<unknown[]> {
+  async getResourceAuditTrail(resource: string, resourceId: string): Promise<unknown[]> {
     // TODO: Implement with database
     return [];
   }
@@ -145,4 +139,3 @@ interface AuditLogFilters {
   page?: number;
   limit?: number;
 }
-

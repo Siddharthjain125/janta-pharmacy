@@ -143,15 +143,15 @@ cd janta-pharmacy
 
 ## 🗺️ Roadmap
 
-### Phase 1: Foundation (Current)
+### Phase 1: Foundation
 - [x] Repository structure
 - [x] Documentation framework
 - [x] CI/CD pipeline foundation
-- [ ] Complete architecture documentation
-- [ ] Technology stack decisions
+- [x] Complete architecture documentation
+- [x] Technology stack decisions
 
-### Phase 2: Core Development
-- [ ] Backend API scaffold
+### Phase 2: Core Development (Current)
+- [x] Backend API scaffold
 - [ ] Frontend application scaffold
 - [ ] Database schema design
 - [ ] Authentication system

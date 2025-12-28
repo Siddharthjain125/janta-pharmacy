@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
 import { Logger } from './common/logging/logger';
 
@@ -29,7 +29,7 @@ async function bootstrap(): Promise<void> {
   );
 
   // Global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter(new Logger()));
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // Global interceptors
   app.useGlobalInterceptors(new CorrelationIdInterceptor());

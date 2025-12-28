@@ -9,38 +9,56 @@ import { tap } from 'rxjs/operators';
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-/**
- * Correlation ID Interceptor
- *
- * Ensures every request has a correlation ID for tracing.
- * If a correlation ID is provided in the request header, it is used.
- * Otherwise, a new UUID is generated.
- */
+export const CORRELATION_ID_HEADER = 'X-Correlation-ID';
+
 @Injectable()
 export class CorrelationIdInterceptor implements NestInterceptor {
-  private readonly headerName = 'X-Correlation-ID';
-
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
 
-    // Get or generate correlation ID
+    // Get existing or generate new correlation ID
     const correlationId =
-      (request.headers[this.headerName.toLowerCase()] as string) || uuidv4();
+      (request.headers[CORRELATION_ID_HEADER.toLowerCase()] as string) ||
+      (request.headers['x-request-id'] as string) ||
+      uuidv4();
 
-    // Set correlation ID on request for use in handlers
-    request.headers[this.headerName.toLowerCase()] = correlationId;
+    // Attach to request headers for downstream use
+    request.headers[CORRELATION_ID_HEADER.toLowerCase()] = correlationId;
 
-    // Set correlation ID on response header
-    response.setHeader(this.headerName, correlationId);
+    // Set on response header
+    response.setHeader(CORRELATION_ID_HEADER, correlationId);
+
+    // Log request start
+    const startTime = Date.now();
+    const method = request.method;
+    const url = request.url;
+    console.log(
+      `[${new Date().toISOString()}] [INFO] [${correlationId}] --> ${method} ${url}`,
+    );
 
     return next.handle().pipe(
-      tap((data) => {
-        // Inject correlation ID into response if it's an object
-        if (data && typeof data === 'object' && !Array.isArray(data)) {
-          (data as Record<string, unknown>).correlationId = correlationId;
-        }
+      tap({
+        next: (data) => {
+          // Inject correlation ID into response body if object
+          if (data && typeof data === 'object' && !Array.isArray(data)) {
+            (data as Record<string, unknown>).correlationId = correlationId;
+          }
+
+          // Log request completion
+          const duration = Date.now() - startTime;
+          console.log(
+            `[${new Date().toISOString()}] [INFO] [${correlationId}] <-- ${method} ${url} ${response.statusCode} (${duration}ms)`,
+          );
+        },
+        error: () => {
+          // Log request error (details handled by exception filter)
+          const duration = Date.now() - startTime;
+          console.log(
+            `[${new Date().toISOString()}] [INFO] [${correlationId}] <-- ${method} ${url} ERROR (${duration}ms)`,
+          );
+        },
       }),
     );
   }
@@ -50,6 +68,5 @@ export class CorrelationIdInterceptor implements NestInterceptor {
  * Helper to get correlation ID from request
  */
 export function getCorrelationId(request: Request): string {
-  return (request.headers['x-correlation-id'] as string) || 'unknown';
+  return (request.headers[CORRELATION_ID_HEADER.toLowerCase()] as string) || 'unknown';
 }
-
