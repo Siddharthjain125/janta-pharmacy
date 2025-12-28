@@ -1,39 +1,44 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { AuthUser, UserRole } from '../interfaces/auth-user.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    // If no roles required, allow access
+    // No roles required = allow access
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
-    // TODO: Implement real role checking
-    // For now, allow all requests during development
-    // In production, this should:
-    // 1. Get user from request (attached by JwtAuthGuard)
-    // 2. Check if user has any of the required roles
-    // 3. Return true/false based on role match
-
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request & { user: AuthUser }>();
     const user = request.user;
 
     if (!user) {
-      return true; // Allow during development
+      throw new ForbiddenException('User context not found');
     }
 
-    // Placeholder: check roles (always returns true for now)
-    const userRoles: string[] = user.roles || [];
-    return requiredRoles.some((role) => userRoles.includes(role)) || true;
+    const hasRole = requiredRoles.some((role) => user.role === role);
+
+    if (!hasRole) {
+      throw new ForbiddenException(
+        `Access denied. Required roles: ${requiredRoles.join(', ')}`,
+      );
+    }
+
+    return true;
   }
 }
-

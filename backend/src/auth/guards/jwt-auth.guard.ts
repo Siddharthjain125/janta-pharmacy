@@ -1,10 +1,17 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { AuthUser, UserRole } from '../interfaces/auth-user.interface';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     // Check if route is marked as public
@@ -17,24 +24,60 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
 
-    // TODO: Implement real JWT validation
-    // For now, allow all requests during development
-    // In production, this should:
-    // 1. Extract token from Authorization header
-    // 2. Validate JWT signature
-    // 3. Check token expiration
-    // 4. Attach user to request
+    const request = context.switchToHttp().getRequest<Request>();
+    const token = this.extractTokenFromHeader(request);
 
-    const request = context.switchToHttp().getRequest();
-    
-    // Placeholder: attach mock user to request
-    request.user = {
-      userId: 'placeholder-user-id',
-      email: 'placeholder@example.com',
-      roles: ['user'],
-    };
+    if (!token) {
+      throw new UnauthorizedException('Missing authentication token');
+    }
+
+    if (!this.isValidTokenFormat(token)) {
+      throw new UnauthorizedException('Invalid token format');
+    }
+
+    // TODO: Implement real JWT verification
+    // - Verify signature using secret/public key
+    // - Check token expiration
+    // - Validate issuer and audience
+    // - Extract real user payload from token
+
+    // Attach mock user to request (simulates decoded JWT payload)
+    const mockUser: AuthUser = this.getMockUserFromToken(token);
+    (request as Request & { user: AuthUser }).user = mockUser;
 
     return true;
   }
-}
 
+  private extractTokenFromHeader(request: Request): string | null {
+    const authHeader = request.headers.authorization;
+
+    if (!authHeader) {
+      return null;
+    }
+
+    const [type, token] = authHeader.split(' ');
+
+    if (type !== 'Bearer' || !token) {
+      return null;
+    }
+
+    return token;
+  }
+
+  private isValidTokenFormat(token: string): boolean {
+    // TODO: Implement real JWT format validation
+    // For now, check basic structure (3 parts separated by dots for JWT)
+    const parts = token.split('.');
+    return parts.length === 3 && parts.every((part) => part.length > 0);
+  }
+
+  private getMockUserFromToken(_token: string): AuthUser {
+    // TODO: Replace with real JWT decode
+    // This mock simulates different users based on token prefix for testing
+    return {
+      id: 'mock-user-id',
+      email: 'mock@example.com',
+      role: UserRole.CUSTOMER,
+    };
+  }
+}

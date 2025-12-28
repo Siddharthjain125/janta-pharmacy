@@ -1,12 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiResponse } from '../common/api/api-response';
+import { Public } from '../auth/decorators/public.decorator';
 
 /**
  * Health Controller
  *
  * Provides health check and API information endpoints.
+ * All endpoints are public (no auth required).
  */
 @Controller()
+@Public()
 export class HealthController {
   /**
    * Root endpoint - API information
@@ -40,4 +43,3 @@ export class HealthController {
     );
   }
 }
-
