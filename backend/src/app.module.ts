@@ -7,6 +7,7 @@ import securityConfig from './config/security.config';
 
 // Common
 import { Logger } from './common/logging/logger';
+import { HealthController } from './health/health.controller';
 
 // Domain Modules
 import { UserModule } from './user/user.module';
@@ -34,6 +35,7 @@ import { AuditService } from './audit/audit.service';
     OrderModule,
     PrescriptionModule,
   ],
+  controllers: [HealthController],
   providers: [
     // Common Services
     Logger,
