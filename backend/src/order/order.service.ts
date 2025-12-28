@@ -1,125 +1,108 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { ORDER_REPOSITORY, IOrderRepository } from './repositories/order-repository.interface';
+import { OrderDto, OrderStatus } from './dto/order.dto';
+import {
+  OrderNotFoundException,
+  UnauthorizedOrderAccessException,
+  InvalidOrderStateException,
+} from './exceptions/order.exceptions';
+import { logWithCorrelation } from '../common/logging/logger';
 
-/**
- * Order Service
- *
- * Handles business logic for order management.
- * Currently contains placeholder implementations.
- */
 @Injectable()
 export class OrderService {
+  constructor(
+    @Inject(ORDER_REPOSITORY)
+    private readonly orderRepository: IOrderRepository,
+  ) {}
+
   /**
-   * Find all orders with pagination
+   * Create a new order for the authenticated user
    */
-  async findAll(
-    page: number,
-    limit: number,
-    status?: string,
-  ): Promise<unknown[]> {
-    // TODO: Implement with database
-    return [
-      {
-        id: '1',
-        userId: 'user-1',
-        status: 'pending',
-        total: 29.99,
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  async createOrder(userId: string, correlationId: string): Promise<OrderDto> {
+    const order = await this.orderRepository.createOrder(userId);
+
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      `Order created: ${order.id}`,
+      'OrderService',
+      { orderId: order.id, userId },
+    );
+
+    return order;
   }
 
   /**
-   * Find order by ID
+   * Get order by ID with ownership verification
    */
-  async findById(id: string): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id,
-      userId: 'user-1',
-      status: 'pending',
-      items: [],
-      total: 29.99,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * Find orders by user ID
-   */
-  async findByUserId(
+  async getOrderById(
+    orderId: string,
     userId: string,
-    page: number,
-    limit: number,
-  ): Promise<unknown[]> {
-    // TODO: Implement with database
-    return [];
+    correlationId: string,
+  ): Promise<OrderDto> {
+    const order = await this.orderRepository.findById(orderId);
+
+    if (!order) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Order not found: ${orderId}`,
+        'OrderService',
+      );
+      throw new OrderNotFoundException(orderId);
+    }
+
+    if (order.userId !== userId) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Unauthorized order access attempt`,
+        'OrderService',
+        { orderId, requestingUserId: userId, ownerUserId: order.userId },
+      );
+      throw new UnauthorizedOrderAccessException();
+    }
+
+    return order;
   }
 
   /**
-   * Create a new order
+   * Get all orders for the authenticated user
    */
-  async create(createOrderDto: unknown): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id: 'new-order-id',
-      status: 'pending',
-      ...createOrderDto as object,
-      createdAt: new Date().toISOString(),
-    };
+  async getOrdersForUser(
+    userId: string,
+    status?: OrderStatus,
+  ): Promise<OrderDto[]> {
+    return this.orderRepository.findByUserId(userId, status);
   }
 
   /**
-   * Update order status
+   * Cancel an order
    */
-  async updateStatus(id: string, updateStatusDto: unknown): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id,
-      ...updateStatusDto as object,
-      updatedAt: new Date().toISOString(),
-    };
-  }
+  async cancelOrder(
+    orderId: string,
+    userId: string,
+    correlationId: string,
+  ): Promise<OrderDto> {
+    const order = await this.getOrderById(orderId, userId, correlationId);
 
-  /**
-   * Cancel order
-   */
-  async cancel(id: string): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id,
-      status: 'cancelled',
-      cancelledAt: new Date().toISOString(),
-    };
-  }
+    if (order.status !== OrderStatus.CREATED) {
+      throw new InvalidOrderStateException(order.status, OrderStatus.CANCELLED);
+    }
 
-  /**
-   * Get order tracking information
-   */
-  async getTracking(id: string): Promise<unknown> {
-    // TODO: Implement with tracking service
-    return {
-      orderId: id,
-      status: 'processing',
-      events: [
-        { status: 'created', timestamp: new Date().toISOString() },
-      ],
-    };
-  }
+    const updatedOrder = await this.orderRepository.updateStatus(
+      orderId,
+      OrderStatus.CANCELLED,
+    );
 
-  /**
-   * Validate order before creation
-   */
-  async validate(orderData: unknown): Promise<boolean> {
-    // TODO: Implement validation logic
-    return true;
-  }
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      `Order cancelled: ${orderId}`,
+      'OrderService',
+      { orderId, userId },
+    );
 
-  /**
-   * Calculate order total
-   */
-  async calculateTotal(items: unknown[]): Promise<number> {
-    // TODO: Implement calculation logic
-    return 0;
+    return updatedOrder;
   }
 }
-

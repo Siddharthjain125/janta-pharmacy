@@ -1,33 +1,88 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
+/**
+ * Prisma Service
+ * 
+ * Wraps PrismaClient and handles lifecycle.
+ * Gracefully handles missing DATABASE_URL for development.
+ */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  constructor() {
-    super({
-      log: process.env.NODE_ENV === 'development' 
-        ? ['query', 'info', 'warn', 'error']
-        : ['error'],
-    });
+export class PrismaService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PrismaService.name);
+  private client: PrismaClient | null = null;
+  private _isConnected = false;
+
+  get isConnected(): boolean {
+    return this._isConnected;
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
+    if (!process.env.DATABASE_URL) {
+      this.logger.warn(
+        'DATABASE_URL not set. Database features disabled. ' +
+        'Create backend/.env with DATABASE_URL to enable.',
+      );
+      return;
+    }
+
+    try {
+      this.client = new PrismaClient({
+        log: process.env.NODE_ENV === 'development'
+          ? ['warn', 'error']
+          : ['error'],
+      });
+      await this.client.$connect();
+      this._isConnected = true;
+      this.logger.log('Database connected successfully');
+    } catch (error) {
+      this.logger.error('Failed to connect to database', error);
+      this.client = null;
+      if (process.env.NODE_ENV === 'production') {
+        throw error;
+      }
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.$disconnect();
+    if (this.client) {
+      await this.client.$disconnect();
+    }
   }
 
   /**
-   * Clean database (for testing only)
-   * TODO: Implement when models are complete
+   * Get the Prisma client instance
+   * Throws if database is not connected
    */
-  async cleanDatabase(): Promise<void> {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Cannot clean database in production');
+  getClient(): PrismaClient {
+    if (!this.client) {
+      throw new Error('Database is not connected. Set DATABASE_URL in .env');
     }
-    // TODO: Add truncate logic for all tables
+    return this.client;
+  }
+
+  // Proxy common Prisma properties for convenience
+  get order() {
+    return this.getClient().order;
+  }
+
+  get user() {
+    return this.getClient().user;
+  }
+
+  get product() {
+    return this.getClient().product;
+  }
+
+  get category() {
+    return this.getClient().category;
+  }
+
+  get prescription() {
+    return this.getClient().prescription;
+  }
+
+  get orderItem() {
+    return this.getClient().orderItem;
   }
 }
-
