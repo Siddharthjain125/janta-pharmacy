@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrescriptionController } from './prescription.controller';
 import { PrescriptionService } from './prescription.service';
+import { PrescriptionRepository } from './prescription.repository';
 
 /**
  * Prescription Module
@@ -15,8 +16,8 @@ import { PrescriptionService } from './prescription.service';
  */
 @Module({
   controllers: [PrescriptionController],
-  providers: [PrescriptionService],
-  exports: [PrescriptionService],
+  providers: [PrescriptionService, PrescriptionRepository],
+  exports: [PrescriptionService, PrescriptionRepository],
 })
 export class PrescriptionModule {}
 
