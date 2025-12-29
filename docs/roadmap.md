@@ -23,22 +23,25 @@ A production-grade blueprint before writing code.
 
 ---
 
-### Phase 1: Platform Skeleton (Weeks 1–2)
+### Phase 1: Platform Skeleton (Weeks 1–2) ✅
+**Status:** Completed
 
 **Backend**
-- Project setup with module boundaries
-- Health check endpoint
-- Authentication scaffolding
-- Global error handling
-- Structured logging with correlation IDs
+- ✅ Project setup with module boundaries
+- ✅ Health check endpoint
+- ✅ Authentication scaffolding (JWT guards, role decorators)
+- ✅ Global error handling with correlation IDs
+- ✅ Structured logging
+- ✅ Database module with Prisma (in-memory for dev)
 
 **Frontend**
-- Application shell
-- Authentication flow
-- Role-based routing
+- ✅ Application shell (Next.js App Router)
+- ✅ Authentication context (mocked)
+- ✅ Protected route component
+- ✅ API client abstraction
 
 **Outcome:**  
-A running system with no business logic, ready for real features.
+A running system with auth scaffolding, ready for real features.
 
 ---
 
@@ -57,12 +60,28 @@ Users can securely browse available medicines.
 
 ---
 
-### Phase 3: Order Placement (Weeks 5–6)
+### Phase 3: Order Placement (Weeks 5–6) 🚧
+**Status:** In Progress
 
-- Order creation
+**Completed:**
+- ✅ Order domain model with explicit lifecycle
+- ✅ State machine for order transitions
+- ✅ Command-style service methods (confirm, pay, cancel)
+- ✅ Intent-based API endpoints
+- ✅ Domain-specific exceptions
+- ✅ In-memory repository for development
+
+**Remaining:**
 - Order items management
-- Order lifecycle states
-- Order history
+- Order history with filtering
+- Integration with User module
+
+**Order Lifecycle Implemented:**
+```
+CREATED → CONFIRMED → PAID → SHIPPED → DELIVERED
+    ↓          ↓        ↓        ↓
+ CANCELLED  CANCELLED  CANCELLED  CANCELLED
+```
 
 **Architectural focus:**  
 Transaction boundaries, idempotency, and state transitions.

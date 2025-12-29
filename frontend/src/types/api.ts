@@ -26,10 +26,20 @@ export interface ApiError {
 
 /**
  * Order status enum
- * Aligned with backend OrderStatus
+ * Aligned with backend OrderStatus - represents full order lifecycle
  */
 export enum OrderStatus {
+  /** Order has been created but not yet confirmed */
   CREATED = 'CREATED',
+  /** Order has been confirmed and is awaiting payment */
+  CONFIRMED = 'CONFIRMED',
+  /** Payment has been received */
+  PAID = 'PAID',
+  /** Order has been shipped */
+  SHIPPED = 'SHIPPED',
+  /** Order has been delivered */
+  DELIVERED = 'DELIVERED',
+  /** Order has been cancelled */
   CANCELLED = 'CANCELLED',
 }
 

@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { IOrderRepository } from './order-repository.interface';
-import { OrderDto, OrderStatus } from '../dto/order.dto';
+import { OrderDto } from '../dto/order.dto';
+import { OrderStatus } from '../domain/order-status';
 
 /**
  * In-Memory Order Repository
- * 
+ *
  * Temporary implementation for development without PostgreSQL.
  * Data is stored in memory and resets on application restart.
- * 
+ *
  * TODO: Replace with PrismaOrderRepository when database is configured.
  */
 @Injectable()
@@ -71,4 +72,3 @@ export class InMemoryOrderRepository implements IOrderRepository {
     return this.orders.has(orderId);
   }
 }
-

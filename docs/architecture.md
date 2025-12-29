@@ -146,6 +146,86 @@ not shared internal state.
 
 ---
 
+## 8.1 Order Module - Domain Design
+
+The Order module demonstrates **domain-driven design** principles
+with an explicit state machine for lifecycle management.
+
+### Order Lifecycle States
+
+```
+┌─────────┐     ┌───────────┐     ┌──────┐     ┌─────────┐     ┌───────────┐
+│ CREATED │────▶│ CONFIRMED │────▶│ PAID │────▶│ SHIPPED │────▶│ DELIVERED │
+└────┬────┘     └─────┬─────┘     └──┬───┘     └────┬────┘     └───────────┘
+     │                │              │              │              (terminal)
+     ▼                ▼              ▼              ▼
+┌───────────────────────────────────────────────────┐
+│                    CANCELLED                       │
+└───────────────────────────────────────────────────┘
+                     (terminal)
+```
+
+### State Descriptions
+
+| Status | Description | Next States |
+|--------|-------------|-------------|
+| `CREATED` | Order placed, awaiting confirmation | CONFIRMED, CANCELLED |
+| `CONFIRMED` | Order validated, awaiting payment | PAID, CANCELLED |
+| `PAID` | Payment received, awaiting fulfillment | SHIPPED, CANCELLED |
+| `SHIPPED` | Order in transit | DELIVERED, CANCELLED |
+| `DELIVERED` | Order delivered (terminal) | - |
+| `CANCELLED` | Order cancelled (terminal) | - |
+
+### Design Principles
+
+1. **Explicit State Machine**
+   - All valid transitions defined in one place
+   - Invalid transitions rejected with clear errors
+   - Easy to audit and modify
+
+2. **Command-Style Methods**
+   - `createOrder()` → Initial creation
+   - `confirmOrder()` → CREATED → CONFIRMED
+   - `payForOrder()` → CONFIRMED → PAID
+   - `cancelOrder()` → * → CANCELLED
+
+3. **Intent-Based API**
+   - `POST /orders` - Create order
+   - `POST /orders/:id/confirm` - Confirm order
+   - `POST /orders/:id/pay` - Record payment
+   - `POST /orders/:id/cancel` - Cancel order
+
+4. **Domain Exceptions**
+   - `OrderNotFoundException` - Order doesn't exist
+   - `InvalidOrderStateTransitionException` - Transition not allowed
+   - `OrderTerminalStateException` - Order in final state
+   - `OrderCannotBeCancelledException` - Cancel not allowed
+
+### Module Structure
+
+```
+order/
+├── domain/
+│   ├── order-status.ts       # Status enum + metadata
+│   └── order-state-machine.ts # Transition rules
+├── dto/
+│   └── order.dto.ts          # Data transfer objects
+├── exceptions/
+│   └── order.exceptions.ts   # Domain exceptions
+├── repositories/
+│   ├── order-repository.interface.ts
+│   ├── in-memory-order.repository.ts
+│   └── prisma-order.repository.ts
+├── order.service.ts          # Business logic
+├── order.controller.ts       # HTTP endpoints
+└── order.module.ts           # Module wiring
+```
+
+This pattern can be replicated for other modules
+(Prescription lifecycle, Payment lifecycle, etc.).
+
+---
+
 ## 9. Data Ownership & Boundaries
 
 - Each module is responsible for its own data model

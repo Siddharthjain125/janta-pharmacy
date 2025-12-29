@@ -13,17 +13,18 @@ This is the backend service for Janta Pharmacy, built with **NestJS** and **Type
 
 - ✅ Clean, production-grade project structure
 - ✅ Modular architecture with clear boundaries
-- ✅ Placeholder endpoints and services
 - ✅ Common utilities (logging, error handling, correlation IDs)
 - ✅ Configuration management foundation
+- ✅ Authentication scaffolding (JWT guards, role decorators)
+- ✅ Order module with domain-driven state machine
+- ✅ In-memory repository for development
 
-### What This Is NOT
+### What This Is NOT (Yet)
 
-- ❌ A complete, working application
-- ❌ Database or persistence layer
-- ❌ Authentication/authorization implementation
-- ❌ Business logic or validation rules
-- ❌ External service integrations
+- ❌ Complete business logic for all modules
+- ❌ Production database connectivity
+- ❌ Real JWT token validation
+- ❌ External service integrations (payment, notifications)
 
 ---
 
@@ -65,17 +66,34 @@ backend/
 │   │
 │   ├── common/                 # Shared utilities
 │   │   ├── api/                # API response/error structures
+│   │   ├── exceptions/         # Base exceptions
 │   │   ├── filters/            # Exception filters
 │   │   ├── interceptors/       # Request interceptors
 │   │   └── logging/            # Logger implementation
 │   │
+│   ├── auth/                   # Authentication module
+│   │   ├── guards/             # JWT and roles guards
+│   │   ├── decorators/         # @CurrentUser, @Roles, @Public
+│   │   └── interfaces/         # AuthUser interface
+│   │
+│   ├── database/               # Database module
+│   │   └── prisma.service.ts   # Prisma client wrapper
+│   │
+│   ├── order/                  # Order module (domain-driven)
+│   │   ├── domain/             # State machine, status enum
+│   │   ├── dto/                # Data transfer objects
+│   │   ├── exceptions/         # Domain exceptions
+│   │   └── repositories/       # Data access layer
+│   │
 │   ├── user/                   # User module
 │   ├── catalog/                # Catalog module
-│   ├── order/                  # Order module
 │   ├── prescription/           # Prescription module
 │   ├── payment/                # Payment service
 │   ├── notification/           # Notification service
 │   └── audit/                  # Audit service
+│
+├── prisma/
+│   └── schema.prisma           # Database schema
 │
 ├── test/                       # Test files
 ├── package.json
@@ -153,13 +171,40 @@ All endpoints return placeholder responses.
 | GET | `/api/v1/catalog/search` | Search products |
 
 ### Orders
+
+The Order module implements a **domain-driven state machine** for lifecycle management.
+
+#### Order Lifecycle
+```
+CREATED → CONFIRMED → PAID → SHIPPED → DELIVERED
+    ↓          ↓        ↓        ↓
+ CANCELLED  CANCELLED  CANCELLED  CANCELLED
+```
+
+#### Query Endpoints
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/orders` | List orders |
-| GET | `/api/v1/orders/:id` | Get order |
-| POST | `/api/v1/orders` | Create order |
-| PUT | `/api/v1/orders/:id/status` | Update status |
-| POST | `/api/v1/orders/:id/cancel` | Cancel order |
+| GET | `/api/v1/orders` | List user's orders |
+| GET | `/api/v1/orders?status=CONFIRMED` | Filter by status |
+| GET | `/api/v1/orders/:id` | Get order details |
+
+#### Command Endpoints (Intent-Based)
+| Method | Endpoint | Transition | Description |
+|--------|----------|------------|-------------|
+| POST | `/api/v1/orders` | → CREATED | Create new order |
+| POST | `/api/v1/orders/:id/confirm` | CREATED → CONFIRMED | Confirm order |
+| POST | `/api/v1/orders/:id/pay` | CONFIRMED → PAID | Record payment |
+| POST | `/api/v1/orders/:id/cancel` | * → CANCELLED | Cancel order |
+
+#### Order Status Codes
+| Status | Description |
+|--------|-------------|
+| `CREATED` | Order placed, awaiting confirmation |
+| `CONFIRMED` | Order confirmed, awaiting payment |
+| `PAID` | Payment received |
+| `SHIPPED` | Order in transit |
+| `DELIVERED` | Order delivered (terminal) |
+| `CANCELLED` | Order cancelled (terminal) |
 
 ### Prescriptions
 | Method | Endpoint | Description |

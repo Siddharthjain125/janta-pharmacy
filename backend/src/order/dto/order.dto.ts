@@ -1,12 +1,8 @@
-import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
+import { OrderStatus } from '../domain/order-status';
 
-/**
- * Order status enum
- */
-export enum OrderStatus {
-  CREATED = 'CREATED',
-  CANCELLED = 'CANCELLED',
-}
+// Re-export for convenience
+export { OrderStatus } from '../domain/order-status';
 
 /**
  * Order entity representation
@@ -27,14 +23,6 @@ export class CreateOrderDto {
 }
 
 /**
- * Update order status request
- */
-export class UpdateOrderStatusDto {
-  @IsEnum(OrderStatus)
-  status: OrderStatus;
-}
-
-/**
  * Query parameters for listing orders
  */
 export class ListOrdersQueryDto {
@@ -42,4 +30,3 @@ export class ListOrdersQueryDto {
   @IsEnum(OrderStatus)
   status?: OrderStatus;
 }
-

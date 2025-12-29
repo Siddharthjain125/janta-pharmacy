@@ -105,8 +105,12 @@ export default function OrderDetailPage() {
 
 function getStatusStyle(status: OrderStatus): React.CSSProperties {
   const colors: Record<OrderStatus, string> = {
-    CREATED: '#22c55e',
-    CANCELLED: '#ef4444',
+    CREATED: '#3b82f6',    // Blue - new order
+    CONFIRMED: '#8b5cf6',  // Purple - confirmed
+    PAID: '#22c55e',       // Green - paid
+    SHIPPED: '#f59e0b',    // Amber - in transit
+    DELIVERED: '#10b981',  // Emerald - completed
+    CANCELLED: '#ef4444',  // Red - cancelled
   };
   return {
     padding: '0.5rem 1rem',
