@@ -1,20 +1,53 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Headers,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiResponse } from '../common/api/api-response';
 import { Public } from './decorators/public.decorator';
+import { RegisterUserDto, RegisterUserResponseDto } from './dto';
+import { randomUUID } from 'crypto';
 
 /**
  * Auth Controller
  *
  * Handles authentication endpoints.
  * All endpoints are public (no auth required).
+ *
+ * Endpoints:
+ * - POST /auth/register - Register new user with phone + password
+ * - POST /auth/login - Login (placeholder)
+ * - POST /auth/refresh - Refresh token (placeholder)
  */
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   /**
-   * Login with email and password
+   * Register a new user with phone number and password
+   *
+   * @param registerDto - Registration data
+   * @returns Created user info (no sensitive data)
+   */
+  @Post('register')
+  @Public()
+  @HttpCode(HttpStatus.CREATED)
+  async register(
+    @Body() registerDto: RegisterUserDto,
+    @Headers('x-correlation-id') correlationId?: string,
+  ): Promise<ApiResponse<RegisterUserResponseDto>> {
+    const corrId = correlationId || randomUUID();
+    const result = await this.authService.registerUser(registerDto, corrId);
+    return ApiResponse.success(result, 'User registered successfully');
+  }
+
+  /**
+   * Login with phone number and password
+   * TODO: Implement real login
    */
   @Post('login')
   @Public()
@@ -26,6 +59,7 @@ export class AuthController {
 
   /**
    * Refresh access token
+   * TODO: Implement real token refresh
    */
   @Post('refresh')
   @Public()
