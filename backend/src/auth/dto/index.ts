@@ -5,3 +5,5 @@ export {
 
 export { LoginDto, LoginResponseDto } from './login.dto';
 
+export { RefreshTokenDto, RefreshTokenResponseDto } from './refresh-token.dto';
+

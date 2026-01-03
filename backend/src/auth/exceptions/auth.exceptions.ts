@@ -87,6 +87,46 @@ export class AccountNotActiveException extends BusinessException {
 }
 
 /**
+ * Thrown when refresh token is invalid (not found or malformed)
+ */
+export class InvalidRefreshTokenException extends BusinessException {
+  constructor() {
+    super(
+      'Invalid refresh token',
+      'AUTH_INVALID_REFRESH_TOKEN',
+      401, // Unauthorized
+    );
+  }
+}
+
+/**
+ * Thrown when refresh token has expired
+ */
+export class RefreshTokenExpiredException extends BusinessException {
+  constructor() {
+    super(
+      'Refresh token has expired',
+      'AUTH_REFRESH_TOKEN_EXPIRED',
+      401, // Unauthorized
+    );
+  }
+}
+
+/**
+ * Thrown when refresh token has been revoked (reuse attempt)
+ * This is a security concern - could indicate token theft
+ */
+export class RefreshTokenRevokedException extends BusinessException {
+  constructor() {
+    super(
+      'Refresh token has been revoked',
+      'AUTH_REFRESH_TOKEN_REVOKED',
+      401, // Unauthorized
+    );
+  }
+}
+
+/**
  * Mask phone number for logging (show last 4 digits only)
  */
 function maskPhoneNumber(phone: string): string {

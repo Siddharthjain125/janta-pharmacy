@@ -6,6 +6,8 @@ import { PASSWORD_HASHER } from './interfaces/password-hasher.interface';
 import { BcryptPasswordHasher } from './infrastructure/bcrypt-password-hasher';
 import { CREDENTIAL_REPOSITORY } from './credentials/credential-repository.interface';
 import { InMemoryCredentialRepository } from './credentials/in-memory-credential.repository';
+import { REFRESH_TOKEN_REPOSITORY } from './refresh-tokens/refresh-token-repository.interface';
+import { InMemoryRefreshTokenRepository } from './refresh-tokens/in-memory-refresh-token.repository';
 import { USER_REPOSITORY } from '../user/repositories/user-repository.interface';
 import { InMemoryUserRepository } from '../user/repositories/in-memory-user.repository';
 import {
@@ -13,6 +15,9 @@ import {
   InvalidPhoneNumberFormatException,
   WeakPasswordException,
   InvalidCredentialsException,
+  InvalidRefreshTokenException,
+  RefreshTokenExpiredException,
+  RefreshTokenRevokedException,
 } from './exceptions';
 
 /**
@@ -32,6 +37,7 @@ describe('AuthService', () => {
   let authService: AuthService;
   let userRepository: InMemoryUserRepository;
   let credentialRepository: InMemoryCredentialRepository;
+  let refreshTokenRepository: InMemoryRefreshTokenRepository;
   let passwordHasher: BcryptPasswordHasher;
   let jwtService: JwtService;
 
@@ -41,6 +47,7 @@ describe('AuthService', () => {
     // Create fresh instances for each test
     userRepository = new InMemoryUserRepository();
     credentialRepository = new InMemoryCredentialRepository();
+    refreshTokenRepository = new InMemoryRefreshTokenRepository();
     passwordHasher = new BcryptPasswordHasher();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -65,6 +72,10 @@ describe('AuthService', () => {
           provide: CREDENTIAL_REPOSITORY,
           useValue: credentialRepository,
         },
+        {
+          provide: REFRESH_TOKEN_REPOSITORY,
+          useValue: refreshTokenRepository,
+        },
       ],
     }).compile();
 
@@ -75,6 +86,7 @@ describe('AuthService', () => {
   afterEach(() => {
     // Clean up between tests
     userRepository.clear();
+    refreshTokenRepository.clear();
   });
 
   describe('registerUser', () => {
@@ -327,15 +339,27 @@ describe('AuthService', () => {
     }
 
     describe('successful login', () => {
-      it('should return access token for valid credentials', async () => {
+      it('should return access token and refresh token for valid credentials', async () => {
         const { phoneNumber, password } = await registerTestUser();
 
         const result = await authService.login({ phoneNumber, password }, correlationId);
 
         expect(result).toBeDefined();
         expect(result.accessToken).toBeDefined();
+        expect(result.refreshToken).toBeDefined();
         expect(result.tokenType).toBe('Bearer');
         expect(result.expiresIn).toBeGreaterThan(0);
+      });
+
+      it('should persist refresh token in repository', async () => {
+        const { phoneNumber, password } = await registerTestUser();
+
+        const result = await authService.login({ phoneNumber, password }, correlationId);
+
+        // Verify refresh token was stored
+        const storedToken = await refreshTokenRepository.findByToken(result.refreshToken);
+        expect(storedToken).toBeDefined();
+        expect(storedToken!.revokedAt).toBeNull();
       });
 
       it('should return valid JWT with correct payload', async () => {
@@ -460,6 +484,309 @@ describe('AuthService', () => {
           (result.user as unknown as Record<string, unknown>).passwordHash,
         ).toBeUndefined();
       });
+    });
+  });
+
+  describe('refreshToken', () => {
+    const correlationId = 'test-correlation-id';
+
+    // Helper to register and login a user
+    async function loginTestUser(
+      phoneNumber = '+919876543210',
+      password = 'SecurePass123',
+    ) {
+      await authService.registerUser({ phoneNumber, password }, correlationId);
+      return authService.login({ phoneNumber, password }, correlationId);
+    }
+
+    describe('successful refresh', () => {
+      it('should return new access token and refresh token', async () => {
+        const loginResult = await loginTestUser();
+
+        const result = await authService.refreshToken(
+          { refreshToken: loginResult.refreshToken },
+          correlationId,
+        );
+
+        expect(result).toBeDefined();
+        expect(result.accessToken).toBeDefined();
+        expect(result.refreshToken).toBeDefined();
+        expect(result.tokenType).toBe('Bearer');
+        expect(result.expiresIn).toBeGreaterThan(0);
+      });
+
+      it('should return a different refresh token (rotation)', async () => {
+        const loginResult = await loginTestUser();
+        const originalRefreshToken = loginResult.refreshToken;
+
+        const result = await authService.refreshToken(
+          { refreshToken: originalRefreshToken },
+          correlationId,
+        );
+
+        // New refresh token should be different
+        expect(result.refreshToken).not.toBe(originalRefreshToken);
+      });
+
+      it('should return valid JWT access token', async () => {
+        const loginResult = await loginTestUser();
+
+        const result = await authService.refreshToken(
+          { refreshToken: loginResult.refreshToken },
+          correlationId,
+        );
+
+        // Verify the access token is valid
+        const payload = jwtService.verify(result.accessToken, {
+          secret: TEST_JWT_SECRET,
+        });
+
+        expect(payload.sub).toBeDefined();
+        expect(payload.phone).toBe('+919876543210');
+        expect(payload.type).toBe('access');
+      });
+
+      it('should revoke the old refresh token after use', async () => {
+        const loginResult = await loginTestUser();
+        const originalRefreshToken = loginResult.refreshToken;
+
+        // Use the refresh token
+        await authService.refreshToken(
+          { refreshToken: originalRefreshToken },
+          correlationId,
+        );
+
+        // Old token should be revoked
+        const oldToken = await refreshTokenRepository.findByToken(originalRefreshToken);
+        expect(oldToken).toBeDefined();
+        expect(oldToken!.revokedAt).not.toBeNull();
+      });
+
+      it('should persist new refresh token in repository', async () => {
+        const loginResult = await loginTestUser();
+
+        const result = await authService.refreshToken(
+          { refreshToken: loginResult.refreshToken },
+          correlationId,
+        );
+
+        // New token should be in repository
+        const newToken = await refreshTokenRepository.findByToken(result.refreshToken);
+        expect(newToken).toBeDefined();
+        expect(newToken!.revokedAt).toBeNull();
+      });
+    });
+
+    describe('token rotation enforcement', () => {
+      it('should reject reuse of already-used refresh token', async () => {
+        const loginResult = await loginTestUser();
+        const originalRefreshToken = loginResult.refreshToken;
+
+        // First use should succeed
+        await authService.refreshToken(
+          { refreshToken: originalRefreshToken },
+          correlationId,
+        );
+
+        // Second use should fail (token was revoked)
+        await expect(
+          authService.refreshToken(
+            { refreshToken: originalRefreshToken },
+            correlationId,
+          ),
+        ).rejects.toThrow(RefreshTokenRevokedException);
+      });
+
+      it('should allow chained refresh token usage', async () => {
+        const loginResult = await loginTestUser();
+
+        // First refresh
+        const firstRefresh = await authService.refreshToken(
+          { refreshToken: loginResult.refreshToken },
+          correlationId,
+        );
+
+        // Second refresh with new token
+        const secondRefresh = await authService.refreshToken(
+          { refreshToken: firstRefresh.refreshToken },
+          correlationId,
+        );
+
+        expect(secondRefresh.accessToken).toBeDefined();
+        expect(secondRefresh.refreshToken).toBeDefined();
+        // All three tokens should be different
+        expect(secondRefresh.refreshToken).not.toBe(firstRefresh.refreshToken);
+        expect(secondRefresh.refreshToken).not.toBe(loginResult.refreshToken);
+      });
+    });
+
+    describe('invalid token handling', () => {
+      it('should reject non-existent refresh token', async () => {
+        await expect(
+          authService.refreshToken(
+            { refreshToken: 'non-existent-token-12345' },
+            correlationId,
+          ),
+        ).rejects.toThrow(InvalidRefreshTokenException);
+      });
+
+      it('should reject empty refresh token', async () => {
+        await expect(
+          authService.refreshToken({ refreshToken: '' }, correlationId),
+        ).rejects.toThrow(InvalidRefreshTokenException);
+      });
+
+      it('should reject expired refresh token', async () => {
+        const loginResult = await loginTestUser();
+
+        // Manually expire the token
+        const token = await refreshTokenRepository.findByToken(loginResult.refreshToken);
+        if (token) {
+          // Create expired version by directly manipulating repository
+          // This simulates a token that has naturally expired
+          const expiredToken = {
+            ...token,
+            expiresAt: new Date(Date.now() - 1000), // 1 second ago
+          };
+          // Access private map for testing (in real tests, we might use time manipulation)
+          (refreshTokenRepository as any).tokensByValue.set(
+            loginResult.refreshToken,
+            expiredToken,
+          );
+        }
+
+        await expect(
+          authService.refreshToken(
+            { refreshToken: loginResult.refreshToken },
+            correlationId,
+          ),
+        ).rejects.toThrow(RefreshTokenExpiredException);
+      });
+    });
+
+    describe('security', () => {
+      it('should not expose internal token details in response', async () => {
+        const loginResult = await loginTestUser();
+
+        const result = await authService.refreshToken(
+          { refreshToken: loginResult.refreshToken },
+          correlationId,
+        );
+
+        // Response should only contain expected fields
+        const resultKeys = Object.keys(result);
+        expect(resultKeys).toEqual(
+          expect.arrayContaining(['accessToken', 'refreshToken', 'tokenType', 'expiresIn']),
+        );
+        expect(resultKeys).not.toContain('userId');
+        expect(resultKeys).not.toContain('expiresAt');
+        expect(resultKeys).not.toContain('revokedAt');
+        expect(resultKeys).not.toContain('id');
+      });
+
+      it('should generate cryptographically random tokens', async () => {
+        // Login twice to get two different tokens
+        await authService.registerUser(
+          { phoneNumber: '+919876543210', password: 'SecurePass123' },
+          correlationId,
+        );
+
+        const login1 = await authService.login(
+          { phoneNumber: '+919876543210', password: 'SecurePass123' },
+          correlationId,
+        );
+
+        const login2 = await authService.login(
+          { phoneNumber: '+919876543210', password: 'SecurePass123' },
+          correlationId,
+        );
+
+        // Each login should produce a unique refresh token
+        expect(login1.refreshToken).not.toBe(login2.refreshToken);
+        // Tokens should have reasonable length (base64url encoded 32 bytes = 43 chars)
+        expect(login1.refreshToken.length).toBeGreaterThanOrEqual(40);
+        expect(login2.refreshToken.length).toBeGreaterThanOrEqual(40);
+      });
+    });
+
+    describe('multi-device support', () => {
+      it('should allow multiple active refresh tokens per user', async () => {
+        await authService.registerUser(
+          { phoneNumber: '+919876543210', password: 'SecurePass123' },
+          correlationId,
+        );
+
+        // Simulate logins from multiple devices
+        const login1 = await authService.login(
+          { phoneNumber: '+919876543210', password: 'SecurePass123' },
+          correlationId,
+        );
+
+        const login2 = await authService.login(
+          { phoneNumber: '+919876543210', password: 'SecurePass123' },
+          correlationId,
+        );
+
+        // Both tokens should be valid
+        const token1Valid = await refreshTokenRepository.isValid(login1.refreshToken);
+        const token2Valid = await refreshTokenRepository.isValid(login2.refreshToken);
+
+        expect(token1Valid).toBe(true);
+        expect(token2Valid).toBe(true);
+
+        // Both should be usable
+        const refresh1 = await authService.refreshToken(
+          { refreshToken: login1.refreshToken },
+          correlationId,
+        );
+        const refresh2 = await authService.refreshToken(
+          { refreshToken: login2.refreshToken },
+          correlationId,
+        );
+
+        expect(refresh1.accessToken).toBeDefined();
+        expect(refresh2.accessToken).toBeDefined();
+      });
+    });
+  });
+
+  describe('revokeAllUserTokens', () => {
+    const correlationId = 'test-correlation-id';
+
+    it('should revoke all refresh tokens for a user', async () => {
+      await authService.registerUser(
+        { phoneNumber: '+919876543210', password: 'SecurePass123' },
+        correlationId,
+      );
+
+      // Create multiple sessions
+      const login1 = await authService.login(
+        { phoneNumber: '+919876543210', password: 'SecurePass123' },
+        correlationId,
+      );
+
+      const login2 = await authService.login(
+        { phoneNumber: '+919876543210', password: 'SecurePass123' },
+        correlationId,
+      );
+
+      // Get user ID from token
+      const token = await refreshTokenRepository.findByToken(login1.refreshToken);
+      const userId = token!.userId;
+
+      // Revoke all tokens
+      const revokedCount = await authService.revokeAllUserTokens(userId, correlationId);
+
+      expect(revokedCount).toBe(2);
+
+      // Both tokens should now be invalid
+      await expect(
+        authService.refreshToken({ refreshToken: login1.refreshToken }, correlationId),
+      ).rejects.toThrow(RefreshTokenRevokedException);
+
+      await expect(
+        authService.refreshToken({ refreshToken: login2.refreshToken }, correlationId),
+      ).rejects.toThrow(RefreshTokenRevokedException);
     });
   });
 });

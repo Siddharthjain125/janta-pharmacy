@@ -8,6 +8,8 @@ import { PASSWORD_HASHER } from './interfaces/password-hasher.interface';
 import { BcryptPasswordHasher } from './infrastructure/bcrypt-password-hasher';
 import { CREDENTIAL_REPOSITORY } from './credentials/credential-repository.interface';
 import { InMemoryCredentialRepository } from './credentials/in-memory-credential.repository';
+import { REFRESH_TOKEN_REPOSITORY } from './refresh-tokens/refresh-token-repository.interface';
+import { InMemoryRefreshTokenRepository } from './refresh-tokens/in-memory-refresh-token.repository';
 import { UserModule } from '../user/user.module';
 import { getJwtConfig } from './config/jwt.config';
 
@@ -79,6 +81,13 @@ import { getJwtConfig } from './config/jwt.config';
       useClass: InMemoryCredentialRepository,
     },
 
+    // Refresh token storage - in-memory for now
+    // Replace with Redis or database implementation in production
+    {
+      provide: REFRESH_TOKEN_REPOSITORY,
+      useClass: InMemoryRefreshTokenRepository,
+    },
+
     // Register guards globally (optional - can also use @UseGuards per controller)
     // Uncomment to enable global auth:
     // { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -91,6 +100,7 @@ import { getJwtConfig } from './config/jwt.config';
     JwtModule, // Export for use in guards
     PASSWORD_HASHER, // Export for testing/mocking
     CREDENTIAL_REPOSITORY, // Export for testing/mocking
+    REFRESH_TOKEN_REPOSITORY, // Export for testing/mocking
   ],
 })
 export class AuthModule {}

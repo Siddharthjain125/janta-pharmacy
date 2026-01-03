@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { randomBytes } from 'crypto';
 import { UserService } from '../user/user.service';
 import { canAuthenticate } from '../user/domain';
 import {
@@ -11,10 +12,16 @@ import {
   ICredentialRepository,
 } from './credentials/credential-repository.interface';
 import {
+  REFRESH_TOKEN_REPOSITORY,
+  IRefreshTokenRepository,
+} from './refresh-tokens/refresh-token-repository.interface';
+import {
   RegisterUserDto,
   RegisterUserResponseDto,
   LoginDto,
   LoginResponseDto,
+  RefreshTokenDto,
+  RefreshTokenResponseDto,
 } from './dto';
 import {
   PhoneNumberAlreadyRegisteredException,
@@ -22,10 +29,16 @@ import {
   WeakPasswordException,
   InvalidCredentialsException,
   AccountNotActiveException,
+  InvalidRefreshTokenException,
+  RefreshTokenExpiredException,
+  RefreshTokenRevokedException,
 } from './exceptions';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../user/domain';
 import { logWithCorrelation } from '../common/logging/logger';
 import { JwtPayload, getJwtConfig } from './config/jwt.config';
+
+/** Refresh token expiration time in days */
+const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
 /**
  * Auth Service
@@ -60,6 +73,8 @@ export class AuthService {
     private readonly passwordHasher: IPasswordHasher,
     @Inject(CREDENTIAL_REPOSITORY)
     private readonly credentialRepository: ICredentialRepository,
+    @Inject(REFRESH_TOKEN_REPOSITORY)
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
   /**
@@ -231,6 +246,9 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
+    // 6. Generate and persist refresh token
+    const refreshToken = await this.createRefreshToken(user.id);
+
     logWithCorrelation(
       'INFO',
       correlationId,
@@ -239,9 +257,10 @@ export class AuthService {
       { userId: user.id, phoneNumber: normalizedPhone },
     );
 
-    // 6. Return token and user info
+    // 7. Return tokens and user info
     return {
       accessToken,
+      refreshToken,
       tokenType: 'Bearer',
       expiresIn: this.parseExpiresIn(jwtConfig.expiresIn),
       user: {
@@ -308,27 +327,165 @@ export class AuthService {
     }
   }
 
-  // ============================================
-  // TODO: Methods below are placeholders
-  // ============================================
-
   /**
    * Refresh access token using refresh token
-   * TODO: Implement with real token refresh logic
+   *
+   * Flow:
+   * 1. Find the refresh token
+   * 2. Validate it exists, is not expired, and is not revoked
+   * 3. Revoke the old token (rotation)
+   * 4. Find the user
+   * 5. Generate new access token
+   * 6. Generate new refresh token
+   * 7. Return new tokens
+   *
+   * Security notes:
+   * - Refresh token rotation enforced (old token revoked)
+   * - Reuse of revoked token is rejected (theft detection)
+   * - Generic errors prevent token enumeration
    */
-  async refreshToken(refreshDto: { refreshToken: string }): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
-    tokenType: string;
-  }> {
-    // TODO: Validate refresh token
-    // TODO: Generate new access token
-    return {
-      accessToken: 'placeholder-new-access-token',
-      refreshToken: 'placeholder-new-refresh-token',
-      expiresIn: 3600,
-      tokenType: 'Bearer',
+  async refreshToken(
+    dto: RefreshTokenDto,
+    correlationId: string,
+  ): Promise<RefreshTokenResponseDto> {
+    // 1. Find the refresh token
+    const existingToken = await this.refreshTokenRepository.findByToken(
+      dto.refreshToken,
+    );
+
+    if (!existingToken) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Refresh failed: token not found',
+        'AuthService',
+        {},
+      );
+      throw new InvalidRefreshTokenException();
+    }
+
+    // 2. Check if token was revoked (potential reuse attack)
+    if (existingToken.revokedAt) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Refresh failed: token already revoked (potential reuse attack)',
+        'AuthService',
+        { userId: existingToken.userId },
+      );
+      // Security: Could revoke all tokens for this user here
+      throw new RefreshTokenRevokedException();
+    }
+
+    // 3. Check if token is expired
+    if (existingToken.expiresAt <= new Date()) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Refresh failed: token expired',
+        'AuthService',
+        { userId: existingToken.userId },
+      );
+      throw new RefreshTokenExpiredException();
+    }
+
+    // 4. Revoke the old token (rotation)
+    await this.refreshTokenRepository.revoke(dto.refreshToken);
+
+    // 5. Find the user
+    const user = await this.userService.getUserEntity(existingToken.userId);
+    if (!user) {
+      logWithCorrelation(
+        'ERROR',
+        correlationId,
+        'Refresh failed: user not found for valid token',
+        'AuthService',
+        { userId: existingToken.userId },
+      );
+      throw new InvalidRefreshTokenException();
+    }
+
+    // 6. Check if user can still authenticate
+    if (!canAuthenticate(user.status)) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Refresh failed: account not active',
+        'AuthService',
+        { userId: user.id, status: user.status },
+      );
+      throw new AccountNotActiveException();
+    }
+
+    // 7. Generate new access token
+    const jwtConfig = getJwtConfig();
+    const payload: JwtPayload = {
+      sub: user.id,
+      phone: user.phoneNumber,
+      email: user.email,
+      roles: user.roles,
+      type: 'access',
     };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    // 8. Generate new refresh token
+    const newRefreshToken = await this.createRefreshToken(user.id);
+
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      'Token refresh successful',
+      'AuthService',
+      { userId: user.id },
+    );
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      tokenType: 'Bearer',
+      expiresIn: this.parseExpiresIn(jwtConfig.expiresIn),
+    };
+  }
+
+  /**
+   * Generate and persist a new refresh token
+   */
+  private async createRefreshToken(userId: string): Promise<string> {
+    // Generate a cryptographically secure opaque token
+    const token = randomBytes(32).toString('base64url');
+
+    // Calculate expiration
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
+
+    // Persist the token
+    await this.refreshTokenRepository.create({
+      token,
+      userId,
+      expiresAt,
+    });
+
+    return token;
+  }
+
+  /**
+   * Revoke all refresh tokens for a user (logout from all devices)
+   */
+  async revokeAllUserTokens(
+    userId: string,
+    correlationId: string,
+  ): Promise<number> {
+    const revokedCount = await this.refreshTokenRepository.revokeAllByUserId(userId);
+
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      `Revoked ${revokedCount} refresh tokens`,
+      'AuthService',
+      { userId },
+    );
+
+    return revokedCount;
   }
 }
