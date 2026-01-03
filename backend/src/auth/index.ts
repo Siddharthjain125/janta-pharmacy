@@ -1,15 +1,32 @@
+/**
+ * Auth Module Public API
+ *
+ * Exports only what other modules should use.
+ */
+
 // Module
-export * from './auth.module';
-export * from './auth.service';
+export { AuthModule } from './auth.module';
+export { AuthService } from './auth.service';
 
 // Guards
-export * from './guards/jwt-auth.guard';
-export * from './guards/roles.guard';
+export { JwtAuthGuard } from './guards/jwt-auth.guard';
+export { RolesGuard } from './guards/roles.guard';
 
 // Decorators
-export * from './decorators/roles.decorator';
-export * from './decorators/public.decorator';
-export * from './decorators/current-user.decorator';
+export { Roles } from './decorators/roles.decorator';
+export { Public, IS_PUBLIC_KEY } from './decorators/public.decorator';
+export { CurrentUser } from './decorators/current-user.decorator';
 
-// Interfaces
-export * from './interfaces/auth-user.interface';
+// Interfaces - Auth context
+export {
+  AuthUser,
+  AuthenticatedRequest,
+  UserRole,
+  toAuthUser,
+} from './interfaces/auth-user.interface';
+
+// Interfaces - Password hashing (for testing/mocking)
+export {
+  PASSWORD_HASHER,
+  IPasswordHasher,
+} from './interfaces/password-hasher.interface';
