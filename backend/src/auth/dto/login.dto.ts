@@ -18,17 +18,20 @@ export interface LoginDto {
 /**
  * Response DTO for successful login
  *
- * Returns the access token and basic user info.
+ * Returns the access token, refresh token, and basic user info.
  * Does NOT include sensitive data.
  */
 export interface LoginResponseDto {
   /** JWT access token */
   accessToken: string;
 
+  /** Opaque refresh token for obtaining new access tokens */
+  refreshToken: string;
+
   /** Token type (always 'Bearer') */
   tokenType: 'Bearer';
 
-  /** Token expiration time in seconds */
+  /** Access token expiration time in seconds */
   expiresIn: number;
 
   /** Basic user info (safe to expose) */

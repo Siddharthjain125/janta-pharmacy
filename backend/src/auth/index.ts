@@ -35,9 +35,17 @@ export {
 } from './credentials/credential-repository.interface';
 export { Credential, CredentialType } from './credentials/credential.entity';
 
+// Interfaces - Refresh Tokens (for testing/mocking)
+export {
+  REFRESH_TOKEN_REPOSITORY,
+  IRefreshTokenRepository,
+} from './refresh-tokens/refresh-token-repository.interface';
+export { RefreshToken } from './refresh-tokens/refresh-token.entity';
+
 // DTOs
 export { RegisterUserDto, RegisterUserResponseDto } from './dto';
 export { LoginDto, LoginResponseDto } from './dto';
+export { RefreshTokenDto, RefreshTokenResponseDto } from './dto';
 
 // Config
 export { JwtPayload, getJwtConfig } from './config/jwt.config';
@@ -50,4 +58,7 @@ export {
   WeakPasswordException,
   InvalidCredentialsException,
   AccountNotActiveException,
+  InvalidRefreshTokenException,
+  RefreshTokenExpiredException,
+  RefreshTokenRevokedException,
 } from './exceptions';

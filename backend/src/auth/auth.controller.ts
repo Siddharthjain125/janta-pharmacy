@@ -14,6 +14,8 @@ import {
   RegisterUserResponseDto,
   LoginDto,
   LoginResponseDto,
+  RefreshTokenDto,
+  RefreshTokenResponseDto,
 } from './dto';
 import { randomUUID } from 'crypto';
 
@@ -70,19 +72,22 @@ export class AuthController {
 
   /**
    * Refresh access token
-   * TODO: Implement real token refresh
+   *
+   * Accepts a refresh token and returns new access + refresh tokens.
+   * The old refresh token is invalidated (rotation enforced).
+   *
+   * @param refreshDto - Contains the refresh token
+   * @returns New access token and refresh token
    */
   @Post('refresh')
   @Public()
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Body() refreshDto: RefreshTokenDto,
-  ): Promise<ApiResponse<unknown>> {
-    const result = await this.authService.refreshToken(refreshDto);
+    @Headers('x-correlation-id') correlationId?: string,
+  ): Promise<ApiResponse<RefreshTokenResponseDto>> {
+    const corrId = correlationId || randomUUID();
+    const result = await this.authService.refreshToken(refreshDto, corrId);
     return ApiResponse.success(result, 'Token refreshed successfully');
   }
-}
-
-interface RefreshTokenDto {
-  refreshToken: string;
 }
