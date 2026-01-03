@@ -1,8 +1,36 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
-import type { AuthUser, UserRole } from '@/types/api';
-import { apiClient } from './api-client';
+/**
+ * Auth Context & Provider
+ *
+ * Provides authentication state and methods to the React app.
+ * Connects to the AuthService for all auth operations.
+ *
+ * Responsibilities:
+ * - Expose auth state (user, isAuthenticated, isLoading)
+ * - Expose auth methods (login, register, logout)
+ * - Handle session restoration on app boot
+ * - Wire up API client with token provider
+ *
+ * Design:
+ * - All auth logic lives in AuthService (not here)
+ * - UI components only use this context, never AuthService directly
+ * - API client is wired up here for transparent auth handling
+ */
+
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
+import type { AuthUser, LoginRequest, RegisterRequest, RegisterResponse } from '@/types/api';
+import { authService, AuthError, type AuthResult } from './auth-service';
+import { apiClient, type TokenProvider } from './api-client';
 
 /**
  * Auth context state
@@ -11,81 +39,226 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitialized: boolean;
+  error: string | null;
 }
 
 /**
- * Auth context value
+ * Auth context value exposed to components
  */
-interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+interface AuthContextValue extends Omit<AuthState, 'isInitialized'> {
+  /** Login with phone number and password */
+  login: (phoneNumber: string, password: string) => Promise<void>;
+  /** Register a new user */
+  register: (request: RegisterRequest) => Promise<RegisterResponse>;
+  /** Logout and clear all auth state */
   logout: () => void;
+  /** Clear current error */
+  clearError: () => void;
 }
-
-/**
- * Default mock user for development
- */
-const MOCK_USER: AuthUser = {
-  id: 'mock-user-id',
-  email: 'user@example.com',
-  role: 'CUSTOMER' as UserRole,
-};
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
  * Auth Provider Component
- * 
- * Provides authentication state and methods to the app.
- * Currently uses mock authentication for development.
- * 
- * TODO: Implement real authentication flow
- * TODO: Add token refresh logic
- * TODO: Persist auth state to storage
+ *
+ * Wraps the app and provides authentication context.
+ * Handles session restoration on mount and API client wiring.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(MOCK_USER);
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    isAuthenticated: false,
+    isLoading: true, // Start loading until session check completes
+    isInitialized: false,
+    error: null,
+  });
 
-  const isAuthenticated = user !== null;
+  // Track if we've set up the API client listener
+  const apiClientWiredRef = useRef(false);
 
   /**
-   * Login handler
-   * TODO: Implement real login with backend
+   * Update state helper
    */
-  const login = useCallback(async (_email: string, _password: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      // TODO: Call backend auth API
-      // const response = await apiClient.post<AuthTokens>('/auth/login', { email, password });
-      // apiClient.setAuthToken(response.data?.accessToken || null);
-      
-      // Mock login - simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setUser(MOCK_USER);
-    } finally {
-      setIsLoading(false);
-    }
+  const updateState = useCallback((updates: Partial<AuthState>) => {
+    setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
   /**
-   * Logout handler
+   * Handle successful authentication
    */
-  const logout = useCallback((): void => {
-    setUser(null);
-    apiClient.setAuthToken(null);
-    // TODO: Clear stored tokens
-    // TODO: Call backend logout endpoint if needed
-  }, []);
+  const handleAuthSuccess = useCallback(
+    (result: AuthResult) => {
+      updateState({
+        user: result.user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+    },
+    [updateState],
+  );
 
+  /**
+   * Handle logout (internal)
+   */
+  const handleLogout = useCallback(() => {
+    authService.logout();
+    updateState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+  }, [updateState]);
+
+  /**
+   * Wire up API client with token provider and auth listener
+   */
+  useEffect(() => {
+    if (apiClientWiredRef.current) return;
+    apiClientWiredRef.current = true;
+
+    // Create token provider that uses authService
+    const tokenProvider: TokenProvider = {
+      getAccessToken: () => authService.getAccessToken(),
+      refreshToken: async () => {
+        try {
+          const result = await authService.refresh();
+          if (result) {
+            handleAuthSuccess(result);
+            return true;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      },
+    };
+
+    // Wire up API client
+    apiClient.setTokenProvider(tokenProvider);
+    apiClient.setAuthStateListener((authenticated) => {
+      if (!authenticated) {
+        handleLogout();
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      apiClient.setTokenProvider(null);
+      apiClient.setAuthStateListener(null);
+      apiClientWiredRef.current = false;
+    };
+  }, [handleAuthSuccess, handleLogout]);
+
+  /**
+   * Try to restore session on mount
+   */
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const result = await authService.tryRestoreSession();
+        if (result) {
+          handleAuthSuccess(result);
+        } else {
+          updateState({
+            isLoading: false,
+            isInitialized: true,
+          });
+        }
+      } catch {
+        updateState({
+          isLoading: false,
+          isInitialized: true,
+        });
+      }
+    };
+
+    restoreSession();
+  }, [handleAuthSuccess, updateState]);
+
+  /**
+   * Login with phone number and password
+   */
+  const login = useCallback(
+    async (phoneNumber: string, password: string): Promise<void> => {
+      updateState({ isLoading: true, error: null });
+
+      try {
+        const request: LoginRequest = { phoneNumber, password };
+        const result = await authService.login(request);
+        handleAuthSuccess(result);
+      } catch (error) {
+        const message =
+          error instanceof AuthError
+            ? error.message
+            : 'Login failed. Please try again.';
+        updateState({
+          isLoading: false,
+          error: message,
+        });
+        throw error;
+      }
+    },
+    [handleAuthSuccess, updateState],
+  );
+
+  /**
+   * Register a new user
+   */
+  const register = useCallback(
+    async (request: RegisterRequest): Promise<RegisterResponse> => {
+      updateState({ isLoading: true, error: null });
+
+      try {
+        const result = await authService.register(request);
+        updateState({ isLoading: false });
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof AuthError
+            ? error.message
+            : 'Registration failed. Please try again.';
+        updateState({
+          isLoading: false,
+          error: message,
+        });
+        throw error;
+      }
+    },
+    [updateState],
+  );
+
+  /**
+   * Public logout method
+   */
+  const logout = useCallback(() => {
+    handleLogout();
+  }, [handleLogout]);
+
+  /**
+   * Clear error state
+   */
+  const clearError = useCallback(() => {
+    updateState({ error: null });
+  }, [updateState]);
+
+  /**
+   * Context value
+   */
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
-      isAuthenticated,
-      isLoading,
+      user: state.user,
+      isAuthenticated: state.isAuthenticated,
+      isLoading: state.isLoading,
+      error: state.error,
       login,
+      register,
       logout,
+      clearError,
     }),
-    [user, isAuthenticated, isLoading, login, logout],
+    [state, login, register, logout, clearError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -93,6 +266,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 /**
  * Hook to access auth context
+ *
+ * @throws Error if used outside AuthProvider
  */
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
@@ -101,4 +276,3 @@ export function useAuth(): AuthContextValue {
   }
   return context;
 }
-

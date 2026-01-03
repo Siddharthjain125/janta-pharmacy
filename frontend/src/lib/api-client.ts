@@ -1,4 +1,17 @@
-import { API_BASE_URL, MOCK_AUTH_TOKEN } from './constants';
+/**
+ * API Client
+ *
+ * Centralized HTTP client for backend API calls.
+ * Handles authentication, JSON parsing, error handling, and token refresh.
+ *
+ * Features:
+ * - Automatic Authorization header injection
+ * - Transparent 401 handling with token refresh
+ * - Request queuing during refresh to prevent race conditions
+ * - Clean separation from auth logic (uses callbacks for token access)
+ */
+
+import { API_BASE_URL } from './constants';
 import type { ApiResponse, ApiError } from '@/types/api';
 
 /**
@@ -17,36 +30,52 @@ interface RequestOptions {
 }
 
 /**
- * API Client
- * 
- * Centralized HTTP client for backend API calls.
- * Handles authentication, JSON parsing, and error handling.
- * 
- * TODO: Implement real token management
- * TODO: Add request/response interceptors
- * TODO: Add retry logic for failed requests
+ * Token provider interface for dependency injection
+ * Allows the API client to get tokens without direct coupling to auth service
+ */
+export interface TokenProvider {
+  getAccessToken: () => string | null;
+  refreshToken: () => Promise<boolean>;
+}
+
+/**
+ * Listener for auth state changes (e.g., forced logout)
+ */
+export type AuthStateListener = (authenticated: boolean) => void;
+
+/**
+ * API Client Class
+ *
+ * Handles all HTTP communication with the backend.
+ * Automatically refreshes tokens on 401 responses.
  */
 class ApiClient {
   private baseUrl: string;
-  private authToken: string | null = null;
+  private tokenProvider: TokenProvider | null = null;
+  private authStateListener: AuthStateListener | null = null;
+
+  // Refresh state to prevent concurrent refresh attempts
+  private isRefreshing = false;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
   /**
-   * Set the authentication token
+   * Set the token provider for authorization headers
+   * Called by AuthProvider on mount
    */
-  setAuthToken(token: string | null): void {
-    this.authToken = token;
+  setTokenProvider(provider: TokenProvider | null): void {
+    this.tokenProvider = provider;
   }
 
   /**
-   * Get the current auth token
+   * Set listener for auth state changes (e.g., when refresh fails)
+   * Called by AuthProvider to handle forced logout
    */
-  getAuthToken(): string | null {
-    // TODO: Get token from secure storage
-    return this.authToken || MOCK_AUTH_TOKEN;
+  setAuthStateListener(listener: AuthStateListener | null): void {
+    this.authStateListener = listener;
   }
 
   /**
@@ -58,8 +87,8 @@ class ApiClient {
       ...options.headers,
     };
 
-    if (options.requiresAuth !== false) {
-      const token = this.getAuthToken();
+    if (options.requiresAuth !== false && this.tokenProvider) {
+      const token = this.tokenProvider.getAccessToken();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
@@ -69,11 +98,38 @@ class ApiClient {
   }
 
   /**
-   * Make an API request
+   * Attempt to refresh the access token
+   * Returns true if refresh succeeded, false otherwise
+   */
+  private async attemptRefresh(): Promise<boolean> {
+    // If already refreshing, wait for the existing refresh to complete
+    if (this.isRefreshing && this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    if (!this.tokenProvider) {
+      return false;
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = this.tokenProvider.refreshToken();
+
+    try {
+      const success = await this.refreshPromise;
+      return success;
+    } finally {
+      this.isRefreshing = false;
+      this.refreshPromise = null;
+    }
+  }
+
+  /**
+   * Make an API request with automatic retry on 401
    */
   async request<T>(
     endpoint: string,
     options: RequestOptions = {},
+    isRetry = false,
   ): Promise<ApiResponse<T>> {
     const { method = 'GET', body } = options;
     const url = `${this.baseUrl}${endpoint}`;
@@ -88,10 +144,25 @@ class ApiClient {
     }
 
     const response = await fetch(url, fetchOptions);
+
+    // Handle 401 Unauthorized - attempt token refresh once
+    if (response.status === 401 && !isRetry && options.requiresAuth !== false) {
+      const refreshed = await this.attemptRefresh();
+
+      if (refreshed) {
+        // Retry the original request with new token
+        return this.request<T>(endpoint, options, true);
+      } else {
+        // Refresh failed - notify listener (triggers logout)
+        if (this.authStateListener) {
+          this.authStateListener(false);
+        }
+      }
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
-      // TODO: Handle specific error codes
       throw data as ApiError;
     }
 
@@ -101,28 +172,53 @@ class ApiClient {
   /**
    * GET request
    */
-  async get<T>(endpoint: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<ApiResponse<T>> {
+  async get<T>(
+    endpoint: string,
+    options?: Omit<RequestOptions, 'method' | 'body'>,
+  ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
   /**
    * POST request
    */
-  async post<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method'>): Promise<ApiResponse<T>> {
+  async post<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, 'method'>,
+  ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'POST', body });
   }
 
   /**
    * PUT request
    */
-  async put<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method'>): Promise<ApiResponse<T>> {
+  async put<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, 'method'>,
+  ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'PUT', body });
+  }
+
+  /**
+   * PATCH request
+   */
+  async patch<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, 'method'>,
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, { ...options, method: 'PATCH', body });
   }
 
   /**
    * DELETE request
    */
-  async delete<T>(endpoint: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<ApiResponse<T>> {
+  async delete<T>(
+    endpoint: string,
+    options?: Omit<RequestOptions, 'method' | 'body'>,
+  ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 }
@@ -132,4 +228,3 @@ export const apiClient = new ApiClient(API_BASE_URL);
 
 // Export class for testing
 export { ApiClient };
-

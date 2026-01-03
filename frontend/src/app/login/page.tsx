@@ -2,24 +2,21 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
 
 /**
  * Login Page
- * 
- * Simple login form for authentication.
- * Currently uses mock authentication.
- * 
- * TODO: Add form validation
- * TODO: Add error handling
- * TODO: Add password visibility toggle
- * TODO: Add "forgot password" link
+ *
+ * Phone number + password authentication form.
+ * Redirects to home on successful login.
  */
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const [localError, setLocalError] = useState<string | null>(null);
+  const { login, isLoading, isAuthenticated, error, clearError } = useAuth();
   const router = useRouter();
 
   // Redirect if already authenticated
@@ -30,66 +27,133 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await login(email, password);
-    router.push(ROUTES.HOME);
+    setLocalError(null);
+    clearError();
+
+    // Basic validation
+    if (!phoneNumber.trim()) {
+      setLocalError('Phone number is required');
+      return;
+    }
+    if (!password) {
+      setLocalError('Password is required');
+      return;
+    }
+
+    try {
+      await login(phoneNumber.trim(), password);
+      router.push(ROUTES.HOME);
+    } catch {
+      // Error is handled by auth context
+    }
   };
+
+  const displayError = localError || error;
 
   return (
     <div style={styles.container}>
-      <h1>Login</h1>
-      <p style={styles.subtitle}>Sign in to your account</p>
+      <div style={styles.card}>
+        <h1 style={styles.title}>Welcome back</h1>
+        <p style={styles.subtitle}>Sign in to your account</p>
 
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <div style={styles.field}>
-          <label htmlFor="email" style={styles.label}>
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            style={styles.input}
-            required
-          />
-        </div>
+        {displayError && (
+          <div style={styles.error} role="alert">
+            {displayError}
+          </div>
+        )}
 
-        <div style={styles.field}>
-          <label htmlFor="password" style={styles.label}>
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            style={styles.input}
-            required
-          />
-        </div>
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <div style={styles.field}>
+            <label htmlFor="phoneNumber" style={styles.label}>
+              Phone Number
+            </label>
+            <input
+              id="phoneNumber"
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+92 300 1234567"
+              style={styles.input}
+              autoComplete="tel"
+              disabled={isLoading}
+            />
+          </div>
 
-        <button type="submit" style={styles.button} disabled={isLoading}>
-          {isLoading ? 'Signing in...' : 'Sign In'}
-        </button>
-      </form>
+          <div style={styles.field}>
+            <label htmlFor="password" style={styles.label}>
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={styles.input}
+              autoComplete="current-password"
+              disabled={isLoading}
+            />
+          </div>
 
-      <p style={styles.note}>
-        <strong>Dev Mode:</strong> Any credentials will work (mock auth).
-      </p>
+          <button
+            type="submit"
+            style={{
+              ...styles.button,
+              opacity: isLoading ? 0.7 : 1,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+            }}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        <p style={styles.footer}>
+          Don&apos;t have an account?{' '}
+          <Link href={ROUTES.REGISTER} style={styles.link}>
+            Register
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
+    minHeight: 'calc(100vh - 200px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2rem 1rem',
+  },
+  card: {
+    width: '100%',
     maxWidth: '400px',
-    margin: '2rem auto',
+    padding: '2rem',
+    background: '#fff',
+    borderRadius: '12px',
+    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
+  },
+  title: {
+    margin: 0,
+    fontSize: '1.75rem',
+    fontWeight: '600',
+    color: '#1a1a1a',
   },
   subtitle: {
+    margin: '0.5rem 0 1.5rem',
     color: '#666',
-    marginBottom: '2rem',
+    fontSize: '0.95rem',
+  },
+  error: {
+    padding: '0.75rem 1rem',
+    marginBottom: '1rem',
+    background: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '8px',
+    color: '#dc2626',
+    fontSize: '0.875rem',
   },
   form: {
     display: 'flex',
@@ -104,29 +168,36 @@ const styles: Record<string, React.CSSProperties> = {
   label: {
     fontWeight: '500',
     fontSize: '0.875rem',
+    color: '#374151',
   },
   input: {
-    padding: '0.75rem',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    padding: '0.75rem 1rem',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
     fontSize: '1rem',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+    outline: 'none',
   },
   button: {
-    padding: '0.75rem',
-    background: '#333',
+    padding: '0.875rem 1rem',
+    background: '#059669',
     color: 'white',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '8px',
     fontSize: '1rem',
-    cursor: 'pointer',
+    fontWeight: '500',
     marginTop: '0.5rem',
+    transition: 'background-color 0.15s',
   },
-  note: {
+  footer: {
     marginTop: '1.5rem',
-    padding: '1rem',
-    background: '#f5f5f5',
-    borderRadius: '4px',
+    textAlign: 'center' as const,
+    color: '#666',
     fontSize: '0.875rem',
   },
+  link: {
+    color: '#059669',
+    fontWeight: '500',
+    textDecoration: 'none',
+  },
 };
-

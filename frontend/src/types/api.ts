@@ -68,20 +68,78 @@ export enum UserRole {
 
 /**
  * Authenticated user
+ * Aligned with backend AuthUser - phone number is primary identifier
  */
 export interface AuthUser {
   id: string;
-  email: string;
+  phoneNumber: string;
+  email?: string | null;
   role: UserRole;
+  roles: UserRole[];
 }
 
 /**
- * Auth tokens
+ * Login request DTO
+ * Aligned with backend LoginDto
  */
-export interface AuthTokens {
+export interface LoginRequest {
+  phoneNumber: string;
+  password: string;
+}
+
+/**
+ * Login response DTO
+ * Aligned with backend LoginResponseDto
+ */
+export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
+  tokenType: 'Bearer';
   expiresIn: number;
-  tokenType: string;
+  user: {
+    id: string;
+    phoneNumber: string;
+    roles: string[];
+  };
+}
+
+/**
+ * Register request DTO
+ * Aligned with backend RegisterUserDto
+ */
+export interface RegisterRequest {
+  phoneNumber: string;
+  password: string;
+  email?: string;
+  name?: string;
+}
+
+/**
+ * Register response DTO
+ * Aligned with backend RegisterUserResponseDto
+ */
+export interface RegisterResponse {
+  userId: string;
+  phoneNumber: string;
+  message: string;
+}
+
+/**
+ * Refresh token request DTO
+ * Aligned with backend RefreshTokenDto
+ */
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+/**
+ * Refresh token response DTO
+ * Aligned with backend RefreshTokenResponseDto
+ */
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: 'Bearer';
+  expiresIn: number;
 }
 
