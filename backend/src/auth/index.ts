@@ -26,7 +26,24 @@ export {
 } from './interfaces/auth-user.interface';
 
 // Interfaces - Password hashing (for testing/mocking)
+export { PASSWORD_HASHER, IPasswordHasher } from './interfaces/password-hasher.interface';
+
+// Interfaces - Credentials (for testing/mocking)
 export {
-  PASSWORD_HASHER,
-  IPasswordHasher,
-} from './interfaces/password-hasher.interface';
+  CREDENTIAL_REPOSITORY,
+  ICredentialRepository,
+} from './credentials/credential-repository.interface';
+export { Credential, CredentialType } from './credentials/credential.entity';
+
+// DTOs
+export { RegisterUserDto, RegisterUserResponseDto } from './dto';
+
+// Exceptions
+export {
+  PhoneNumberAlreadyRegisteredException,
+  EmailAlreadyRegisteredException,
+  InvalidPhoneNumberFormatException,
+  WeakPasswordException,
+  InvalidCredentialsException,
+  AccountNotActiveException,
+} from './exceptions';
