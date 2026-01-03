@@ -1,125 +1,333 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { ORDER_REPOSITORY, IOrderRepository } from './repositories/order-repository.interface';
+import { OrderDto } from './dto/order.dto';
+import {
+  OrderStatus,
+  validateTransition,
+  canCancel,
+  isTerminalStatus,
+} from './domain';
+import {
+  OrderNotFoundException,
+  UnauthorizedOrderAccessException,
+  InvalidOrderStateTransitionException,
+  OrderTerminalStateException,
+  OrderCannotBeCancelledException,
+  OrderNotConfirmedException,
+  OrderAlreadyConfirmedException,
+} from './exceptions/order.exceptions';
+import { logWithCorrelation } from '../common/logging/logger';
 
 /**
  * Order Service
  *
- * Handles business logic for order management.
- * Currently contains placeholder implementations.
+ * Implements order business logic with explicit lifecycle management.
+ * All state transitions are validated through the order state machine.
+ *
+ * Design principles:
+ * - Command-style methods for state transitions
+ * - Explicit validation before any state change
+ * - Comprehensive logging with correlation IDs
+ * - No direct status updates - all through command methods
  */
 @Injectable()
 export class OrderService {
-  /**
-   * Find all orders with pagination
-   */
-  async findAll(
-    page: number,
-    limit: number,
-    status?: string,
-  ): Promise<unknown[]> {
-    // TODO: Implement with database
-    return [
-      {
-        id: '1',
-        userId: 'user-1',
-        status: 'pending',
-        total: 29.99,
-        createdAt: new Date().toISOString(),
-      },
-    ];
-  }
+  constructor(
+    @Inject(ORDER_REPOSITORY)
+    private readonly orderRepository: IOrderRepository,
+  ) {}
+
+  // ============================================================
+  // QUERIES
+  // ============================================================
 
   /**
-   * Find order by ID
+   * Get order by ID with ownership verification
    */
-  async findById(id: string): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id,
-      userId: 'user-1',
-      status: 'pending',
-      items: [],
-      total: 29.99,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * Find orders by user ID
-   */
-  async findByUserId(
+  async getOrderById(
+    orderId: string,
     userId: string,
-    page: number,
-    limit: number,
-  ): Promise<unknown[]> {
-    // TODO: Implement with database
-    return [];
+    correlationId: string,
+  ): Promise<OrderDto> {
+    const order = await this.orderRepository.findById(orderId);
+
+    if (!order) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Order not found`,
+        'OrderService',
+        { orderId },
+      );
+      throw new OrderNotFoundException(orderId);
+    }
+
+    if (order.userId !== userId) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Unauthorized order access attempt`,
+        'OrderService',
+        { orderId, requestingUserId: userId, ownerUserId: order.userId },
+      );
+      throw new UnauthorizedOrderAccessException();
+    }
+
+    return order;
   }
+
+  /**
+   * Get all orders for the authenticated user
+   */
+  async getOrdersForUser(
+    userId: string,
+    status?: OrderStatus,
+  ): Promise<OrderDto[]> {
+    return this.orderRepository.findByUserId(userId, status);
+  }
+
+  // ============================================================
+  // COMMANDS - State Transitions
+  // ============================================================
 
   /**
    * Create a new order
+   *
+   * Initial status: CREATED
    */
-  async create(createOrderDto: unknown): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id: 'new-order-id',
-      status: 'pending',
-      ...createOrderDto as object,
-      createdAt: new Date().toISOString(),
-    };
+  async createOrder(userId: string, correlationId: string): Promise<OrderDto> {
+    const order = await this.orderRepository.createOrder(userId);
+
+    this.logStateTransition(correlationId, {
+      orderId: order.id,
+      userId,
+      previousState: null,
+      nextState: OrderStatus.CREATED,
+      action: 'CREATE',
+    });
+
+    return order;
   }
 
   /**
-   * Update order status
+   * Confirm an order
+   *
+   * Transition: CREATED → CONFIRMED
+   *
+   * Business rules:
+   * - Order must be in CREATED status
+   * - Only order owner can confirm
    */
-  async updateStatus(id: string, updateStatusDto: unknown): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id,
-      ...updateStatusDto as object,
-      updatedAt: new Date().toISOString(),
-    };
+  async confirmOrder(
+    orderId: string,
+    userId: string,
+    correlationId: string,
+  ): Promise<OrderDto> {
+    const order = await this.getOrderById(orderId, userId, correlationId);
+    const previousState = order.status;
+    const targetState = OrderStatus.CONFIRMED;
+
+    // Validate transition
+    if (order.status !== OrderStatus.CREATED) {
+      throw new OrderAlreadyConfirmedException(orderId, order.status);
+    }
+
+    this.validateAndLogTransition(
+      correlationId,
+      orderId,
+      userId,
+      previousState,
+      targetState,
+      'CONFIRM',
+    );
+
+    const updatedOrder = await this.orderRepository.updateStatus(
+      orderId,
+      targetState,
+    );
+
+    this.logStateTransition(correlationId, {
+      orderId,
+      userId,
+      previousState,
+      nextState: targetState,
+      action: 'CONFIRM',
+    });
+
+    return updatedOrder;
   }
 
   /**
-   * Cancel order
+   * Pay for an order
+   *
+   * Transition: CONFIRMED → PAID
+   *
+   * Business rules:
+   * - Order must be in CONFIRMED status
+   * - Only order owner can pay
+   *
+   * Note: This is the command to record payment.
+   * Actual payment processing would be handled by PaymentService.
    */
-  async cancel(id: string): Promise<unknown> {
-    // TODO: Implement with database
-    return {
-      id,
-      status: 'cancelled',
-      cancelledAt: new Date().toISOString(),
-    };
+  async payForOrder(
+    orderId: string,
+    userId: string,
+    correlationId: string,
+  ): Promise<OrderDto> {
+    const order = await this.getOrderById(orderId, userId, correlationId);
+    const previousState = order.status;
+    const targetState = OrderStatus.PAID;
+
+    // Validate order is in correct state for payment
+    if (order.status !== OrderStatus.CONFIRMED) {
+      throw new OrderNotConfirmedException(orderId, order.status);
+    }
+
+    this.validateAndLogTransition(
+      correlationId,
+      orderId,
+      userId,
+      previousState,
+      targetState,
+      'PAY',
+    );
+
+    const updatedOrder = await this.orderRepository.updateStatus(
+      orderId,
+      targetState,
+    );
+
+    this.logStateTransition(correlationId, {
+      orderId,
+      userId,
+      previousState,
+      nextState: targetState,
+      action: 'PAY',
+    });
+
+    return updatedOrder;
   }
 
   /**
-   * Get order tracking information
+   * Cancel an order
+   *
+   * Transitions:
+   * - CREATED → CANCELLED
+   * - CONFIRMED → CANCELLED
+   * - PAID → CANCELLED (with refund implications)
+   *
+   * Business rules:
+   * - Cannot cancel SHIPPED, DELIVERED, or already CANCELLED orders
+   * - Only order owner can cancel
    */
-  async getTracking(id: string): Promise<unknown> {
-    // TODO: Implement with tracking service
-    return {
-      orderId: id,
-      status: 'processing',
-      events: [
-        { status: 'created', timestamp: new Date().toISOString() },
-      ],
-    };
+  async cancelOrder(
+    orderId: string,
+    userId: string,
+    correlationId: string,
+  ): Promise<OrderDto> {
+    const order = await this.getOrderById(orderId, userId, correlationId);
+    const previousState = order.status;
+    const targetState = OrderStatus.CANCELLED;
+
+    // Check if order can be cancelled
+    if (!canCancel(order.status)) {
+      if (isTerminalStatus(order.status)) {
+        throw new OrderTerminalStateException(orderId, order.status);
+      }
+      throw new OrderCannotBeCancelledException(orderId, order.status);
+    }
+
+    this.validateAndLogTransition(
+      correlationId,
+      orderId,
+      userId,
+      previousState,
+      targetState,
+      'CANCEL',
+    );
+
+    const updatedOrder = await this.orderRepository.updateStatus(
+      orderId,
+      targetState,
+    );
+
+    this.logStateTransition(correlationId, {
+      orderId,
+      userId,
+      previousState,
+      nextState: targetState,
+      action: 'CANCEL',
+    });
+
+    return updatedOrder;
+  }
+
+  // ============================================================
+  // PRIVATE HELPERS
+  // ============================================================
+
+  /**
+   * Validate state transition and log if invalid
+   */
+  private validateAndLogTransition(
+    correlationId: string,
+    orderId: string,
+    userId: string,
+    from: OrderStatus,
+    to: OrderStatus,
+    action: string,
+  ): void {
+    const validation = validateTransition(from, to);
+
+    if (!validation.valid) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Invalid state transition attempted`,
+        'OrderService',
+        {
+          orderId,
+          userId,
+          action,
+          previousState: from,
+          targetState: to,
+          reason: validation.reason,
+          allowedTransitions: validation.allowedTransitions,
+        },
+      );
+
+      throw new InvalidOrderStateTransitionException(
+        from,
+        to,
+        validation.allowedTransitions,
+      );
+    }
   }
 
   /**
-   * Validate order before creation
+   * Log successful state transition
    */
-  async validate(orderData: unknown): Promise<boolean> {
-    // TODO: Implement validation logic
-    return true;
-  }
-
-  /**
-   * Calculate order total
-   */
-  async calculateTotal(items: unknown[]): Promise<number> {
-    // TODO: Implement calculation logic
-    return 0;
+  private logStateTransition(
+    correlationId: string,
+    params: {
+      orderId: string;
+      userId: string;
+      previousState: OrderStatus | null;
+      nextState: OrderStatus;
+      action: string;
+    },
+  ): void {
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      `Order state transition: ${params.action}`,
+      'OrderService',
+      {
+        orderId: params.orderId,
+        userId: params.userId,
+        previousState: params.previousState,
+        nextState: params.nextState,
+      },
+    );
   }
 }
-

@@ -152,13 +152,13 @@ cd janta-pharmacy
 
 ### Phase 2: Core Development (Current)
 - [x] Backend API scaffold
-- [ ] Frontend application scaffold
+- [x] Frontend application scaffold
 - [ ] Database schema design
 - [ ] Authentication system
 
 ### Phase 3: Features
 - [ ] Inventory management
-- [ ] Order processing
+- [x] Order processing
 - [ ] Customer management
 - [ ] Reporting & analytics
 

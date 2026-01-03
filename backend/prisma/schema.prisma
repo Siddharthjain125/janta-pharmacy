@@ -1,9 +1,6 @@
 // =============================================================================
 // Janta Pharmacy - Prisma Schema
 // =============================================================================
-// This is a SKELETON schema with placeholder models.
-// Real fields and relations will be added in later phases.
-// =============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -15,7 +12,28 @@ datasource db {
 }
 
 // =============================================================================
-// USER DOMAIN
+// ORDER DOMAIN (Implemented)
+// =============================================================================
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  status    OrderStatus @default(CREATED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  CREATED
+  CANCELLED
+}
+
+// =============================================================================
+// PLACEHOLDER MODELS (Not yet implemented)
 // =============================================================================
 
 model User {
@@ -23,42 +41,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // TODO: Add fields
-  // email     String   @unique
-  // password  String
-  // firstName String?
-  // lastName  String?
-  // phone     String?
-  // role      UserRole @default(CUSTOMER)
-
-  // TODO: Add relations
-  // orders        Order[]
-  // prescriptions Prescription[]
-
   @@map("users")
 }
-
-// =============================================================================
-// CATALOG DOMAIN
-// =============================================================================
 
 model Product {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  // TODO: Add fields
-  // name                String
-  // description         String?
-  // sku                 String   @unique
-  // price               Decimal  @db.Decimal(10, 2)
-  // categoryId          String?
-  // requiresPrescription Boolean @default(false)
-  // inStock             Boolean  @default(true)
-
-  // TODO: Add relations
-  // category   Category? @relation(fields: [categoryId], references: [id])
-  // orderItems OrderItem[]
 
   @@map("products")
 }
@@ -68,108 +57,20 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // TODO: Add fields
-  // name        String @unique
-  // description String?
-  // parentId    String?
-
-  // TODO: Add relations
-  // parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  // children Category[] @relation("CategoryHierarchy")
-  // products Product[]
-
   @@map("categories")
-}
-
-// =============================================================================
-// ORDER DOMAIN
-// =============================================================================
-
-model Order {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // TODO: Add fields
-  // userId          String
-  // status          OrderStatus @default(PENDING)
-  // total           Decimal     @db.Decimal(10, 2)
-  // prescriptionId  String?
-
-  // TODO: Add relations
-  // user         User          @relation(fields: [userId], references: [id])
-  // items        OrderItem[]
-  // prescription Prescription? @relation(fields: [prescriptionId], references: [id])
-
-  @@map("orders")
 }
 
 model OrderItem {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
 
-  // TODO: Add fields
-  // orderId   String
-  // productId String
-  // quantity  Int
-  // price     Decimal @db.Decimal(10, 2)
-
-  // TODO: Add relations
-  // order   Order   @relation(fields: [orderId], references: [id])
-  // product Product @relation(fields: [productId], references: [id])
-
   @@map("order_items")
 }
-
-// =============================================================================
-// PRESCRIPTION DOMAIN
-// =============================================================================
 
 model Prescription {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // TODO: Add fields
-  // userId      String
-  // imageUrl    String
-  // status      PrescriptionStatus @default(PENDING)
-  // verifiedAt  DateTime?
-  // verifiedBy  String?
-  // expiresAt   DateTime?
-
-  // TODO: Add relations
-  // user   User    @relation(fields: [userId], references: [id])
-  // orders Order[]
-
   @@map("prescriptions")
 }
-
-// =============================================================================
-// ENUMS (Placeholders)
-// =============================================================================
-
-// TODO: Uncomment when implementing
-// enum UserRole {
-//   CUSTOMER
-//   STAFF
-//   PHARMACIST
-//   ADMIN
-// }
-
-// enum OrderStatus {
-//   PENDING
-//   CONFIRMED
-//   PROCESSING
-//   SHIPPED
-//   DELIVERED
-//   CANCELLED
-// }
-
-// enum PrescriptionStatus {
-//   PENDING
-//   VERIFIED
-//   REJECTED
-//   EXPIRED
-// }
-

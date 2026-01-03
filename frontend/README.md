@@ -1,98 +1,197 @@
-# Frontend
+# Janta Pharmacy - Frontend
 
-> **Status**: 🚧 Not Yet Implemented
-> **Component**: Web Application
+> **Status**: 🏗️ Scaffolding Phase
+> **Framework**: Next.js 14 (App Router)
 
 ---
 
 ## Overview
 
-This directory will contain the customer-facing web application and admin dashboard for Janta Pharmacy.
+This is the frontend application for Janta Pharmacy, built with **Next.js** and **TypeScript**. Following the project's **architecture-first** philosophy, this is currently a structural scaffold designed to be extended with real features.
 
-## Planned Structure
+### What This Is
+
+- ✅ Clean Next.js App Router project structure
+- ✅ TypeScript configuration
+- ✅ API client abstraction (fetch-based)
+- ✅ Authentication context (mocked)
+- ✅ Protected route component
+- ✅ Basic routing setup
+- ✅ Type definitions aligned with backend
+
+### What This Is NOT (Yet)
+
+- ❌ Complete UI/UX implementation
+- ❌ Real authentication flow
+- ❌ Form validation
+- ❌ State management library
+- ❌ Styling framework (Tailwind, etc.)
+- ❌ Testing setup
+
+---
+
+## Project Structure
 
 ```
 frontend/
 ├── src/
-│   ├── components/    # Reusable UI components
-│   ├── pages/         # Page components / routes
-│   ├── hooks/         # Custom React hooks
-│   ├── services/      # API client and services
-│   ├── store/         # State management
-│   ├── styles/        # Global styles and themes
-│   └── utils/         # Utility functions
-├── public/
-├── tests/
+│   ├── app/                    # Next.js App Router pages
+│   │   ├── layout.tsx          # Root layout
+│   │   ├── page.tsx            # Home page
+│   │   ├── login/              # Login page
+│   │   └── orders/             # Orders pages
+│   │       ├── page.tsx        # Orders list
+│   │       └── [id]/           # Order detail
+│   │
+│   ├── lib/                    # Core utilities
+│   │   ├── api-client.ts       # HTTP client
+│   │   ├── auth-context.tsx    # Auth provider
+│   │   └── constants.ts        # App constants
+│   │
+│   ├── components/             # Shared components
+│   │   ├── Header.tsx          # Navigation header
+│   │   └── ProtectedRoute.tsx  # Auth guard
+│   │
+│   └── types/                  # TypeScript types
+│       └── api.ts              # API types (aligned with backend)
+│
+├── public/                     # Static assets
 ├── package.json
-└── README.md
+├── tsconfig.json
+└── next.config.js
 ```
 
-## Technology Stack
+---
 
-> **Decision Pending** - See [/docs/decisions.md](/docs/decisions.md)
+## Why Scaffolding First?
 
-### Candidates Under Consideration
+1. **Alignment with Backend**: Types and API contracts match the backend exactly
+2. **Clear Architecture**: Structure is established before features
+3. **Team Onboarding**: New developers understand the patterns
+4. **Progressive Enhancement**: Features added incrementally
 
-| Option | Framework | Rendering | Pros | Cons |
-|--------|-----------|-----------|------|------|
-| Next.js | React | SSR/SSG/ISR | Full-featured, Vercel support | Opinionated |
-| Remix | React | SSR | Modern patterns, nested routing | Newer ecosystem |
-| Vite + React | React | SPA | Fast, flexible | Manual SSR setup |
-
-### UI Library Options
-
-- **Tailwind CSS** - Utility-first CSS
-- **shadcn/ui** - Accessible component primitives
-- **Radix UI** - Headless components
-- **Material UI** - Complete component library
+---
 
 ## Getting Started
 
-Instructions will be added once the technology stack is selected.
+### Prerequisites
+
+- Node.js >= 18.0.0
+- npm or yarn
+
+### Installation
 
 ```bash
-# Placeholder - commands will vary based on stack
 cd frontend
 npm install
+```
+
+### Development
+
+```bash
 npm run dev
 ```
 
-## Design System
+Open [http://localhost:3001](http://localhost:3001) (or the port shown in terminal).
 
-A design system will be established including:
+### Build
 
-- Color palette
-- Typography scale
-- Spacing system
-- Component library
-- Accessibility guidelines
+```bash
+npm run build
+npm run start
+```
 
-## Features (Planned)
+---
 
-### Customer-Facing
-- [ ] Product browsing and search
-- [ ] Shopping cart
-- [ ] Checkout flow
-- [ ] Order history
-- [ ] User profile
+## Pages
 
-### Admin Dashboard
-- [ ] Inventory management
-- [ ] Order processing
-- [ ] Customer management
-- [ ] Analytics and reports
+| Route | Description | Auth Required |
+|-------|-------------|---------------|
+| `/` | Home page | No |
+| `/login` | Login page | No |
+| `/orders` | Orders list | Yes |
+| `/orders/[id]` | Order detail | Yes |
+
+---
+
+## API Integration
+
+The frontend is designed to connect to the backend API:
+
+```typescript
+import { apiClient } from '@/lib/api-client';
+
+// Example (not yet implemented)
+const orders = await apiClient.get<Order[]>('/orders');
+```
+
+### Backend URL
+
+Set in environment or defaults to `http://localhost:3000/api/v1`:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
+```
+
+---
+
+## Authentication
+
+Currently using **mock authentication** for development:
+
+- Any email/password combination works
+- User is always authenticated with mock data
+- Token is a placeholder string
+
+### Real Auth TODO
+
+1. Connect to `/auth/login` endpoint
+2. Store tokens securely
+3. Implement token refresh
+4. Add logout flow
+
+---
+
+## Type Safety
+
+Types in `src/types/api.ts` are aligned with backend DTOs:
+
+- `Order` ↔ `OrderDto`
+- `OrderStatus` ↔ `OrderStatus` enum
+- `ApiResponse<T>` ↔ `ApiResponse<T>`
+
+---
 
 ## Next Steps
 
-1. [ ] Select framework and UI library
-2. [ ] Initialize project structure
-3. [ ] Set up design system
-4. [ ] Implement core layout and navigation
-5. [ ] Connect to backend API
+1. [ ] Add Tailwind CSS for styling
+2. [ ] Implement real API calls
+3. [ ] Add form validation (zod/yup)
+4. [ ] Connect to real authentication
+5. [ ] Add error boundaries
+6. [ ] Add loading states
+7. [ ] Add testing (Jest, React Testing Library)
+
+---
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm run type-check` | Run TypeScript check |
 
 ---
 
 ## Contributing
 
-Please read the main [README.md](/README.md) for contribution guidelines.
+Please refer to the main [README.md](/README.md) for contribution guidelines.
 
+---
+
+## License
+
+MIT - See [LICENSE](/LICENSE)

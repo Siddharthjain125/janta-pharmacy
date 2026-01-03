@@ -36,6 +36,8 @@ This document records significant architectural decisions made for the Janta Pha
 | ADR-002 | Git Branching Strategy | Accepted | 2025-12 |
 | ADR-003 | Branch Protection Rules | Accepted | 2025-12 |
 | ADR-004 | Monorepo Structure | Accepted | 2025-12 |
+| ADR-005 | Backend Technology Stack | Accepted | 2025-12 |
+| ADR-006 | Order State Machine Pattern | Accepted | 2025-12 |
 
 ---
 
@@ -269,15 +271,181 @@ For our team size and project scope, monorepo advantages outweigh disadvantages.
 
 ---
 
+## ADR-005: Backend Technology Stack
+
+### Status
+**Accepted**
+
+### Context
+Need to select a backend technology stack that:
+- Supports rapid development
+- Has strong TypeScript support
+- Provides good structure for modular architecture
+- Has mature ecosystem and documentation
+- Suitable for a small team
+
+### Decision
+Adopt the following backend stack:
+
+| Component | Choice | Rationale |
+|-----------|--------|-----------|
+| Runtime | Node.js | JavaScript ecosystem, async I/O |
+| Language | TypeScript | Type safety, better tooling |
+| Framework | NestJS | Modular architecture, DI, decorators |
+| ORM | Prisma | Type-safe queries, schema-first |
+| Database | PostgreSQL | Reliable, SQL, JSON support |
+| API Style | REST | Simplicity, wide tooling support |
+
+### NestJS Module Structure
+
+```
+module/
+├── domain/           # Business rules, state machines
+├── dto/              # Data transfer objects
+├── exceptions/       # Domain-specific errors
+├── repositories/     # Data access layer
+├── *.service.ts      # Business logic
+├── *.controller.ts   # HTTP endpoints
+└── *.module.ts       # Dependency wiring
+```
+
+### Consequences
+
+**Positive:**
+- Strong typing throughout the stack
+- Clear architectural patterns (modules, DI)
+- Good documentation and community
+- Easy to onboard new developers
+- Scales well for our expected load
+
+**Negative:**
+- JavaScript single-threaded nature for CPU-bound tasks
+- Learning curve for NestJS patterns
+- Prisma limitations for complex queries
+
+**Mitigations:**
+- Use worker threads for CPU-intensive tasks if needed
+- Document patterns and provide examples
+- Fallback to raw SQL for complex queries
+
+---
+
+## ADR-006: Order State Machine Pattern
+
+### Status
+**Accepted**
+
+### Context
+Order management requires:
+- Clear lifecycle states (created, confirmed, paid, shipped, delivered, cancelled)
+- Enforced state transitions (can't ship before payment)
+- Audit trail for state changes
+- Consistent error handling for invalid transitions
+
+Options considered:
+1. **Simple status field**: Just update status, validate in service
+2. **State machine library**: Use xstate or similar
+3. **Domain-driven state machine**: Custom implementation in domain layer
+
+### Decision
+Implement a **custom domain-driven state machine** within the Order module.
+
+### Implementation Details
+
+#### 1. Centralized State Transitions
+
+```typescript
+// order-state-machine.ts
+const ALLOWED_TRANSITIONS = {
+  CREATED:   [CONFIRMED, CANCELLED],
+  CONFIRMED: [PAID, CANCELLED],
+  PAID:      [SHIPPED, CANCELLED],
+  SHIPPED:   [DELIVERED, CANCELLED],
+  DELIVERED: [],  // Terminal
+  CANCELLED: [],  // Terminal
+};
+```
+
+#### 2. Command-Style Service Methods
+
+```typescript
+// Instead of: updateOrderStatus(id, newStatus)
+// Use intent-based commands:
+confirmOrder(orderId, userId, correlationId)
+payForOrder(orderId, userId, correlationId)
+cancelOrder(orderId, userId, correlationId)
+```
+
+#### 3. Intent-Based API Routes
+
+```
+POST /orders              → Create order (CREATED)
+POST /orders/:id/confirm  → CREATED → CONFIRMED
+POST /orders/:id/pay      → CONFIRMED → PAID
+POST /orders/:id/cancel   → * → CANCELLED
+```
+
+#### 4. Domain Exceptions
+
+| Exception | HTTP | When |
+|-----------|------|------|
+| `InvalidOrderStateTransitionException` | 409 | Transition not allowed |
+| `OrderTerminalStateException` | 409 | Order in final state |
+| `OrderCannotBeCancelledException` | 409 | Cancel not allowed |
+| `OrderNotConfirmedException` | 409 | Pay before confirm |
+| `OrderAlreadyConfirmedException` | 409 | Already confirmed |
+
+#### 5. Comprehensive Logging
+
+Every state transition logs:
+```json
+{
+  "level": "INFO",
+  "correlationId": "uuid",
+  "message": "Order state transition: CONFIRM",
+  "orderId": "uuid",
+  "userId": "uuid",
+  "previousState": "CREATED",
+  "nextState": "CONFIRMED"
+}
+```
+
+### Consequences
+
+**Positive:**
+- All transition rules in one place
+- Easy to audit and modify
+- Clear error messages for invalid operations
+- Self-documenting code
+- Extensible to other domains (Prescription, Payment)
+
+**Negative:**
+- More code than simple status updates
+- Need to update state machine for new transitions
+- Custom implementation vs battle-tested library
+
+**Mitigations:**
+- Keep state machine simple and well-documented
+- Add comprehensive tests for transitions
+- Consider xstate if complexity grows significantly
+
+### Pattern Replication
+
+This pattern should be applied to:
+- Prescription lifecycle (uploaded → verified → approved/rejected)
+- Payment lifecycle (pending → processing → completed/failed)
+- Delivery lifecycle (assigned → picked → in-transit → delivered)
+
+---
+
 ## Pending Decisions
 
 The following decisions need to be made:
 
 | Topic | Priority | Target Date |
 |-------|----------|-------------|
-| Frontend framework selection | High | TBD |
-| Backend technology stack | High | TBD |
-| Database selection | High | TBD |
+| Frontend framework selection | ✅ Decided | Next.js |
+| Database selection | ✅ Decided | PostgreSQL |
 | Cloud provider | High | TBD |
 | Mobile framework selection | Medium | TBD |
 | Authentication provider | Medium | TBD |
