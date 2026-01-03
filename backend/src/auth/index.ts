@@ -37,6 +37,10 @@ export { Credential, CredentialType } from './credentials/credential.entity';
 
 // DTOs
 export { RegisterUserDto, RegisterUserResponseDto } from './dto';
+export { LoginDto, LoginResponseDto } from './dto';
+
+// Config
+export { JwtPayload, getJwtConfig } from './config/jwt.config';
 
 // Exceptions
 export {

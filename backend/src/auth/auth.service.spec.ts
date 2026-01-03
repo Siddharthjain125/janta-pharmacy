@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import { PASSWORD_HASHER } from './interfaces/password-hasher.interface';
@@ -11,18 +12,20 @@ import {
   PhoneNumberAlreadyRegisteredException,
   InvalidPhoneNumberFormatException,
   WeakPasswordException,
+  InvalidCredentialsException,
 } from './exceptions';
 
 /**
  * AuthService Tests
  *
- * These tests validate the behavior of the user registration flow.
+ * These tests validate the behavior of user registration and login flows.
  * They use real implementations (not mocks) to ensure realistic behavior.
  *
  * Design decisions:
  * - Real InMemoryUserRepository (fast, no DB)
  * - Real BcryptPasswordHasher (validates actual hashing)
  * - Real InMemoryCredentialRepository (validates credential storage)
+ * - Real JwtService with test secret
  * - Focus on observable behavior, not implementation details
  */
 describe('AuthService', () => {
@@ -30,6 +33,9 @@ describe('AuthService', () => {
   let userRepository: InMemoryUserRepository;
   let credentialRepository: InMemoryCredentialRepository;
   let passwordHasher: BcryptPasswordHasher;
+  let jwtService: JwtService;
+
+  const TEST_JWT_SECRET = 'test-jwt-secret-for-testing-only';
 
   beforeEach(async () => {
     // Create fresh instances for each test
@@ -38,6 +44,12 @@ describe('AuthService', () => {
     passwordHasher = new BcryptPasswordHasher();
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [
+        JwtModule.register({
+          secret: TEST_JWT_SECRET,
+          signOptions: { expiresIn: '15m', issuer: 'janta-pharmacy' },
+        }),
+      ],
       providers: [
         AuthService,
         UserService,
@@ -57,6 +69,7 @@ describe('AuthService', () => {
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
+    jwtService = module.get<JwtService>(JwtService);
   });
 
   afterEach(() => {
@@ -300,5 +313,153 @@ describe('AuthService', () => {
       });
     });
   });
-});
 
+  describe('login', () => {
+    const correlationId = 'test-correlation-id';
+
+    // Helper to register a user before testing login
+    async function registerTestUser(
+      phoneNumber = '+919876543210',
+      password = 'SecurePass123',
+    ) {
+      await authService.registerUser({ phoneNumber, password }, correlationId);
+      return { phoneNumber, password };
+    }
+
+    describe('successful login', () => {
+      it('should return access token for valid credentials', async () => {
+        const { phoneNumber, password } = await registerTestUser();
+
+        const result = await authService.login({ phoneNumber, password }, correlationId);
+
+        expect(result).toBeDefined();
+        expect(result.accessToken).toBeDefined();
+        expect(result.tokenType).toBe('Bearer');
+        expect(result.expiresIn).toBeGreaterThan(0);
+      });
+
+      it('should return valid JWT with correct payload', async () => {
+        const { phoneNumber, password } = await registerTestUser();
+
+        const result = await authService.login({ phoneNumber, password }, correlationId);
+
+        // Decode and verify the token
+        const payload = jwtService.verify(result.accessToken, {
+          secret: TEST_JWT_SECRET,
+        });
+
+        expect(payload.sub).toBeDefined(); // userId
+        expect(payload.phone).toBe('+919876543210');
+        expect(payload.roles).toBeDefined();
+        expect(payload.type).toBe('access');
+      });
+
+      it('should return user info in response', async () => {
+        const { phoneNumber, password } = await registerTestUser();
+
+        const result = await authService.login({ phoneNumber, password }, correlationId);
+
+        expect(result.user).toBeDefined();
+        expect(result.user.id).toBeDefined();
+        expect(result.user.phoneNumber).toBe('+919876543210');
+        expect(result.user.roles).toBeDefined();
+      });
+
+      it('should normalize phone number during login', async () => {
+        await registerTestUser('+919876543210', 'SecurePass123');
+
+        // Login with different format
+        const result = await authService.login(
+          {
+            phoneNumber: '9876543210', // Without +91
+            password: 'SecurePass123',
+          },
+          correlationId,
+        );
+
+        expect(result.accessToken).toBeDefined();
+      });
+    });
+
+    describe('failed login', () => {
+      it('should reject non-existent phone number', async () => {
+        await expect(
+          authService.login(
+            {
+              phoneNumber: '+919999999999',
+              password: 'SomePassword1',
+            },
+            correlationId,
+          ),
+        ).rejects.toThrow(InvalidCredentialsException);
+      });
+
+      it('should reject wrong password', async () => {
+        await registerTestUser('+919876543210', 'CorrectPass123');
+
+        await expect(
+          authService.login(
+            {
+              phoneNumber: '+919876543210',
+              password: 'WrongPass123',
+            },
+            correlationId,
+          ),
+        ).rejects.toThrow(InvalidCredentialsException);
+      });
+
+      it('should not reveal whether phone exists in error', async () => {
+        // Error for non-existent user
+        let nonExistentError: Error | null = null;
+        try {
+          await authService.login(
+            {
+              phoneNumber: '+919999999999',
+              password: 'SomePassword1',
+            },
+            correlationId,
+          );
+        } catch (e) {
+          nonExistentError = e as Error;
+        }
+
+        // Error for wrong password
+        await registerTestUser('+919876543210', 'CorrectPass123');
+        let wrongPasswordError: Error | null = null;
+        try {
+          await authService.login(
+            {
+              phoneNumber: '+919876543210',
+              password: 'WrongPass123',
+            },
+            correlationId,
+          );
+        } catch (e) {
+          wrongPasswordError = e as Error;
+        }
+
+        // Both should throw the same error type (prevent enumeration)
+        expect(nonExistentError).toBeInstanceOf(InvalidCredentialsException);
+        expect(wrongPasswordError).toBeInstanceOf(InvalidCredentialsException);
+        expect(nonExistentError?.message).toBe(wrongPasswordError?.message);
+      });
+    });
+
+    describe('response safety', () => {
+      it('should not include password in response', async () => {
+        const { phoneNumber, password } = await registerTestUser();
+
+        const result = await authService.login({ phoneNumber, password }, correlationId);
+
+        // Response should not contain password
+        expect((result as unknown as Record<string, unknown>).password).toBeUndefined();
+        expect(
+          (result.user as unknown as Record<string, unknown>).password,
+        ).toBeUndefined();
+        expect(
+          (result.user as unknown as Record<string, unknown>).passwordHash,
+        ).toBeUndefined();
+      });
+    });
+  });
+});
