@@ -41,7 +41,7 @@ async function bootstrap(): Promise<void> {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID'],
   });
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 3001;
   await app.listen(port);
 
   logger.log(`🚀 Janta Pharmacy API running on: http://localhost:${port}/api/v1`);

@@ -39,6 +39,7 @@ export class JwtAuthGuard implements CanActivate {
     // - Verify signature using secret/public key
     // - Check token expiration
     // - Validate issuer and audience
+    // - Look up user from UserService
     // - Extract real user payload from token
 
     // Attach mock user to request (simulates decoded JWT payload)
@@ -72,12 +73,14 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   private getMockUserFromToken(_token: string): AuthUser {
-    // TODO: Replace with real JWT decode
-    // This mock simulates different users based on token prefix for testing
+    // TODO: Replace with real JWT decode + UserService lookup
+    // This mock simulates a user for development/testing
     return {
       id: 'mock-user-id',
+      phoneNumber: '+919999999999',
       email: 'mock@example.com',
       role: UserRole.CUSTOMER,
+      roles: [UserRole.CUSTOMER],
     };
   }
 }
