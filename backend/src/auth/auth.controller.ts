@@ -9,7 +9,12 @@ import {
 import { AuthService } from './auth.service';
 import { ApiResponse } from '../common/api/api-response';
 import { Public } from './decorators/public.decorator';
-import { RegisterUserDto, RegisterUserResponseDto } from './dto';
+import {
+  RegisterUserDto,
+  RegisterUserResponseDto,
+  LoginDto,
+  LoginResponseDto,
+} from './dto';
 import { randomUUID } from 'crypto';
 
 /**
@@ -20,7 +25,7 @@ import { randomUUID } from 'crypto';
  *
  * Endpoints:
  * - POST /auth/register - Register new user with phone + password
- * - POST /auth/login - Login (placeholder)
+ * - POST /auth/login - Login with phone + password
  * - POST /auth/refresh - Refresh token (placeholder)
  */
 @Controller('auth')
@@ -47,13 +52,19 @@ export class AuthController {
 
   /**
    * Login with phone number and password
-   * TODO: Implement real login
+   *
+   * @param loginDto - Login credentials
+   * @returns JWT access token and user info
    */
   @Post('login')
   @Public()
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto): Promise<ApiResponse<unknown>> {
-    const result = await this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Headers('x-correlation-id') correlationId?: string,
+  ): Promise<ApiResponse<LoginResponseDto>> {
+    const corrId = correlationId || randomUUID();
+    const result = await this.authService.login(loginDto, corrId);
     return ApiResponse.success(result, 'Login successful');
   }
 
@@ -64,15 +75,12 @@ export class AuthController {
   @Post('refresh')
   @Public()
   @HttpCode(HttpStatus.OK)
-  async refresh(@Body() refreshDto: RefreshTokenDto): Promise<ApiResponse<unknown>> {
+  async refresh(
+    @Body() refreshDto: RefreshTokenDto,
+  ): Promise<ApiResponse<unknown>> {
     const result = await this.authService.refreshToken(refreshDto);
     return ApiResponse.success(result, 'Token refreshed successfully');
   }
-}
-
-interface LoginDto {
-  email: string;
-  password: string;
 }
 
 interface RefreshTokenDto {

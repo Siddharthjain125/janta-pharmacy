@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -8,6 +9,7 @@ import { BcryptPasswordHasher } from './infrastructure/bcrypt-password-hasher';
 import { CREDENTIAL_REPOSITORY } from './credentials/credential-repository.interface';
 import { InMemoryCredentialRepository } from './credentials/in-memory-credential.repository';
 import { UserModule } from '../user/user.module';
+import { getJwtConfig } from './config/jwt.config';
 
 /**
  * Auth Module
@@ -16,14 +18,16 @@ import { UserModule } from '../user/user.module';
  *
  * Responsibilities:
  * - User registration with password
+ * - User login with password
  * - Password hashing (pluggable implementation)
  * - Credential storage
- * - JWT token management (planned)
+ * - JWT token generation and validation
  * - Authentication guards
  * - Role-based authorization
  *
  * Dependencies:
  * - UserModule: For user identity management
+ * - JwtModule: For token generation/validation
  *
  * Design decisions:
  * - Password hashing is behind an interface (IPasswordHasher)
@@ -31,17 +35,31 @@ import { UserModule } from '../user/user.module';
  * - BcryptPasswordHasher is the default, can be swapped
  * - In-memory credential storage for now, will be replaced with DB
  * - Guards are exported for use in other modules
+ * - JWT config is centralized and env-based
  *
  * Future extensions:
- * - Login with password
+ * - Refresh token support
  * - OTP verification (new provider, same interface pattern)
  * - Social login (OAuth providers)
- * - JWT generation and validation
  * - Session management
  */
 @Module({
   imports: [
     UserModule, // For user identity management
+
+    // JWT configuration
+    JwtModule.registerAsync({
+      useFactory: () => {
+        const config = getJwtConfig();
+        return {
+          secret: config.secret,
+          signOptions: {
+            expiresIn: config.expiresIn as `${number}${'s' | 'm' | 'h' | 'd'}`,
+            issuer: config.issuer,
+          },
+        };
+      },
+    }),
   ],
   controllers: [AuthController],
   providers: [
@@ -70,6 +88,7 @@ import { UserModule } from '../user/user.module';
     AuthService,
     JwtAuthGuard,
     RolesGuard,
+    JwtModule, // Export for use in guards
     PASSWORD_HASHER, // Export for testing/mocking
     CREDENTIAL_REPOSITORY, // Export for testing/mocking
   ],

@@ -1,5 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
+import { canAuthenticate } from '../user/domain';
 import {
   PASSWORD_HASHER,
   IPasswordHasher,
@@ -8,15 +10,22 @@ import {
   CREDENTIAL_REPOSITORY,
   ICredentialRepository,
 } from './credentials/credential-repository.interface';
-import { RegisterUserDto, RegisterUserResponseDto } from './dto';
+import {
+  RegisterUserDto,
+  RegisterUserResponseDto,
+  LoginDto,
+  LoginResponseDto,
+} from './dto';
 import {
   PhoneNumberAlreadyRegisteredException,
-  EmailAlreadyRegisteredException,
   InvalidPhoneNumberFormatException,
   WeakPasswordException,
+  InvalidCredentialsException,
+  AccountNotActiveException,
 } from './exceptions';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../user/domain';
 import { logWithCorrelation } from '../common/logging/logger';
+import { JwtPayload, getJwtConfig } from './config/jwt.config';
 
 /**
  * Auth Service
@@ -25,25 +34,28 @@ import { logWithCorrelation } from '../common/logging/logger';
  *
  * Responsibilities:
  * - User registration with password
+ * - User login with password
  * - Password validation
  * - Credential storage
+ * - JWT token generation
  *
  * Design decisions:
- * - Depends on UserService for identity creation
+ * - Depends on UserService for identity
  * - Depends on IPasswordHasher for secure hashing
  * - Depends on ICredentialRepository for credential storage
+ * - Depends on JwtService for token generation
  * - Does NOT expose password hashes
  *
  * Future extensions:
- * - Login with password
+ * - Refresh token support
  * - OTP generation and verification
  * - Social login handling
- * - JWT token generation
  */
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
+    private readonly jwtService: JwtService,
     @Inject(PASSWORD_HASHER)
     private readonly passwordHasher: IPasswordHasher,
     @Inject(CREDENTIAL_REPOSITORY)
@@ -130,6 +142,117 @@ export class AuthService {
   }
 
   /**
+   * Login with phone number and password
+   *
+   * Flow:
+   * 1. Normalize phone number
+   * 2. Find user by phone number
+   * 3. Check user can authenticate (status check)
+   * 4. Find password credential
+   * 5. Verify password
+   * 6. Generate JWT access token
+   * 7. Return token and user info
+   *
+   * Security notes:
+   * - Uses timing-safe password comparison
+   * - Returns generic error to prevent enumeration
+   * - Logs failed attempts (without passwords)
+   */
+  async login(dto: LoginDto, correlationId: string): Promise<LoginResponseDto> {
+    const normalizedPhone = normalizePhoneNumber(dto.phoneNumber);
+
+    // 1. Find user by phone number
+    const user = await this.userService.getUserByPhoneNumber(normalizedPhone);
+    if (!user) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Login failed: user not found',
+        'AuthService',
+        { phoneNumber: normalizedPhone },
+      );
+      // Intentionally vague error to prevent enumeration
+      throw new InvalidCredentialsException();
+    }
+
+    // 2. Check if user can authenticate
+    if (!canAuthenticate(user.status)) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Login failed: account not active',
+        'AuthService',
+        { userId: user.id, status: user.status },
+      );
+      throw new AccountNotActiveException();
+    }
+
+    // 3. Find password credential
+    const credential = await this.credentialRepository.findByUserIdAndType(
+      user.id,
+      'password',
+    );
+    if (!credential || !credential.value) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Login failed: no password credential',
+        'AuthService',
+        { userId: user.id },
+      );
+      throw new InvalidCredentialsException();
+    }
+
+    // 4. Verify password
+    const isValidPassword = await this.passwordHasher.compare(
+      dto.password,
+      credential.value,
+    );
+    if (!isValidPassword) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        'Login failed: invalid password',
+        'AuthService',
+        { userId: user.id },
+      );
+      throw new InvalidCredentialsException();
+    }
+
+    // 5. Generate JWT access token
+    const jwtConfig = getJwtConfig();
+    const payload: JwtPayload = {
+      sub: user.id,
+      phone: user.phoneNumber,
+      email: user.email,
+      roles: user.roles,
+      type: 'access',
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      'Login successful',
+      'AuthService',
+      { userId: user.id, phoneNumber: normalizedPhone },
+    );
+
+    // 6. Return token and user info
+    return {
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: this.parseExpiresIn(jwtConfig.expiresIn),
+      user: {
+        id: user.id,
+        phoneNumber: user.phoneNumber,
+        roles: user.roles,
+      },
+    };
+  }
+
+  /**
    * Validate password meets minimum requirements
    * Throws WeakPasswordException if validation fails
    */
@@ -152,30 +275,53 @@ export class AuthService {
     }
   }
 
+  /**
+   * Parse expiration string to seconds
+   */
+  private parseExpiresIn(expiresIn: string): number {
+    // Handle numeric strings
+    const numValue = parseInt(expiresIn, 10);
+    if (!isNaN(numValue) && expiresIn === String(numValue)) {
+      return numValue;
+    }
+
+    // Parse time strings like '15m', '1h', '7d'
+    const match = expiresIn.match(/^(\d+)([smhd])$/);
+    if (!match) {
+      return 900; // Default to 15 minutes
+    }
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+
+    switch (unit) {
+      case 's':
+        return value;
+      case 'm':
+        return value * 60;
+      case 'h':
+        return value * 3600;
+      case 'd':
+        return value * 86400;
+      default:
+        return 900;
+    }
+  }
+
   // ============================================
   // TODO: Methods below are placeholders
   // ============================================
 
   /**
-   * Authenticate user with credentials
-   * TODO: Implement with real authentication logic
-   */
-  async login(loginDto: { email: string; password: string }): Promise<AuthTokens> {
-    // TODO: Validate credentials against database
-    // TODO: Generate real JWT tokens
-    return {
-      accessToken: 'placeholder-access-token',
-      refreshToken: 'placeholder-refresh-token',
-      expiresIn: 3600,
-      tokenType: 'Bearer',
-    };
-  }
-
-  /**
    * Refresh access token using refresh token
    * TODO: Implement with real token refresh logic
    */
-  async refreshToken(refreshDto: { refreshToken: string }): Promise<AuthTokens> {
+  async refreshToken(refreshDto: { refreshToken: string }): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    tokenType: string;
+  }> {
     // TODO: Validate refresh token
     // TODO: Generate new access token
     return {
@@ -185,39 +331,4 @@ export class AuthService {
       tokenType: 'Bearer',
     };
   }
-
-  /**
-   * Validate access token
-   * TODO: Implement with real JWT validation
-   */
-  async validateToken(token: string): Promise<TokenPayload | null> {
-    // TODO: Verify JWT signature and expiration
-    return {
-      userId: 'placeholder-user-id',
-      email: 'placeholder@example.com',
-      roles: ['user'],
-    };
-  }
-
-  /**
-   * Extract user from token
-   * TODO: Implement with real token parsing
-   */
-  async getUserFromToken(token: string): Promise<unknown> {
-    // TODO: Decode and return user info
-    return null;
-  }
-}
-
-interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: string;
-}
-
-interface TokenPayload {
-  userId: string;
-  email: string;
-  roles: string[];
 }
