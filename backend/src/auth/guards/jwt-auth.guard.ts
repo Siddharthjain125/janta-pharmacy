@@ -5,15 +5,36 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AuthUser, UserRole } from '../interfaces/auth-user.interface';
+import { JwtPayload, getJwtConfig } from '../config/jwt.config';
 
+/**
+ * JWT Auth Guard
+ *
+ * Validates JWT access tokens and attaches user context to requests.
+ *
+ * Features:
+ * - Extracts Bearer token from Authorization header
+ * - Validates JWT signature and expiration
+ * - Populates request.user with AuthUser
+ * - Supports @Public() decorator to skip auth
+ *
+ * Security notes:
+ * - Rejects expired tokens
+ * - Rejects tampered tokens (invalid signature)
+ * - Returns generic errors to prevent information leakage
+ */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly jwtService: JwtService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     // Check if route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
@@ -31,21 +52,51 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing authentication token');
     }
 
-    if (!this.isValidTokenFormat(token)) {
-      throw new UnauthorizedException('Invalid token format');
+    try {
+      // Verify and decode the JWT
+      const config = getJwtConfig();
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret: config.secret,
+        issuer: config.issuer,
+      });
+
+      // Validate token type
+      if (payload.type !== 'access') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      // Build AuthUser from JWT payload
+      const authUser: AuthUser = {
+        id: payload.sub,
+        phoneNumber: payload.phone,
+        email: payload.email,
+        role: (payload.roles[0] as UserRole) || UserRole.CUSTOMER,
+        roles: payload.roles as UserRole[],
+      };
+
+      // Attach user to request
+      (request as Request & { user: AuthUser }).user = authUser;
+
+      return true;
+    } catch (error) {
+      // Handle specific JWT errors
+      if (error instanceof Error) {
+        if (error.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('Token has expired');
+        }
+        if (error.name === 'JsonWebTokenError') {
+          throw new UnauthorizedException('Invalid token');
+        }
+      }
+
+      // Re-throw if already UnauthorizedException
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      // Generic error for unexpected cases
+      throw new UnauthorizedException('Authentication failed');
     }
-
-    // TODO: Implement real JWT verification
-    // - Verify signature using secret/public key
-    // - Check token expiration
-    // - Validate issuer and audience
-    // - Extract real user payload from token
-
-    // Attach mock user to request (simulates decoded JWT payload)
-    const mockUser: AuthUser = this.getMockUserFromToken(token);
-    (request as Request & { user: AuthUser }).user = mockUser;
-
-    return true;
   }
 
   private extractTokenFromHeader(request: Request): string | null {
@@ -62,22 +113,5 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     return token;
-  }
-
-  private isValidTokenFormat(token: string): boolean {
-    // TODO: Implement real JWT format validation
-    // For now, check basic structure (3 parts separated by dots for JWT)
-    const parts = token.split('.');
-    return parts.length === 3 && parts.every((part) => part.length > 0);
-  }
-
-  private getMockUserFromToken(_token: string): AuthUser {
-    // TODO: Replace with real JWT decode
-    // This mock simulates different users based on token prefix for testing
-    return {
-      id: 'mock-user-id',
-      email: 'mock@example.com',
-      role: UserRole.CUSTOMER,
-    };
   }
 }

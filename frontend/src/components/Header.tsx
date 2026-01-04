@@ -6,13 +6,21 @@ import { ROUTES } from '@/lib/constants';
 
 /**
  * Header Component
- * 
- * Simple navigation header with auth-aware links.
- * TODO: Add proper styling
- * TODO: Add mobile menu
+ *
+ * Navigation header with auth-aware links.
+ * Shows phone number for authenticated users (primary identifier).
  */
 export function Header() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
+
+  /**
+   * Format phone number for display
+   * Shows last 4 digits with mask for privacy
+   */
+  const formatPhoneDisplay = (phone: string): string => {
+    if (phone.length <= 4) return phone;
+    return `***${phone.slice(-4)}`;
+  };
 
   return (
     <header style={styles.header}>
@@ -25,23 +33,34 @@ export function Header() {
           <Link href={ROUTES.HOME} style={styles.link}>
             Home
           </Link>
-          <Link href={ROUTES.ORDERS} style={styles.link}>
-            Orders
-          </Link>
+          {isAuthenticated && (
+            <Link href={ROUTES.ORDERS} style={styles.link}>
+              Orders
+            </Link>
+          )}
         </nav>
 
         <div style={styles.auth}>
-          {isAuthenticated ? (
+          {isLoading ? (
+            <span style={styles.loading}>Loading...</span>
+          ) : isAuthenticated && user ? (
             <>
-              <span style={styles.user}>{user?.email}</span>
+              <span style={styles.user} title={user.phoneNumber}>
+                {formatPhoneDisplay(user.phoneNumber)}
+              </span>
               <button onClick={logout} style={styles.button}>
                 Logout
               </button>
             </>
           ) : (
-            <Link href={ROUTES.LOGIN} style={styles.link}>
-              Login
-            </Link>
+            <div style={styles.authLinks}>
+              <Link href={ROUTES.LOGIN} style={styles.link}>
+                Login
+              </Link>
+              <Link href={ROUTES.REGISTER} style={styles.registerLink}>
+                Register
+              </Link>
+            </div>
           )}
         </div>
       </div>
@@ -49,14 +68,11 @@ export function Header() {
   );
 }
 
-/**
- * Inline styles (temporary)
- * TODO: Replace with proper CSS/Tailwind
- */
 const styles: Record<string, React.CSSProperties> = {
   header: {
-    borderBottom: '1px solid #eaeaea',
+    borderBottom: '1px solid #e5e7eb',
     padding: '1rem 0',
+    background: '#fff',
   },
   container: {
     maxWidth: '1200px',
@@ -70,7 +86,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     fontSize: '1.25rem',
     textDecoration: 'none',
-    color: '#333',
+    color: '#059669',
   },
   nav: {
     display: 'flex',
@@ -78,23 +94,49 @@ const styles: Record<string, React.CSSProperties> = {
   },
   link: {
     textDecoration: 'none',
-    color: '#666',
+    color: '#4b5563',
+    fontSize: '0.95rem',
+    fontWeight: '500',
+    transition: 'color 0.15s',
   },
   auth: {
     display: 'flex',
     alignItems: 'center',
     gap: '1rem',
   },
-  user: {
-    color: '#666',
+  authLinks: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+  },
+  loading: {
+    color: '#9ca3af',
     fontSize: '0.875rem',
+  },
+  user: {
+    color: '#374151',
+    fontSize: '0.875rem',
+    fontWeight: '500',
   },
   button: {
     padding: '0.5rem 1rem',
-    border: '1px solid #333',
-    background: 'transparent',
+    border: '1px solid #e5e7eb',
+    background: '#fff',
     cursor: 'pointer',
-    borderRadius: '4px',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    color: '#4b5563',
+    transition: 'background-color 0.15s, border-color 0.15s',
+  },
+  registerLink: {
+    padding: '0.5rem 1rem',
+    background: '#059669',
+    color: '#fff',
+    textDecoration: 'none',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    transition: 'background-color 0.15s',
   },
 };
-
