@@ -1,24 +1,40 @@
 import { Module } from '@nestjs/common';
-import { CatalogController } from './catalog.controller';
-import { CatalogService } from './catalog.service';
-import { CatalogRepository } from './catalog.repository';
+import { PRODUCT_REPOSITORY } from './repositories/product-repository.interface';
+import { InMemoryProductRepository } from './repositories/in-memory-product.repository';
 
 /**
  * Catalog Module
  *
- * Handles product catalog management including:
- * - Product listing and search
- * - Categories and classifications
- * - Inventory visibility
- * - Prescription requirements
+ * Handles product catalog for the pharmacy.
+ * This is a READ-ONLY module for Phase 2.
  *
- * This module maintains its own data boundaries and
- * does not directly access other module's data.
+ * Responsibilities:
+ * - Product lookup by ID
+ * - Product listing with filters
+ * - Product search
+ * - Category information
+ *
+ * Boundaries:
+ * - Does NOT handle inventory (stock levels, availability)
+ * - Does NOT handle pricing changes (admin operation)
+ * - Does NOT handle product creation/updates (admin operation)
+ * - Other modules depend on this for product information
+ *
+ * Current implementation:
+ * - In-memory repository with sample data
+ * - No controllers (domain layer only for Phase 2)
+ * - No external dependencies
  */
 @Module({
-  controllers: [CatalogController],
-  providers: [CatalogService, CatalogRepository],
-  exports: [CatalogService, CatalogRepository],
+  providers: [
+    {
+      provide: PRODUCT_REPOSITORY,
+      useClass: InMemoryProductRepository,
+    },
+  ],
+  exports: [
+    // Export repository token for other modules
+    PRODUCT_REPOSITORY,
+  ],
 })
 export class CatalogModule {}
-
