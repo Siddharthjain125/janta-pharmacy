@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CatalogController } from './catalog.controller';
+import { CatalogQueryService } from './catalog-query.service';
 import { PRODUCT_REPOSITORY } from './repositories/product-repository.interface';
 import { InMemoryProductRepository } from './repositories/in-memory-product.repository';
 
@@ -6,7 +8,7 @@ import { InMemoryProductRepository } from './repositories/in-memory-product.repo
  * Catalog Module
  *
  * Handles product catalog for the pharmacy.
- * This is a READ-ONLY module for Phase 2.
+ * Currently provides READ-ONLY access to products.
  *
  * Responsibilities:
  * - Product lookup by ID
@@ -22,18 +24,22 @@ import { InMemoryProductRepository } from './repositories/in-memory-product.repo
  *
  * Current implementation:
  * - In-memory repository with sample data
- * - No controllers (domain layer only for Phase 2)
+ * - Read-only REST endpoints
  * - No external dependencies
  */
 @Module({
+  controllers: [CatalogController],
   providers: [
+    CatalogQueryService,
     {
       provide: PRODUCT_REPOSITORY,
       useClass: InMemoryProductRepository,
     },
   ],
   exports: [
-    // Export repository token for other modules
+    // Export query service for other modules
+    CatalogQueryService,
+    // Export repository token for testing
     PRODUCT_REPOSITORY,
   ],
 })
