@@ -52,8 +52,8 @@ export interface JwtPayload {
   /** User ID (sub claim) */
   sub: string;
 
-  /** Phone number */
-  phone: string;
+  /** Phone number (primary identifier) */
+  phoneNumber: string;
 
   /** Email (optional) */
   email: string | null;
