@@ -294,4 +294,54 @@ export class InMemoryProductRepository implements IProductRepository {
   size(): number {
     return this.products.size;
   }
+
+  /**
+   * Add a product (useful for testing)
+   * Allows adding products with custom properties like isActive=false
+   */
+  addProduct(data: {
+    id: string;
+    name: string;
+    description?: string;
+    category: ProductCategory;
+    priceInRupees: number;
+    requiresPrescription: boolean;
+    isActive?: boolean;
+  }): void {
+    const product = createProduct(
+      {
+        id: data.id,
+        name: data.name,
+        description: data.description ?? null,
+        category: data.category,
+        price: Money.fromMajorUnits(data.priceInRupees),
+        requiresPrescription: data.requiresPrescription,
+        isActive: data.isActive ?? true,
+      },
+      new Date(),
+    );
+    this.products.set(data.id, product);
+  }
+
+  /**
+   * Deactivate a product by ID (useful for testing)
+   */
+  deactivateProduct(productId: string): void {
+    const existing = this.products.get(productId);
+    if (existing) {
+      const deactivated = createProduct(
+        {
+          id: existing.id.toString(),
+          name: existing.name,
+          description: existing.description,
+          category: existing.category,
+          price: existing.price,
+          requiresPrescription: existing.requiresPrescription,
+          isActive: false,
+        },
+        existing.createdAt,
+      );
+      this.products.set(productId, deactivated);
+    }
+  }
 }

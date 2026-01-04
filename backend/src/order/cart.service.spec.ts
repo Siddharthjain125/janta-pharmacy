@@ -2,11 +2,13 @@ import { CartService } from './cart.service';
 import { InMemoryOrderRepository } from './repositories/in-memory-order.repository';
 import { CatalogQueryService } from '../catalog/catalog-query.service';
 import { InMemoryProductRepository } from '../catalog/repositories/in-memory-product.repository';
+import { ProductCategory } from '../catalog/domain';
 import { OrderStatus } from './domain';
 import {
   NoDraftOrderException,
   OrderItemNotFoundException,
   InvalidQuantityException,
+  OrderNotDraftException,
 } from './exceptions/order.exceptions';
 import { ProductNotFoundException } from '../catalog/exceptions';
 
@@ -220,6 +222,33 @@ describe('CartService', () => {
       await expect(
         cartService.addItemToCart(userId, validProductId, 1.5, correlationId),
       ).rejects.toThrow(InvalidQuantityException);
+    });
+
+    it('should throw ProductNotFoundException for inactive product', async () => {
+      // Add an inactive product
+      const inactiveProductId = 'prod-inactive';
+      productRepository.addProduct({
+        id: inactiveProductId,
+        name: 'Inactive Medicine',
+        description: 'This product has been discontinued',
+        category: ProductCategory.GENERAL,
+        priceInRupees: 100,
+        requiresPrescription: false,
+        isActive: false,
+      });
+
+      await expect(
+        cartService.addItemToCart(userId, inactiveProductId, 1, correlationId),
+      ).rejects.toThrow(ProductNotFoundException);
+    });
+
+    it('should throw ProductNotFoundException when product becomes inactive', async () => {
+      // Deactivate an existing product
+      productRepository.deactivateProduct(validProductId);
+
+      await expect(
+        cartService.addItemToCart(userId, validProductId, 1, correlationId),
+      ).rejects.toThrow(ProductNotFoundException);
     });
   });
 
@@ -441,6 +470,251 @@ describe('CartService', () => {
       );
 
       expect(cart.itemCount).toBe(10);
+    });
+  });
+
+  // ============================================================
+  // Invariant Enforcement Tests
+  // ============================================================
+
+  describe('non-DRAFT order mutation prevention', () => {
+    it('should not find CONFIRMED order as draft', async () => {
+      // Create a cart and add item
+      await cartService.addItemToCart(userId, validProductId, 1, correlationId);
+      const cart = await cartService.getCart(userId, correlationId);
+
+      // Manually transition to CONFIRMED (simulating checkout flow)
+      await orderRepository.updateStatus(cart!.id, OrderStatus.CONFIRMED);
+
+      // getCart should return null since it only finds DRAFT orders
+      const result = await cartService.getCart(userId, correlationId);
+      expect(result).toBeNull();
+    });
+
+    it('should not find CANCELLED order as draft', async () => {
+      // Create and abandon a cart
+      await cartService.addItemToCart(userId, validProductId, 1, correlationId);
+      await cartService.abandonCart(userId, correlationId);
+
+      // getCart should return null
+      const result = await cartService.getCart(userId, correlationId);
+      expect(result).toBeNull();
+    });
+
+    it('should throw NoDraftOrderException when trying to remove item from non-existent draft', async () => {
+      // Create a cart and transition to CONFIRMED
+      await cartService.addItemToCart(userId, validProductId, 1, correlationId);
+      const cart = await cartService.getCart(userId, correlationId);
+      await orderRepository.updateStatus(cart!.id, OrderStatus.CONFIRMED);
+
+      // Try to remove item - should fail since no DRAFT exists
+      await expect(
+        cartService.removeItemFromCart(userId, validProductId, correlationId),
+      ).rejects.toThrow(NoDraftOrderException);
+    });
+
+    it('should throw NoDraftOrderException when trying to update quantity on confirmed order', async () => {
+      // Create a cart and transition to CONFIRMED
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+      const cart = await cartService.getCart(userId, correlationId);
+      await orderRepository.updateStatus(cart!.id, OrderStatus.CONFIRMED);
+
+      // Try to update quantity - should fail since no DRAFT exists
+      await expect(
+        cartService.updateItemQuantity(userId, validProductId, 5, correlationId),
+      ).rejects.toThrow(NoDraftOrderException);
+    });
+
+    it('should throw NoDraftOrderException when trying to clear cancelled order', async () => {
+      // Create and abandon a cart
+      await cartService.addItemToCart(userId, validProductId, 1, correlationId);
+      await cartService.abandonCart(userId, correlationId);
+
+      // Try to clear - should fail since no DRAFT exists
+      await expect(
+        cartService.clearCart(userId, correlationId),
+      ).rejects.toThrow(NoDraftOrderException);
+    });
+
+    it('should allow creating new draft after order is confirmed', async () => {
+      // Create a cart and confirm it
+      await cartService.addItemToCart(userId, validProductId, 1, correlationId);
+      const cart = await cartService.getCart(userId, correlationId);
+      await orderRepository.updateStatus(cart!.id, OrderStatus.CONFIRMED);
+
+      // Should be able to create a new draft
+      const newCart = await cartService.createDraftOrder(userId, correlationId);
+
+      expect(newCart).toBeDefined();
+      expect(newCart.id).not.toBe(cart!.id);
+      expect(newCart.status).toBe(OrderStatus.DRAFT);
+      expect(newCart.items.length).toBe(0);
+    });
+
+    it('should allow adding items after previous order is confirmed', async () => {
+      // Create a cart and confirm it
+      await cartService.addItemToCart(userId, validProductId, 1, correlationId);
+      const cart = await cartService.getCart(userId, correlationId);
+      await orderRepository.updateStatus(cart!.id, OrderStatus.CONFIRMED);
+
+      // Should be able to add items (creates new draft)
+      const newCart = await cartService.addItemToCart(
+        userId,
+        validProductId2,
+        2,
+        correlationId,
+      );
+
+      expect(newCart).toBeDefined();
+      expect(newCart.id).not.toBe(cart!.id);
+      expect(newCart.items.length).toBe(1);
+      expect(newCart.items[0].productId).toBe(validProductId2);
+    });
+  });
+
+  describe('order isolation between users', () => {
+    it('should not allow user to see other users cart', async () => {
+      // User 1 creates a cart
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // User 2 should not see user 1's cart
+      const otherUserCart = await cartService.getCart(otherUserId, correlationId);
+      expect(otherUserCart).toBeNull();
+    });
+
+    it('should maintain separate carts for different users', async () => {
+      // User 1 creates a cart with product 1
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // User 2 creates a cart with product 2
+      await cartService.addItemToCart(otherUserId, validProductId2, 3, correlationId);
+
+      // Verify carts are separate
+      const user1Cart = await cartService.getCart(userId, correlationId);
+      const user2Cart = await cartService.getCart(otherUserId, correlationId);
+
+      expect(user1Cart!.items.length).toBe(1);
+      expect(user1Cart!.items[0].productId).toBe(validProductId);
+      expect(user1Cart!.items[0].quantity).toBe(2);
+
+      expect(user2Cart!.items.length).toBe(1);
+      expect(user2Cart!.items[0].productId).toBe(validProductId2);
+      expect(user2Cart!.items[0].quantity).toBe(3);
+    });
+
+    it('should not allow user to modify other users cart items', async () => {
+      // User 1 creates a cart
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // User 2 tries to update item in "their" cart (but they don't have one)
+      await expect(
+        cartService.updateItemQuantity(otherUserId, validProductId, 5, correlationId),
+      ).rejects.toThrow(NoDraftOrderException);
+    });
+
+    it('should not allow user to remove items from other users cart', async () => {
+      // User 1 creates a cart
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // User 2 tries to remove item (but they don't have a cart)
+      await expect(
+        cartService.removeItemFromCart(otherUserId, validProductId, correlationId),
+      ).rejects.toThrow(NoDraftOrderException);
+    });
+
+    it('should not allow user to clear other users cart', async () => {
+      // User 1 creates a cart
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // User 2 tries to clear cart (but they don't have one)
+      await expect(
+        cartService.clearCart(otherUserId, correlationId),
+      ).rejects.toThrow(NoDraftOrderException);
+    });
+
+    it('should not allow user to abandon other users cart', async () => {
+      // User 1 creates a cart
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // User 2 tries to abandon cart (but they don't have one)
+      await expect(
+        cartService.abandonCart(otherUserId, correlationId),
+      ).rejects.toThrow(NoDraftOrderException);
+    });
+  });
+
+  describe('order total recalculation', () => {
+    it('should recalculate total when adding items', async () => {
+      // Add first item: 2 x 25 = 50
+      let cart = await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+      expect(cart.total.amount).toBe(50);
+
+      // Add second item: 50 + (3 x 45) = 50 + 135 = 185
+      cart = await cartService.addItemToCart(userId, validProductId2, 3, correlationId);
+      expect(cart.total.amount).toBe(185);
+    });
+
+    it('should recalculate total when incrementing quantity of existing item', async () => {
+      // Add first item: 2 x 25 = 50
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // Add more of same item: (2 + 3) x 25 = 125
+      const cart = await cartService.addItemToCart(userId, validProductId, 3, correlationId);
+      expect(cart.total.amount).toBe(125);
+    });
+
+    it('should recalculate total when updating quantity', async () => {
+      // Add items
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId); // 50
+      await cartService.addItemToCart(userId, validProductId2, 1, correlationId); // 45
+      // Total: 95
+
+      // Update quantity: 10 x 25 + 1 x 45 = 295
+      const cart = await cartService.updateItemQuantity(userId, validProductId, 10, correlationId);
+      expect(cart.total.amount).toBe(295);
+    });
+
+    it('should recalculate total when removing items', async () => {
+      // Add items
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId); // 50
+      await cartService.addItemToCart(userId, validProductId2, 1, correlationId); // 45
+      // Total: 95
+
+      // Remove first item: 0 + 45 = 45
+      const cart = await cartService.removeItemFromCart(userId, validProductId, correlationId);
+      expect(cart.total.amount).toBe(45);
+    });
+
+    it('should set total to zero when clearing cart', async () => {
+      // Add items
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+      await cartService.addItemToCart(userId, validProductId2, 1, correlationId);
+
+      // Clear cart
+      const cart = await cartService.clearCart(userId, correlationId);
+      expect(cart.total.amount).toBe(0);
+    });
+
+    it('should handle multiple operations and maintain correct total', async () => {
+      // Complex scenario:
+      // 1. Add 2 of product1: 2 x 25 = 50
+      await cartService.addItemToCart(userId, validProductId, 2, correlationId);
+
+      // 2. Add 3 of product2: 50 + 3 x 45 = 185
+      await cartService.addItemToCart(userId, validProductId2, 3, correlationId);
+
+      // 3. Add 1 more of product1: (2+1) x 25 + 3 x 45 = 75 + 135 = 210
+      await cartService.addItemToCart(userId, validProductId, 1, correlationId);
+
+      // 4. Update product2 to 5: 3 x 25 + 5 x 45 = 75 + 225 = 300
+      await cartService.updateItemQuantity(userId, validProductId2, 5, correlationId);
+
+      // 5. Remove product1: 0 + 5 x 45 = 225
+      const cart = await cartService.removeItemFromCart(userId, validProductId, correlationId);
+
+      expect(cart.total.amount).toBe(225);
+      expect(cart.items.length).toBe(1);
+      expect(cart.itemCount).toBe(5);
     });
   });
 });
