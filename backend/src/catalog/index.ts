@@ -8,15 +8,27 @@
 // Module
 export { CatalogModule } from './catalog.module';
 
-// Domain exports
+// Query Service (for other modules to access catalog data)
+export { CatalogQueryService } from './catalog-query.service';
+
+// DTOs (for type safety across modules)
+export {
+  ProductDto,
+  ProductSummaryDto,
+  PriceDto,
+  CategoryDto,
+  toProductDto,
+  toProductSummaryDto,
+  toCategoryDto,
+} from './dto';
+
+// Domain exports (for type safety)
 export {
   Product,
   ProductId,
   Money,
   ProductCategory,
   PRODUCT_CATEGORY_METADATA,
-  createProduct,
-  productToDTO,
   getAllCategories,
   categoryRequiresPrescription,
 } from './domain';
@@ -35,4 +47,3 @@ export {
   InvalidProductCategoryException,
   InvalidProductIdException,
 } from './exceptions';
-
