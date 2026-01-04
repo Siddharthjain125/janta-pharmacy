@@ -373,7 +373,7 @@ describe('AuthService', () => {
         });
 
         expect(payload.sub).toBeDefined(); // userId
-        expect(payload.phone).toBe('+919876543210');
+        expect(payload.phoneNumber).toBe('+919876543210');
         expect(payload.roles).toBeDefined();
         expect(payload.type).toBe('access');
       });
@@ -542,7 +542,7 @@ describe('AuthService', () => {
         });
 
         expect(payload.sub).toBeDefined();
-        expect(payload.phone).toBe('+919876543210');
+        expect(payload.phoneNumber).toBe('+919876543210');
         expect(payload.type).toBe('access');
       });
 
