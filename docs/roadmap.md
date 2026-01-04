@@ -16,9 +16,9 @@ and only then expanding user-facing functionality.
 |-------|------------|--------|------------|
 | Phase 0 | Architecture Blueprint | ✅ Complete | N/A |
 | Phase 0.5 | Core Domain Validation | ✅ Complete | ❌ |
-| Phase 1 | Identity & Access | 🔜 Next | ✅ Demo 1 |
-| Phase 2 | Catalog | ⏳ Planned | ✅ Demo 2 |
-| Phase 3 | Order Completion | ⏳ Planned | ✅ Demo 3 |
+| Phase 1 | Identity & Access | ✅ Complete | ✅ Demo 1 |
+| Phase 2 | Catalog | ✅ Complete | ✅ Demo 2 |
+| Phase 3 | Order Completion | 🔜 Next | ✅ Demo 3 |
 | Phase 4 | Prescription Workflow | ⏳ Planned | ✅ Demo 4 |
 | Phase 5 | Payments & Notifications | ⏳ Planned | ✅ Demo 5 |
 | Phase 6 | Admin & Operability | ⏳ Planned | ✅ Demo 6 |
@@ -78,85 +78,109 @@ architectural risk.
 
 ---
 
-## Phase 1: Identity & Access 🔜
+## Phase 1: Identity & Access ✅
 
-> **Status:** Next Up
+> **Status:** Complete
 
 **Goal:** Establish real user identity as the foundation for all features.
 
 ### Backend
 
-- [ ] User entity & repository
-- [ ] Registration (`POST /auth/register`)
-- [ ] Login with JWT (`POST /auth/login`)
-- [ ] Password hashing (bcrypt)
-- [ ] Refresh token flow
-- [ ] Auth guards wired to real users
+- [x] User entity & repository
+- [x] Registration (`POST /auth/register`)
+- [x] Login with JWT (`POST /auth/login`)
+- [x] Password hashing (bcrypt)
+- [x] Refresh token flow with rotation
+- [x] Auth guards wired to real users
+- [x] Role-based access control
 
 ### Frontend
 
-- [ ] Login & registration pages
-- [ ] Replace mock AuthContext
-- [ ] Token storage & refresh handling
-- [ ] Auth-based routing & redirects
-- [ ] Logout flow
+- [x] Login & registration pages
+- [x] Real AuthContext with token management
+- [x] Token storage & automatic refresh handling
+- [x] Auth-based routing & protected routes
+- [x] Logout flow
+- [x] Session persistence across page reloads
 
 ### 🎯 Demo 1
 
 > User can register, login, see their identity, and logout.
 
-**Why now:** Orders, catalog, prescriptions, and payments all depend on real identity.
+**Outcome:** Full authentication flow with JWT + refresh token rotation, protected routes, and session persistence.
 
 ---
 
-## Phase 2: Catalog Management
+## Phase 2: Catalog Management ✅
+
+> **Status:** Complete
 
 **Goal:** Expose a browseable, searchable medicine catalog.
 
 ### Backend
 
-- [ ] Product entity (OTC / prescription-required)
-- [ ] Category entity
-- [ ] Product listing with pagination
-- [ ] Search & filtering APIs
+- [x] Product entity with value objects (ProductId, Money)
+- [x] ProductCategory enum with metadata
+- [x] ProductRepository interface (read-only)
+- [x] InMemoryProductRepository with sample data
+- [x] CatalogQueryService for application-level queries
+- [x] Product listing with pagination
+- [x] Search by name/description (case-insensitive)
+- [x] Filter by category & prescription requirement
+- [x] Combined filters with pagination
+- [x] Clean DTO boundaries (no domain leakage)
+- [x] Automated tests for query behavior
 
 ### Frontend
 
-- [ ] Product listing page
-- [ ] Category sidebar
-- [ ] Search bar
-- [ ] Product detail page
+- [x] Product listing page (`/catalog`)
+- [x] Category filter dropdown
+- [x] Search input with real-time filtering
+- [x] Prescription-required toggle
+- [x] Pagination controls (Next/Previous)
+- [x] URL state persistence (shareable/reload-safe)
+- [x] Product detail page (`/catalog/[id]`)
+- [x] Loading, empty, and error states
 
 ### 🎯 Demo 2
 
-> Logged-in user can browse and search medicines.
+> Logged-in user can browse, search, filter, and paginate medicines.
+
+**Outcome:** Full catalog browsing with search, filtering, pagination, and URL state management.
 
 ---
 
-## Phase 3: Order Completion
+## Phase 3: Order Completion 🔜
+
+> **Status:** Next Up
 
 **Goal:** Turn the validated order domain into a full user flow.
 
 ### Backend
 
-- [ ] OrderItem entity
-- [ ] Add/remove items
-- [ ] Order total calculation
+- [ ] OrderItem entity with product reference
+- [ ] Cart / draft order management
+- [ ] Add/remove items from order
+- [ ] Order total calculation (integrate with Money)
 - [ ] User & catalog integration
 - [ ] Order history with pagination
+- [ ] Prescription-required product handling
 
 ### Frontend
 
-- [ ] Shopping cart
+- [ ] Shopping cart (add to cart from catalog)
+- [ ] Cart page with item management
 - [ ] Checkout flow
 - [ ] Order summary
-- [ ] Order history & details
+- [ ] Order history & details pages
 - [ ] Cancel order flow
-- [ ] Order status visualization
+- [ ] Order status visualization (state machine states)
 
 ### 🎯 Demo 3
 
 > User can add items, place orders, view history, cancel eligible orders.
+
+**Why now:** Order domain model already validated in Phase 0.5. This phase wires it to real users and catalog.
 
 ---
 
@@ -241,14 +265,14 @@ architectural risk.
 
 ## 🎬 Demo Timeline
 
-| Demo | After Phase | What User Can Do |
-|------|-------------|------------------|
-| **Demo 1** | Phase 1 | Register, login, see identity, logout |
-| **Demo 2** | Phase 2 | Browse and search medicine catalog |
-| **Demo 3** | Phase 3 | Add to cart, place order, view history |
-| **Demo 4** | Phase 4 | Upload prescription, admin approval flow |
-| **Demo 5** | Phase 5 | Pay for order, receive confirmation |
-| **Demo 6** | Phase 6 | Admin: manage inventory, view orders |
+| Demo | After Phase | What User Can Do | Status |
+|------|-------------|------------------|--------|
+| **Demo 1** | Phase 1 | Register, login, see identity, logout | ✅ Ready |
+| **Demo 2** | Phase 2 | Browse, search, filter medicine catalog | ✅ Ready |
+| **Demo 3** | Phase 3 | Add to cart, place order, view history | 🔜 Next |
+| **Demo 4** | Phase 4 | Upload prescription, admin approval flow | ⏳ Planned |
+| **Demo 5** | Phase 5 | Pay for order, receive confirmation | ⏳ Planned |
+| **Demo 6** | Phase 6 | Admin: manage inventory, view orders | ⏳ Planned |
 
 ---
 

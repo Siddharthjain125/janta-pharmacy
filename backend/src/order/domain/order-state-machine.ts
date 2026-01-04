@@ -1,4 +1,4 @@
-import { OrderStatus, isTerminalStatus } from './order-status';
+import { OrderStatus, isTerminalStatus, isMutableStatus } from './order-status';
 
 /**
  * Order State Machine
@@ -10,6 +10,11 @@ import { OrderStatus, isTerminalStatus } from './order-status';
  * - Explicit over implicit
  * - All transitions documented
  * - Easy to audit and modify
+ *
+ * State flow:
+ * DRAFT (cart) → CREATED (placed) → CONFIRMED → PAID → SHIPPED → DELIVERED
+ *                                                  ↓
+ *                                              CANCELLED (from any non-terminal)
  */
 
 /**
@@ -18,6 +23,7 @@ import { OrderStatus, isTerminalStatus } from './order-status';
  * Value: array of valid next statuses
  */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  [OrderStatus.DRAFT]: [OrderStatus.CREATED, OrderStatus.CANCELLED],
   [OrderStatus.CREATED]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
   [OrderStatus.CONFIRMED]: [OrderStatus.PAID, OrderStatus.CANCELLED],
   [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
@@ -104,9 +110,25 @@ export function isPaid(status: OrderStatus): boolean {
 }
 
 /**
- * Business rule: Is the order still modifiable?
+ * Business rule: Is the order still modifiable (status changes allowed)?
+ * Note: This is different from isMutableStatus (item changes allowed)
  */
 export function isModifiable(status: OrderStatus): boolean {
-  return [OrderStatus.CREATED, OrderStatus.CONFIRMED].includes(status);
+  return [OrderStatus.DRAFT, OrderStatus.CREATED, OrderStatus.CONFIRMED].includes(status);
+}
+
+/**
+ * Business rule: Can items be added/removed/updated?
+ * Only DRAFT orders allow item modifications.
+ */
+export function canModifyItems(status: OrderStatus): boolean {
+  return isMutableStatus(status);
+}
+
+/**
+ * Business rule: Can this draft be converted to a placed order?
+ */
+export function canPlaceOrder(status: OrderStatus): boolean {
+  return status === OrderStatus.DRAFT;
 }
 

@@ -1,4 +1,10 @@
-export { OrderStatus, ORDER_STATUS_METADATA, isTerminalStatus } from './order-status';
+export {
+  OrderStatus,
+  ORDER_STATUS_METADATA,
+  isTerminalStatus,
+  isMutableStatus,
+  isDraftOrder,
+} from './order-status';
 
 export {
   canTransition,
@@ -7,5 +13,16 @@ export {
   canCancel,
   isPaid,
   isModifiable,
+  canModifyItems,
+  canPlaceOrder,
   type TransitionValidation,
 } from './order-state-machine';
+
+export {
+  type OrderItem,
+  type CreateOrderItemData,
+  createOrderItem,
+  updateOrderItemQuantity,
+  calculateItemSubtotal,
+  orderItemToDTO,
+} from './order-item';
