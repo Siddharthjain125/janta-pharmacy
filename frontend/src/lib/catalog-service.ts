@@ -16,27 +16,59 @@ import type {
 
 /**
  * Options for fetching products
+ *
+ * Maps to backend query parameters:
+ * - search → ?search=
+ * - category → ?category=
+ * - requiresPrescription → ?requiresPrescription=
+ * - page → ?page=
+ * - limit → ?limit=
  */
 export interface FetchProductsOptions {
-  page?: number;
-  limit?: number;
+  /** Text search (searches name and description) */
+  search?: string;
+  /** Filter by category code (e.g., GENERAL, PRESCRIPTION) */
   category?: string;
+  /** Filter by prescription requirement */
   requiresPrescription?: boolean;
+  /** Page number (1-indexed) */
+  page?: number;
+  /** Items per page */
+  limit?: number;
 }
 
 /**
- * Fetch all active products with optional filtering
+ * Fetch products with search, filtering, and pagination
+ *
+ * This is the primary function for browsing the catalog.
+ * All parameters are optional - omitting them returns all active products.
  */
-export async function fetchAllProducts(
+export async function fetchProducts(
   options: FetchProductsOptions = {},
 ): Promise<PaginatedResponse<ProductSummary>> {
   const params = new URLSearchParams();
 
-  if (options.page) params.set('page', String(options.page));
-  if (options.limit) params.set('limit', String(options.limit));
-  if (options.category) params.set('category', options.category);
+  // Add search text if provided
+  if (options.search?.trim()) {
+    params.set('search', options.search.trim());
+  }
+
+  // Add category filter if provided
+  if (options.category?.trim()) {
+    params.set('category', options.category.trim());
+  }
+
+  // Add prescription filter if explicitly set
   if (options.requiresPrescription !== undefined) {
     params.set('requiresPrescription', String(options.requiresPrescription));
+  }
+
+  // Add pagination
+  if (options.page && options.page > 0) {
+    params.set('page', String(options.page));
+  }
+  if (options.limit && options.limit > 0) {
+    params.set('limit', String(options.limit));
   }
 
   const queryString = params.toString();
@@ -46,8 +78,7 @@ export async function fetchAllProducts(
     requiresAuth: true,
   });
 
-  // The backend returns PaginatedResponse directly, but apiClient wraps in ApiResponse
-  // We need to return the raw paginated response
+  // The backend returns PaginatedResponse directly
   return response as unknown as PaginatedResponse<ProductSummary>;
 }
 
@@ -67,27 +98,6 @@ export async function fetchProductById(id: string): Promise<Product> {
 }
 
 /**
- * Search products by query
- */
-export async function searchProducts(
-  query: string,
-  options: { page?: number; limit?: number } = {},
-): Promise<PaginatedResponse<ProductSummary>> {
-  const params = new URLSearchParams();
-  params.set('q', query);
-  if (options.page) params.set('page', String(options.page));
-  if (options.limit) params.set('limit', String(options.limit));
-
-  const endpoint = `/catalog/search?${params.toString()}`;
-
-  const response = await apiClient.get<ProductSummary[]>(endpoint, {
-    requiresAuth: true,
-  });
-
-  return response as unknown as PaginatedResponse<ProductSummary>;
-}
-
-/**
  * Fetch all product categories
  */
 export async function fetchCategories(): Promise<Category[]> {
@@ -98,3 +108,5 @@ export async function fetchCategories(): Promise<Category[]> {
   return response.data ?? [];
 }
 
+// Legacy alias for backward compatibility
+export const fetchAllProducts = fetchProducts;
