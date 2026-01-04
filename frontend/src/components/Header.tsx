@@ -34,9 +34,14 @@ export function Header() {
             Home
           </Link>
           {isAuthenticated && (
-            <Link href={ROUTES.ORDERS} style={styles.link}>
-              Orders
-            </Link>
+            <>
+              <Link href={ROUTES.CATALOG} style={styles.link}>
+                Catalog
+              </Link>
+              <Link href={ROUTES.ORDERS} style={styles.link}>
+                Orders
+              </Link>
+            </>
           )}
         </nav>
 
