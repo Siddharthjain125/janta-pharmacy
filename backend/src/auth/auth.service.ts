@@ -238,7 +238,7 @@ export class AuthService {
     const jwtConfig = getJwtConfig();
     const payload: JwtPayload = {
       sub: user.id,
-      phone: user.phoneNumber,
+      phoneNumber: user.phoneNumber,
       email: user.email,
       roles: user.roles,
       type: 'access',
@@ -421,7 +421,7 @@ export class AuthService {
     const jwtConfig = getJwtConfig();
     const payload: JwtPayload = {
       sub: user.id,
-      phone: user.phoneNumber,
+      phoneNumber: user.phoneNumber,
       email: user.email,
       roles: user.roles,
       type: 'access',

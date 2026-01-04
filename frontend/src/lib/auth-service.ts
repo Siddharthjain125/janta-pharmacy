@@ -201,6 +201,13 @@ class AuthServiceImpl {
    *
    * Note: This is a client-side decode for display purposes only.
    * The backend validates the token on every request.
+   *
+   * Backend JwtPayload structure:
+   * - sub: user ID
+   * - phoneNumber: phone number
+   * - email: email or null
+   * - roles: array of role strings
+   * - type: 'access' | 'refresh'
    */
   private decodeUserFromToken(token: string): AuthUser | null {
     try {
@@ -216,8 +223,8 @@ class AuthServiceImpl {
         id: payload.sub,
         phoneNumber: payload.phoneNumber,
         email: payload.email || null,
-        role: payload.role as UserRole,
-        roles: payload.roles || [payload.role],
+        role: (payload.roles?.[0] || 'CUSTOMER') as UserRole,
+        roles: payload.roles || ['CUSTOMER'],
       };
     } catch {
       return null;

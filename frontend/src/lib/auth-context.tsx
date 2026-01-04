@@ -74,8 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: null,
   });
 
-  // Track if we've set up the API client listener
+  // Track if we've set up the API client listener (survives StrictMode remounts)
   const apiClientWiredRef = useRef(false);
+
+  // Track if session restoration is in progress or completed
+  const sessionRestorationRef = useRef<'idle' | 'in_progress' | 'completed'>('idle');
 
   /**
    * Update state helper
@@ -93,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: result.user,
         isAuthenticated: true,
         isLoading: false,
+        isInitialized: true,
         error: null,
       });
     },
@@ -114,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Wire up API client with token provider and auth listener
+   * This effect should only run once, even in StrictMode
    */
   useEffect(() => {
     if (apiClientWiredRef.current) return;
@@ -144,18 +149,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Cleanup on unmount
-    return () => {
-      apiClient.setTokenProvider(null);
-      apiClient.setAuthStateListener(null);
-      apiClientWiredRef.current = false;
-    };
+    // Note: We don't reset apiClientWiredRef on cleanup
+    // This prevents double-wiring in StrictMode
   }, [handleAuthSuccess, handleLogout]);
 
   /**
    * Try to restore session on mount
+   * Guards against duplicate execution in StrictMode
    */
   useEffect(() => {
+    // Skip if already in progress or completed
+    if (sessionRestorationRef.current !== 'idle') {
+      return;
+    }
+
+    sessionRestorationRef.current = 'in_progress';
+
     const restoreSession = async () => {
       try {
         const result = await authService.tryRestoreSession();
@@ -172,6 +181,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           isInitialized: true,
         });
+      } finally {
+        sessionRestorationRef.current = 'completed';
       }
     };
 

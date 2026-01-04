@@ -17,7 +17,8 @@ export function Header() {
    * Format phone number for display
    * Shows last 4 digits with mask for privacy
    */
-  const formatPhoneDisplay = (phone: string): string => {
+  const formatPhoneDisplay = (phone: string | undefined | null): string => {
+    if (!phone) return '...';
     if (phone.length <= 4) return phone;
     return `***${phone.slice(-4)}`;
   };
@@ -34,9 +35,14 @@ export function Header() {
             Home
           </Link>
           {isAuthenticated && (
-            <Link href={ROUTES.ORDERS} style={styles.link}>
-              Orders
-            </Link>
+            <>
+              <Link href={ROUTES.CATALOG} style={styles.link}>
+                Catalog
+              </Link>
+              <Link href={ROUTES.ORDERS} style={styles.link}>
+                Orders
+              </Link>
+            </>
           )}
         </nav>
 

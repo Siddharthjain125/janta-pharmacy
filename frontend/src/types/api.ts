@@ -143,3 +143,81 @@ export interface RefreshTokenResponse {
   expiresIn: number;
 }
 
+// ============================================================================
+// CATALOG TYPES
+// ============================================================================
+
+/**
+ * Price representation
+ * Aligned with backend PriceDto
+ */
+export interface Price {
+  amount: number;
+  currency: string;
+  formatted: string;
+}
+
+/**
+ * Product summary for listings
+ * Aligned with backend ProductSummaryDto
+ */
+export interface ProductSummary {
+  id: string;
+  name: string;
+  category: string;
+  categoryLabel: string;
+  price: Price;
+  requiresPrescription: boolean;
+}
+
+/**
+ * Full product details
+ * Aligned with backend ProductDto
+ */
+export interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  categoryLabel: string;
+  price: Price;
+  requiresPrescription: boolean;
+  isActive: boolean;
+}
+
+/**
+ * Category information
+ * Aligned with backend CategoryDto
+ */
+export interface Category {
+  code: string;
+  label: string;
+  description: string;
+}
+
+/**
+ * Pagination metadata
+ * Aligned with backend PaginationMeta
+ */
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+/**
+ * Paginated API response
+ * Aligned with backend PaginatedResponse
+ */
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  pagination: PaginationMeta;
+  message: string;
+  timestamp: string;
+  correlationId?: string;
+}
+

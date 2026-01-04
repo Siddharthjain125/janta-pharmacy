@@ -1,116 +1,160 @@
 import {
   Controller,
   Get,
-  Post,
-  Put,
-  Delete,
   Param,
-  Body,
   Query,
-  HttpCode,
-  HttpStatus,
+  Headers,
 } from '@nestjs/common';
-import { CatalogService } from './catalog.service';
-import { ApiResponse } from '../common/api/api-response';
+import { CatalogQueryService } from './catalog-query.service';
+import { ApiResponse, PaginatedResponse, PaginationMeta } from '../common/api/api-response';
+import { ProductDto, ProductSummaryDto, CategoryDto } from './dto';
 
 /**
  * Catalog Controller
  *
- * Exposes REST endpoints for product catalog management.
- * All endpoints return placeholder responses.
+ * Read-only REST endpoints for browsing the product catalog.
+ *
+ * Design notes:
+ * - All endpoints are public (no authentication required for browsing)
+ * - Only GET methods (read-only catalog)
+ * - Uses correlation IDs for request tracing
+ * - Returns DTOs, never domain entities
+ * - HTTP params are mapped to application-level query objects
  */
 @Controller('catalog')
 export class CatalogController {
-  constructor(private readonly catalogService: CatalogService) {}
+  constructor(private readonly catalogQueryService: CatalogQueryService) {}
 
   /**
-   * Get all products with pagination and filters
+   * List products with search, filtering, and pagination
+   * GET /api/v1/catalog/products
+   *
+   * Query Parameters:
+   * - search: Text search (searches name and description)
+   * - category: Filter by category code (e.g., GENERAL, PRESCRIPTION)
+   * - requiresPrescription: Filter by prescription requirement (true/false)
+   * - page: Page number (1-indexed, default: 1)
+   * - limit: Items per page (default: 20, max: 100)
    */
   @Get('products')
-  async findAllProducts(
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
-    @Query('category') category?: string,
+  async listProducts(
     @Query('search') search?: string,
-  ): Promise<ApiResponse<unknown>> {
-    const products = await this.catalogService.findAllProducts(
-      page,
-      limit,
-      category,
-      search,
+    @Query('category') category?: string,
+    @Query('requiresPrescription') requiresPrescription?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+  ): Promise<PaginatedResponse<ProductSummaryDto>> {
+    // Parse HTTP query params to application-level params
+    const params = {
+      search: search?.trim() || undefined,
+      category: category?.trim() || undefined,
+      requiresPrescription: this.parseBooleanParam(requiresPrescription),
+      page: this.parseIntParam(page, 1),
+      limit: this.parseIntParam(limit, 20),
+    };
+
+    const result = await this.catalogQueryService.listProducts(params, correlationId);
+
+    const pagination: PaginationMeta = {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: result.totalPages,
+      hasNextPage: result.hasNextPage,
+      hasPreviousPage: result.hasPreviousPage,
+    };
+
+    return ApiResponse.paginated(
+      result.items,
+      pagination,
+      'Products retrieved successfully',
+      correlationId,
     );
-    return ApiResponse.success(products, 'Products retrieved successfully');
   }
 
   /**
    * Get product by ID
+   * GET /api/v1/catalog/products/:id
    */
   @Get('products/:id')
-  async findProductById(@Param('id') id: string): Promise<ApiResponse<unknown>> {
-    const product = await this.catalogService.findProductById(id);
-    return ApiResponse.success(product, 'Product retrieved successfully');
-  }
-
-  /**
-   * Create a new product
-   */
-  @Post('products')
-  @HttpCode(HttpStatus.CREATED)
-  async createProduct(@Body() createProductDto: unknown): Promise<ApiResponse<unknown>> {
-    const product = await this.catalogService.createProduct(createProductDto);
-    return ApiResponse.success(product, 'Product created successfully');
-  }
-
-  /**
-   * Update product by ID
-   */
-  @Put('products/:id')
-  async updateProduct(
+  async getProduct(
     @Param('id') id: string,
-    @Body() updateProductDto: unknown,
-  ): Promise<ApiResponse<unknown>> {
-    const product = await this.catalogService.updateProduct(id, updateProductDto);
-    return ApiResponse.success(product, 'Product updated successfully');
-  }
-
-  /**
-   * Delete product by ID
-   */
-  @Delete('products/:id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteProduct(@Param('id') id: string): Promise<void> {
-    await this.catalogService.deleteProduct(id);
+    @Headers('x-correlation-id') correlationId?: string,
+  ): Promise<ApiResponse<ProductDto>> {
+    const product = await this.catalogQueryService.getProductById(id, correlationId);
+    return ApiResponse.success(product, 'Product retrieved successfully', correlationId);
   }
 
   /**
    * Get all categories
+   * GET /api/v1/catalog/categories
    */
   @Get('categories')
-  async findAllCategories(): Promise<ApiResponse<unknown>> {
-    const categories = await this.catalogService.findAllCategories();
-    return ApiResponse.success(categories, 'Categories retrieved successfully');
+  async listCategories(
+    @Headers('x-correlation-id') correlationId?: string,
+  ): Promise<ApiResponse<CategoryDto[]>> {
+    const categories = await this.catalogQueryService.getCategories();
+    return ApiResponse.success(categories, 'Categories retrieved successfully', correlationId);
   }
 
   /**
-   * Get category by ID
+   * Get products by category
+   * GET /api/v1/catalog/categories/:code/products
+   *
+   * This is a convenience endpoint that filters by category.
+   * Same as calling GET /products?category=:code
    */
-  @Get('categories/:id')
-  async findCategoryById(@Param('id') id: string): Promise<ApiResponse<unknown>> {
-    const category = await this.catalogService.findCategoryById(id);
-    return ApiResponse.success(category, 'Category retrieved successfully');
+  @Get('categories/:code/products')
+  async getProductsByCategory(
+    @Param('code') code: string,
+    @Query('search') search?: string,
+    @Query('requiresPrescription') requiresPrescription?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+  ): Promise<PaginatedResponse<ProductSummaryDto>> {
+    const params = {
+      search: search?.trim() || undefined,
+      category: code,
+      requiresPrescription: this.parseBooleanParam(requiresPrescription),
+      page: this.parseIntParam(page, 1),
+      limit: this.parseIntParam(limit, 20),
+    };
+
+    const result = await this.catalogQueryService.listProducts(params, correlationId);
+
+    const pagination: PaginationMeta = {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: result.totalPages,
+      hasNextPage: result.hasNextPage,
+      hasPreviousPage: result.hasPreviousPage,
+    };
+
+    return ApiResponse.paginated(
+      result.items,
+      pagination,
+      'Products retrieved successfully',
+      correlationId,
+    );
   }
 
   /**
-   * Search products
+   * Parse string to integer with default value
    */
-  @Get('search')
-  async searchProducts(
-    @Query('q') query: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
-  ): Promise<ApiResponse<unknown>> {
-    const results = await this.catalogService.searchProducts(query, page, limit);
-    return ApiResponse.success(results, 'Search completed successfully');
+  private parseIntParam(value: string | undefined, defaultValue: number): number {
+    if (!value) return defaultValue;
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? defaultValue : parsed;
+  }
+
+  /**
+   * Parse string to boolean (undefined if not provided)
+   */
+  private parseBooleanParam(value: string | undefined): boolean | undefined {
+    if (value === undefined || value === '') return undefined;
+    return value.toLowerCase() === 'true';
   }
 }
-
