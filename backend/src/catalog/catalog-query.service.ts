@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PRODUCT_REPOSITORY, IProductRepository } from './repositories';
-import { Product, ProductCategory, getAllCategories } from './domain';
+import { ProductCategory, getAllCategories } from './domain';
 import {
   ProductDto,
   ProductSummaryDto,
@@ -9,8 +9,46 @@ import {
   toProductSummaryDto,
   toCategoryDto,
 } from './dto';
+import {
+  ProductSearchCriteria,
+  ProductSearchResult,
+} from './queries';
 import { ProductNotFoundException, InvalidProductCategoryException } from './exceptions';
 import { logWithCorrelation } from '../common/logging/logger';
+
+/**
+ * Product List Query Parameters
+ *
+ * Application-level parameters for listing products.
+ * The service converts these to ProductSearchCriteria.
+ */
+export interface ProductListParams {
+  /** Text search query */
+  search?: string;
+  /** Filter by category code */
+  category?: string;
+  /** Filter by prescription requirement */
+  requiresPrescription?: boolean;
+  /** Page number (1-indexed) */
+  page?: number;
+  /** Items per page */
+  limit?: number;
+}
+
+/**
+ * Product List Result
+ *
+ * Paginated result with metadata for API responses.
+ */
+export interface ProductListResult {
+  items: ProductSummaryDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
 
 /**
  * Catalog Query Service
@@ -23,6 +61,7 @@ import { logWithCorrelation } from '../common/logging/logger';
  * - Returns DTOs, not domain entities (for API safety)
  * - Handles not-found cases with domain exceptions
  * - Logs significant operations with correlation IDs
+ * - Uses ProductSearchCriteria for clean query abstraction
  */
 @Injectable()
 export class CatalogQueryService {
@@ -32,56 +71,55 @@ export class CatalogQueryService {
   ) {}
 
   /**
-   * Get all active products with optional filtering
+   * List products with search, filtering, and pagination
+   *
+   * This is the primary method for browsing the catalog.
    */
-  async getAllActiveProducts(
-    options: {
-      category?: string;
-      requiresPrescription?: boolean;
-      page?: number;
-      limit?: number;
-    } = {},
+  async listProducts(
+    params: ProductListParams = {},
     correlationId?: string,
-  ): Promise<{ products: ProductSummaryDto[]; total: number; page: number; limit: number }> {
-    const page = options.page ?? 1;
-    const limit = Math.min(options.limit ?? 20, 100); // Max 100 per page
-    const offset = (page - 1) * limit;
-
-    // Validate category if provided
-    let category: ProductCategory | undefined;
-    if (options.category) {
-      category = this.parseCategory(options.category);
+  ): Promise<ProductListResult> {
+    // Validate and parse category if provided
+    let category: ProductCategory | null = null;
+    if (params.category) {
+      category = this.parseCategory(params.category);
     }
 
-    const [products, total] = await Promise.all([
-      this.productRepository.findAll({
-        category,
-        requiresPrescription: options.requiresPrescription,
-        activeOnly: true,
-        limit,
-        offset,
-      }),
-      this.productRepository.count({
-        category,
-        requiresPrescription: options.requiresPrescription,
-        activeOnly: true,
-      }),
-    ]);
+    // Build search criteria
+    const criteria = ProductSearchCriteria.create({
+      searchText: params.search,
+      category,
+      requiresPrescription: params.requiresPrescription,
+      activeOnly: true,
+      page: params.page,
+      limit: params.limit,
+    });
+
+    // Execute search
+    const result = await this.productRepository.search(criteria);
 
     if (correlationId) {
       logWithCorrelation(
         'DEBUG',
         correlationId,
-        `Fetched ${products.length} products (page ${page}, total ${total})`,
+        `Listed ${result.items.length} products (page ${result.page}/${result.totalPages}, total ${result.total})`,
         'CatalogQueryService',
+        {
+          search: params.search ?? null,
+          category: params.category ?? null,
+          requiresPrescription: params.requiresPrescription ?? null,
+        },
       );
     }
 
     return {
-      products: products.map(toProductSummaryDto),
-      total,
-      page,
-      limit,
+      items: result.items.map(toProductSummaryDto),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      hasNextPage: result.hasNextPage,
+      hasPreviousPage: result.hasPreviousPage,
     };
   }
 
@@ -117,58 +155,6 @@ export class CatalogQueryService {
   }
 
   /**
-   * Get products by category
-   */
-  async getProductsByCategory(
-    categoryCode: string,
-    options: { page?: number; limit?: number } = {},
-    correlationId?: string,
-  ): Promise<{ products: ProductSummaryDto[]; total: number; page: number; limit: number }> {
-    const category = this.parseCategory(categoryCode);
-    return this.getAllActiveProducts({ ...options, category: categoryCode }, correlationId);
-  }
-
-  /**
-   * Search products by name or description
-   */
-  async searchProducts(
-    query: string,
-    options: { page?: number; limit?: number } = {},
-    correlationId?: string,
-  ): Promise<{ products: ProductSummaryDto[]; total: number; page: number; limit: number }> {
-    const page = options.page ?? 1;
-    const limit = Math.min(options.limit ?? 20, 100);
-    const offset = (page - 1) * limit;
-
-    const products = await this.productRepository.search(query, {
-      activeOnly: true,
-      limit,
-      offset,
-    });
-
-    // For search, we need total matching count
-    // Since our in-memory repo doesn't have a count for search,
-    // we'll return the current page size as an approximation
-    const total = products.length < limit ? offset + products.length : offset + limit + 1;
-
-    if (correlationId) {
-      logWithCorrelation(
-        'DEBUG',
-        correlationId,
-        `Search for "${query}" returned ${products.length} results`,
-        'CatalogQueryService',
-      );
-    }
-
-    return {
-      products: products.map(toProductSummaryDto),
-      total,
-      page,
-      limit,
-    };
-  }
-
-  /**
    * Get all categories
    */
   async getCategories(): Promise<CategoryDto[]> {
@@ -197,4 +183,3 @@ export class CatalogQueryService {
     return upperCode as ProductCategory;
   }
 }
-

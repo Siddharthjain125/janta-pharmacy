@@ -1,4 +1,5 @@
 import { Product, ProductCategory } from '../domain';
+import { ProductSearchCriteria, ProductSearchResult } from '../queries';
 
 /**
  * Injection token for the Product repository
@@ -15,8 +16,8 @@ export const PRODUCT_REPOSITORY = Symbol('PRODUCT_REPOSITORY');
  * Design notes:
  * - All methods are async for consistency
  * - Returns Product entities, not database models
- * - Filtering options for efficient queries
- * - No write operations in this interface
+ * - Uses ProductSearchCriteria for clean query abstraction
+ * - No HTTP/transport concepts leak into this interface
  */
 export interface IProductRepository {
   /**
@@ -26,27 +27,15 @@ export interface IProductRepository {
   findById(productId: string): Promise<Product | null>;
 
   /**
-   * Find all active products with optional filters
-   * @param options Filtering and pagination options
+   * Search products using criteria
+   * Returns paginated results with total count
+   *
+   * This is the primary query method that supports:
+   * - Text search (name, description)
+   * - Filtering (category, prescription, active status)
+   * - Pagination
    */
-  findAll(options?: FindProductsOptions): Promise<Product[]>;
-
-  /**
-   * Find products by category
-   * @param category The product category to filter by
-   * @param options Additional filtering options
-   */
-  findByCategory(
-    category: ProductCategory,
-    options?: Omit<FindProductsOptions, 'category'>,
-  ): Promise<Product[]>;
-
-  /**
-   * Search products by name or description
-   * @param query Search query string
-   * @param options Additional filtering options
-   */
-  search(query: string, options?: FindProductsOptions): Promise<Product[]>;
+  search(criteria: ProductSearchCriteria): Promise<ProductSearchResult<Product>>;
 
   /**
    * Check if a product exists and is active
@@ -54,28 +43,7 @@ export interface IProductRepository {
   exists(productId: string): Promise<boolean>;
 
   /**
-   * Count products with optional filters
+   * Count products matching criteria (without pagination)
    */
-  count(options?: Omit<FindProductsOptions, 'limit' | 'offset'>): Promise<number>;
+  count(criteria: ProductSearchCriteria): Promise<number>;
 }
-
-/**
- * Options for filtering and paginating product queries
- */
-export interface FindProductsOptions {
-  /** Filter by category */
-  category?: ProductCategory;
-
-  /** Filter by prescription requirement */
-  requiresPrescription?: boolean;
-
-  /** Only include active products (default: true) */
-  activeOnly?: boolean;
-
-  /** Maximum number of results */
-  limit?: number;
-
-  /** Number of results to skip */
-  offset?: number;
-}
-
