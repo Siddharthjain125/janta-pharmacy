@@ -17,7 +17,8 @@ export function Header() {
    * Format phone number for display
    * Shows last 4 digits with mask for privacy
    */
-  const formatPhoneDisplay = (phone: string): string => {
+  const formatPhoneDisplay = (phone: string | undefined | null): string => {
+    if (!phone) return '...';
     if (phone.length <= 4) return phone;
     return `***${phone.slice(-4)}`;
   };

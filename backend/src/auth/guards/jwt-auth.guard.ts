@@ -68,7 +68,7 @@ export class JwtAuthGuard implements CanActivate {
       // Build AuthUser from JWT payload
       const authUser: AuthUser = {
         id: payload.sub,
-        phoneNumber: payload.phone,
+        phoneNumber: payload.phoneNumber,
         email: payload.email,
         role: (payload.roles[0] as UserRole) || UserRole.CUSTOMER,
         roles: payload.roles as UserRole[],
