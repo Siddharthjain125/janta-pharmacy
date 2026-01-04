@@ -9,7 +9,17 @@
 export { CatalogModule } from './catalog.module';
 
 // Query Service (for other modules to access catalog data)
-export { CatalogQueryService } from './catalog-query.service';
+export {
+  CatalogQueryService,
+  ProductListParams,
+  ProductListResult,
+} from './catalog-query.service';
+
+// Query objects
+export {
+  ProductSearchCriteria,
+  ProductSearchResult,
+} from './queries';
 
 // DTOs (for type safety across modules)
 export {
@@ -37,7 +47,6 @@ export {
 export {
   PRODUCT_REPOSITORY,
   IProductRepository,
-  FindProductsOptions,
 } from './repositories';
 
 // Exceptions

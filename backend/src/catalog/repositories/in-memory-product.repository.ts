@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import {
-  IProductRepository,
-  FindProductsOptions,
-} from './product-repository.interface';
+import { IProductRepository } from './product-repository.interface';
 import {
   Product,
-  ProductId,
   ProductCategory,
   Money,
   createProduct,
 } from '../domain';
+import {
+  ProductSearchCriteria,
+  ProductSearchResult,
+  createSearchResult,
+} from '../queries';
 
 /**
  * In-Memory Product Repository
@@ -19,8 +20,9 @@ import {
  *
  * Features:
  * - Efficient lookup by ID
- * - Filtering by category, prescription requirement
- * - Search by name/description
+ * - Full text search (name, description)
+ * - Filtering by category, prescription requirement, active status
+ * - Pagination with accurate total counts
  * - No persistence across restarts
  */
 @Injectable()
@@ -35,36 +37,25 @@ export class InMemoryProductRepository implements IProductRepository {
     return this.products.get(productId) ?? null;
   }
 
-  async findAll(options?: FindProductsOptions): Promise<Product[]> {
+  async search(criteria: ProductSearchCriteria): Promise<ProductSearchResult<Product>> {
+    // Get all products and apply filters
     let results = Array.from(this.products.values());
-    results = this.applyFilters(results, options);
-    results = this.applyPagination(results, options);
-    return results;
-  }
 
-  async findByCategory(
-    category: ProductCategory,
-    options?: Omit<FindProductsOptions, 'category'>,
-  ): Promise<Product[]> {
-    return this.findAll({ ...options, category });
-  }
+    // Apply all filters
+    results = this.applyFilters(results, criteria);
 
-  async search(query: string, options?: FindProductsOptions): Promise<Product[]> {
-    const normalizedQuery = query.toLowerCase().trim();
-
-    if (!normalizedQuery) {
-      return this.findAll(options);
+    // Apply text search if provided
+    if (criteria.hasSearchText) {
+      results = this.applyTextSearch(results, criteria.searchText!);
     }
 
-    let results = Array.from(this.products.values()).filter((product) => {
-      const nameMatch = product.name.toLowerCase().includes(normalizedQuery);
-      const descMatch = product.description?.toLowerCase().includes(normalizedQuery);
-      return nameMatch || descMatch;
-    });
+    // Get total before pagination
+    const total = results.length;
 
-    results = this.applyFilters(results, options);
-    results = this.applyPagination(results, options);
-    return results;
+    // Apply pagination
+    results = this.applyPagination(results, criteria);
+
+    return createSearchResult(results, total, criteria);
   }
 
   async exists(productId: string): Promise<boolean> {
@@ -72,9 +63,17 @@ export class InMemoryProductRepository implements IProductRepository {
     return product !== undefined && product.isActive;
   }
 
-  async count(options?: Omit<FindProductsOptions, 'limit' | 'offset'>): Promise<number> {
+  async count(criteria: ProductSearchCriteria): Promise<number> {
     let results = Array.from(this.products.values());
-    results = this.applyFilters(results, options);
+
+    // Apply filters
+    results = this.applyFilters(results, criteria);
+
+    // Apply text search if provided
+    if (criteria.hasSearchText) {
+      results = this.applyTextSearch(results, criteria.searchText!);
+    }
+
     return results.length;
   }
 
@@ -83,25 +82,24 @@ export class InMemoryProductRepository implements IProductRepository {
    */
   private applyFilters(
     products: Product[],
-    options?: FindProductsOptions,
+    criteria: ProductSearchCriteria,
   ): Product[] {
-    let results = [...products];
+    let results = products;
 
-    // Filter by active status (default: true)
-    const activeOnly = options?.activeOnly ?? true;
-    if (activeOnly) {
+    // Filter by active status
+    if (criteria.activeOnly) {
       results = results.filter((p) => p.isActive);
     }
 
     // Filter by category
-    if (options?.category) {
-      results = results.filter((p) => p.category === options.category);
+    if (criteria.category !== null) {
+      results = results.filter((p) => p.category === criteria.category);
     }
 
     // Filter by prescription requirement
-    if (options?.requiresPrescription !== undefined) {
+    if (criteria.requiresPrescription !== null) {
       results = results.filter(
-        (p) => p.requiresPrescription === options.requiresPrescription,
+        (p) => p.requiresPrescription === criteria.requiresPrescription,
       );
     }
 
@@ -109,15 +107,34 @@ export class InMemoryProductRepository implements IProductRepository {
   }
 
   /**
+   * Apply text search to product list
+   * Case-insensitive search on name and description
+   */
+  private applyTextSearch(
+    products: Product[],
+    searchText: string,
+  ): Product[] {
+    const normalizedQuery = searchText.toLowerCase().trim();
+
+    if (!normalizedQuery) {
+      return products;
+    }
+
+    return products.filter((product) => {
+      const nameMatch = product.name.toLowerCase().includes(normalizedQuery);
+      const descMatch = product.description?.toLowerCase().includes(normalizedQuery) ?? false;
+      return nameMatch || descMatch;
+    });
+  }
+
+  /**
    * Apply pagination to product list
    */
   private applyPagination(
     products: Product[],
-    options?: FindProductsOptions,
+    criteria: ProductSearchCriteria,
   ): Product[] {
-    const offset = options?.offset ?? 0;
-    const limit = options?.limit ?? products.length;
-    return products.slice(offset, offset + limit);
+    return products.slice(criteria.offset, criteria.offset + criteria.limit);
   }
 
   /**
@@ -278,4 +295,3 @@ export class InMemoryProductRepository implements IProductRepository {
     return this.products.size;
   }
 }
-

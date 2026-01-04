@@ -53,16 +53,6 @@ export interface CategoryDto {
 }
 
 /**
- * Query parameters for listing products
- */
-export interface ListProductsQueryDto {
-  category?: string;
-  requiresPrescription?: boolean;
-  page?: number;
-  limit?: number;
-}
-
-/**
  * Convert domain Product to ProductDto for API response
  */
 export function toProductDto(product: {
