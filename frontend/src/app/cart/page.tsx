@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
 import { getCart, updateCartItem, removeCartItem, confirmOrder } from '@/lib/cart-service';
 import type { Cart, CartItem } from '@/types/api';
@@ -22,6 +23,7 @@ import type { Cart, CartItem } from '@/types/api';
  */
 export default function CartPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +51,11 @@ export default function CartPage() {
     }
   }, []);
 
+  // Wait for auth to be ready before fetching
   useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) return;
     fetchCart();
-  }, [fetchCart]);
+  }, [fetchCart, isAuthLoading, isAuthenticated]);
 
   // Update item quantity
   const handleUpdateQuantity = async (productId: string, newQuantity: number) => {

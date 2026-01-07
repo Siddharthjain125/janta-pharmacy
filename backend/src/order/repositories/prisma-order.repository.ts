@@ -4,6 +4,7 @@ import { IOrderRepository } from './order-repository.interface';
 import { OrderDto, OrderItemDto, OrderStatus } from '../dto/order.dto';
 import { Order as PrismaOrder, OrderStatus as PrismaOrderStatus } from '@prisma/client';
 import { OrderItem } from '../domain/order-item';
+import { PaginatedResult, PaginationParams } from '../queries/pagination';
 
 /**
  * Prisma Order Repository
@@ -105,6 +106,13 @@ export class PrismaOrderRepository implements IOrderRepository {
 
   async getItem(_orderId: string, _productId: string): Promise<OrderItemDto | null> {
     throw new Error('PrismaOrderRepository: getItem not implemented');
+  }
+
+  async findByUserIdPaginated(
+    _userId: string,
+    _pagination: PaginationParams,
+  ): Promise<PaginatedResult<OrderDto>> {
+    throw new Error('PrismaOrderRepository: findByUserIdPaginated not implemented');
   }
 
   // ============================================================

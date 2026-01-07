@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
 import { apiClient } from '@/lib/api-client';
 import type { ConfirmedOrder, ConfirmedOrderItem } from '@/types/api';
@@ -24,14 +25,18 @@ import type { ConfirmedOrder, ConfirmedOrderItem } from '@/types/api';
 export default function OrderConfirmedPage() {
   const params = useParams();
   const router = useRouter();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const orderId = params.id as string;
 
   const [order, setOrder] = useState<ConfirmedOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch order details
+  // Fetch order details - wait for auth to be ready
   useEffect(() => {
+    // Don't fetch until auth is initialized
+    if (isAuthLoading || !isAuthenticated) return;
+
     async function fetchOrder() {
       if (!orderId) return;
 
@@ -65,7 +70,7 @@ export default function OrderConfirmedPage() {
     }
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, isAuthLoading, isAuthenticated]);
 
   // Format price helper
   const formatPrice = (amount: number, currency: string) => {
