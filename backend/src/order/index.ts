@@ -16,6 +16,18 @@ export {
   UpdateItemQuantityDto,
 } from './dto/order.dto';
 
+// Cart DTOs
+export {
+  CartResponseDto,
+  CartItemDto,
+  AddToCartRequestDto,
+  UpdateCartItemRequestDto,
+  toCartResponseDto,
+} from './dto/cart.dto';
+
+// Controllers
+export { CartController } from './cart.controller';
+
 // Domain
 export {
   OrderStatus,

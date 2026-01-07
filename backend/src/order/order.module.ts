@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { OrderController } from './order.controller';
+import { CartController } from './cart.controller';
 import { OrderService } from './order.service';
 import { CartService } from './cart.service';
 import { ORDER_REPOSITORY } from './repositories/order-repository.interface';
@@ -30,7 +31,7 @@ import { CatalogModule } from '../catalog/catalog.module';
     AuthModule, // For JwtAuthGuard
     CatalogModule, // For product validation in CartService
   ],
-  controllers: [OrderController],
+  controllers: [OrderController, CartController],
   providers: [
     OrderService,
     CartService,
