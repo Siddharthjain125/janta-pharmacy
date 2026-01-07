@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OrderDto, OrderItemDto, OrderPriceDto } from './order.dto';
+import { OrderDto, OrderItemDto, OrderPriceDto, OrderStatus } from './order.dto';
 
 /**
  * Cart item response (safe for API exposure)
@@ -93,6 +93,71 @@ function toCartItemDto(item: OrderItemDto): CartItemDto {
     unitPrice: item.unitPrice,
     quantity: item.quantity,
     subtotal: item.subtotal,
+  };
+}
+
+// ============================================================
+// Checkout Response DTOs
+// ============================================================
+
+/**
+ * Item in a confirmed order (safe for API exposure)
+ */
+export interface ConfirmedOrderItemDto {
+  productId: string;
+  productName: string;
+  unitPrice: OrderPriceDto;
+  quantity: number;
+  subtotal: OrderPriceDto;
+}
+
+/**
+ * Checkout response DTO
+ *
+ * Returned after successfully confirming an order (checkout).
+ * Contains all relevant order details for the client.
+ */
+export interface CheckoutResponseDto {
+  /** The confirmed order ID */
+  orderId: string;
+
+  /** Order state (CONFIRMED) */
+  state: OrderStatus;
+
+  /** Items in the order */
+  items: ConfirmedOrderItemDto[];
+
+  /** Total item count (sum of quantities) */
+  itemCount: number;
+
+  /** Order total (finalized at confirmation) */
+  total: OrderPriceDto;
+
+  /** When the order was created (as draft) */
+  createdAt: string;
+
+  /** When the order was confirmed (checkout time) */
+  confirmedAt: string;
+}
+
+/**
+ * Convert OrderDto to checkout response DTO
+ */
+export function toCheckoutResponseDto(order: OrderDto): CheckoutResponseDto {
+  return {
+    orderId: order.id,
+    state: order.status,
+    items: order.items.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      subtotal: item.subtotal,
+    })),
+    itemCount: order.itemCount,
+    total: order.total,
+    createdAt: order.createdAt.toISOString(),
+    confirmedAt: order.updatedAt.toISOString(), // updatedAt reflects confirmation time
   };
 }
 

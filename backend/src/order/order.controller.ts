@@ -10,11 +10,14 @@ import {
   Headers,
 } from '@nestjs/common';
 import { OrderService } from './order.service';
+import { CartService } from './cart.service';
 import { ApiResponse } from '../common/api/api-response';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { OrderDto, OrderStatus } from './dto/order.dto';
+import { CheckoutResponseDto, toCheckoutResponseDto } from './dto/cart.dto';
+import { logWithCorrelation } from '../common/logging/logger';
 
 /**
  * Order Controller
@@ -29,7 +32,10 @@ import { OrderDto, OrderStatus } from './dto/order.dto';
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly cartService: CartService,
+  ) {}
 
   // ============================================================
   // QUERIES
@@ -72,10 +78,50 @@ export class OrderController {
   // ============================================================
 
   /**
+   * Checkout - Confirm draft order
+   * POST /api/v1/orders/checkout
+   *
+   * Converts the user's active cart (DRAFT order) into a confirmed order.
+   * This is an irreversible business commitment.
+   *
+   * Business rules enforced (in domain layer):
+   * - User must have an active cart (DRAFT order)
+   * - Cart must have at least one item
+   * - No prescription-required items (until prescription workflow exists)
+   * - User must own the cart
+   *
+   * Transitions: DRAFT → CONFIRMED
+   */
+  @Post('checkout')
+  @HttpCode(HttpStatus.OK)
+  async checkout(
+    @CurrentUser() user: AuthUser,
+    @Headers('x-correlation-id') correlationId: string,
+  ): Promise<ApiResponse<CheckoutResponseDto>> {
+    logWithCorrelation('INFO', correlationId, 'Checkout initiated', 'OrderController', {
+      userId: user.id,
+    });
+
+    const result = await this.cartService.confirmDraftOrder(user.id, correlationId);
+
+    logWithCorrelation('INFO', correlationId, 'Checkout completed', 'OrderController', {
+      userId: user.id,
+      orderId: result.order.id,
+      total: result.order.total.amount,
+    });
+
+    return ApiResponse.success(
+      toCheckoutResponseDto(result.order),
+      'Order confirmed successfully',
+    );
+  }
+
+  /**
    * Create a new order
    * POST /api/v1/orders
    *
    * Creates order in CREATED status.
+   * Note: For cart-based checkout, use POST /orders/checkout instead.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
