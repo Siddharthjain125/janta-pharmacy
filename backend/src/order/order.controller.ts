@@ -17,7 +17,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { OrderDto, OrderStatus } from './dto/order.dto';
-import { CheckoutResponseDto, toCheckoutResponseDto } from './dto/cart.dto';
+import {
+  CheckoutResponseDto,
+  toCheckoutResponseDto,
+  CancelOrderResponseDto,
+  toCancelOrderResponseDto,
+} from './dto/cart.dto';
 import {
   OrderHistoryQueryDto,
   OrderHistoryResponseDto,
@@ -226,6 +231,7 @@ export class OrderController {
    * POST /api/v1/orders/:id/cancel
    *
    * Cancels an order if allowed by the order lifecycle state machine.
+   * All business rules and state transitions are enforced in the domain layer.
    *
    * Allowed transitions:
    * - DRAFT → CANCELLED
@@ -235,6 +241,12 @@ export class OrderController {
    * - SHIPPED → CANCELLED
    *
    * Cannot cancel orders in terminal states (DELIVERED, CANCELLED).
+   *
+   * Errors (handled by global error handler):
+   * - Order not found → 404
+   * - Unauthorized access → 403
+   * - Invalid state transition → 409
+   * - Already cancelled → 409
    */
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
@@ -242,7 +254,7 @@ export class OrderController {
     @Param('id') orderId: string,
     @CurrentUser() user: AuthUser,
     @Headers('x-correlation-id') correlationId: string,
-  ): Promise<ApiResponse<OrderDto>> {
+  ): Promise<ApiResponse<CancelOrderResponseDto>> {
     logWithCorrelation('INFO', correlationId, 'Cancel order requested', 'OrderController', {
       userId: user.id,
       orderId,
@@ -260,6 +272,9 @@ export class OrderController {
       previousState: result.previousState,
     });
 
-    return ApiResponse.success(result.order, 'Order cancelled successfully');
+    return ApiResponse.success(
+      toCancelOrderResponseDto(result.order),
+      'Order cancelled successfully',
+    );
   }
 }

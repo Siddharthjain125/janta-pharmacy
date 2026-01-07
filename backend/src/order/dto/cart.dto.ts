@@ -161,3 +161,68 @@ export function toCheckoutResponseDto(order: OrderDto): CheckoutResponseDto {
   };
 }
 
+// ============================================================
+// Cancel Order Response DTOs
+// ============================================================
+
+/**
+ * Item in a cancelled order (safe for API exposure)
+ */
+export interface CancelledOrderItemDto {
+  productId: string;
+  productName: string;
+  unitPrice: OrderPriceDto;
+  quantity: number;
+  subtotal: OrderPriceDto;
+}
+
+/**
+ * Cancel order response DTO
+ *
+ * Returned after successfully cancelling an order.
+ * Contains order details at the time of cancellation.
+ */
+export interface CancelOrderResponseDto {
+  /** The cancelled order ID */
+  orderId: string;
+
+  /** Order state (CANCELLED) */
+  state: OrderStatus;
+
+  /** Items in the order at cancellation */
+  items: CancelledOrderItemDto[];
+
+  /** Total item count */
+  itemCount: number;
+
+  /** Order total at cancellation */
+  total: OrderPriceDto;
+
+  /** When the order was originally created */
+  createdAt: string;
+
+  /** When the order was cancelled */
+  cancelledAt: string;
+}
+
+/**
+ * Convert OrderDto to cancel order response DTO
+ */
+export function toCancelOrderResponseDto(order: OrderDto): CancelOrderResponseDto {
+  return {
+    orderId: order.id,
+    state: order.status,
+    items: order.items.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      subtotal: item.subtotal,
+    })),
+    itemCount: order.itemCount,
+    total: order.total,
+    createdAt: order.createdAt.toISOString(),
+    cancelledAt: order.updatedAt.toISOString(), // updatedAt reflects cancellation time
+  };
+}
+
