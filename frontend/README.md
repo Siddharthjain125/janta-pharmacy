@@ -1,104 +1,67 @@
-# Janta Pharmacy - Frontend
+# Janta Pharmacy — Frontend
 
-> **Status**: 🏗️ Scaffolding Phase
-> **Framework**: Next.js 14 (App Router)
+**Next.js web application with real authentication and API integration**
 
 ---
 
 ## Overview
 
-This is the frontend application for Janta Pharmacy, built with **Next.js** and **TypeScript**. Following the project's **architecture-first** philosophy, this is currently a structural scaffold designed to be extended with real features.
+Production-grade frontend built with **Next.js 14** (App Router) and **TypeScript**.
 
-### What This Is
+### Current Status
 
-- ✅ Clean Next.js App Router project structure
-- ✅ TypeScript configuration
-- ✅ API client abstraction (fetch-based)
-- ✅ Authentication context (mocked)
-- ✅ Protected route component
-- ✅ Basic routing setup
-- ✅ Type definitions aligned with backend
+| Feature | Status |
+|---------|--------|
+| Authentication | ✅ JWT + refresh tokens |
+| Session persistence | ✅ Survives page reload |
+| Protected routes | ✅ Redirect to login |
+| Catalog browsing | ✅ Search, filter, paginate |
+| Product details | ✅ Full product view |
+| Shopping cart | ✅ Add, update, remove items |
 
-### What This Is NOT (Yet)
+---
 
-- ❌ Complete UI/UX implementation
-- ❌ Real authentication flow
-- ❌ Form validation
-- ❌ State management library
-- ❌ Styling framework (Tailwind, etc.)
-- ❌ Testing setup
+## Quick Start
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**URL:** http://localhost:3000
+
+**Requires backend running on:** http://localhost:3001
 
 ---
 
 ## Project Structure
 
 ```
-frontend/
-├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── layout.tsx          # Root layout
-│   │   ├── page.tsx            # Home page
-│   │   ├── login/              # Login page
-│   │   └── orders/             # Orders pages
-│   │       ├── page.tsx        # Orders list
-│   │       └── [id]/           # Order detail
-│   │
-│   ├── lib/                    # Core utilities
-│   │   ├── api-client.ts       # HTTP client
-│   │   ├── auth-context.tsx    # Auth provider
-│   │   └── constants.ts        # App constants
-│   │
-│   ├── components/             # Shared components
-│   │   ├── Header.tsx          # Navigation header
-│   │   └── ProtectedRoute.tsx  # Auth guard
-│   │
-│   └── types/                  # TypeScript types
-│       └── api.ts              # API types (aligned with backend)
+src/
+├── app/                    # Next.js App Router pages
+│   ├── layout.tsx          # Root layout with AuthProvider
+│   ├── page.tsx            # Home
+│   ├── login/              # Login page
+│   ├── register/           # Registration page
+│   ├── catalog/            # Product listing + detail
+│   ├── cart/               # Shopping cart
+│   └── orders/             # Order history (planned)
 │
-├── public/                     # Static assets
-├── package.json
-├── tsconfig.json
-└── next.config.js
-```
-
----
-
-## Why Scaffolding First?
-
-1. **Alignment with Backend**: Types and API contracts match the backend exactly
-2. **Clear Architecture**: Structure is established before features
-3. **Team Onboarding**: New developers understand the patterns
-4. **Progressive Enhancement**: Features added incrementally
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js >= 18.0.0
-- npm or yarn
-
-### Installation
-
-```bash
-cd frontend
-npm install
-```
-
-### Development
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3001](http://localhost:3001) (or the port shown in terminal).
-
-### Build
-
-```bash
-npm run build
-npm run start
+├── components/             # Shared components
+│   ├── Header.tsx          # Navigation with auth state
+│   └── ProtectedRoute.tsx  # Auth guard wrapper
+│
+├── lib/                    # Core utilities
+│   ├── api-client.ts       # HTTP client with token refresh
+│   ├── auth-context.tsx    # React context for auth
+│   ├── auth-service.ts     # Auth API calls
+│   ├── catalog-service.ts  # Catalog API calls
+│   ├── cart-service.ts     # Cart API calls
+│   └── constants.ts        # Routes, config
+│
+└── types/                  # TypeScript definitions
+    └── api.ts              # API types (aligned with backend)
 ```
 
 ---
@@ -107,70 +70,77 @@ npm run start
 
 | Route | Description | Auth Required |
 |-------|-------------|---------------|
-| `/` | Home page | No |
-| `/login` | Login page | No |
-| `/orders` | Orders list | Yes |
-| `/orders/[id]` | Order detail | Yes |
+| `/` | Home | No |
+| `/login` | Login form | No |
+| `/register` | Registration form | No |
+| `/catalog` | Product listing | Yes |
+| `/catalog/[id]` | Product detail | Yes |
+| `/cart` | Shopping cart | Yes |
+| `/orders` | Order history (planned) | Yes |
+
+---
+
+## Authentication Flow
+
+1. **Login** — POST to `/auth/login`, receive JWT + refresh token
+2. **Token storage** — Access token in memory, refresh token in localStorage
+3. **API calls** — Access token in Authorization header
+4. **401 handling** — Automatic token refresh, retry request
+5. **Session restore** — On page load, refresh token if available
+
+```typescript
+// Auth context provides:
+const { isAuthenticated, user, login, logout, isLoading } = useAuth();
+```
 
 ---
 
 ## API Integration
 
-The frontend is designed to connect to the backend API:
+All API calls go through centralized client with automatic auth:
 
 ```typescript
 import { apiClient } from '@/lib/api-client';
 
-// Example (not yet implemented)
-const orders = await apiClient.get<Order[]>('/orders');
+// Auth handled automatically
+const response = await apiClient.get<Product[]>('/catalog/products');
 ```
 
-### Backend URL
+Service modules for each domain:
+- `auth-service.ts` — login, register, refresh
+- `catalog-service.ts` — products, categories
+- `cart-service.ts` — cart operations
 
-Set in environment or defaults to `http://localhost:3000/api/v1`:
+---
+
+## Cart Integration
+
+Cart is backed by Draft Order on backend:
+
+```typescript
+import { addItemToCart, getCart, updateCartItem, removeCartItem } from '@/lib/cart-service';
+
+// Add to cart (creates draft if needed)
+await addItemToCart(productId, quantity);
+
+// Get current cart
+const cart = await getCart();
+
+// Update quantity
+await updateCartItem(productId, newQuantity);
+
+// Remove item
+await removeCartItem(productId);
+```
+
+---
+
+## Environment
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
+# .env.local
+NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 ```
-
----
-
-## Authentication
-
-Currently using **mock authentication** for development:
-
-- Any email/password combination works
-- User is always authenticated with mock data
-- Token is a placeholder string
-
-### Real Auth TODO
-
-1. Connect to `/auth/login` endpoint
-2. Store tokens securely
-3. Implement token refresh
-4. Add logout flow
-
----
-
-## Type Safety
-
-Types in `src/types/api.ts` are aligned with backend DTOs:
-
-- `Order` ↔ `OrderDto`
-- `OrderStatus` ↔ `OrderStatus` enum
-- `ApiResponse<T>` ↔ `ApiResponse<T>`
-
----
-
-## Next Steps
-
-1. [ ] Add Tailwind CSS for styling
-2. [ ] Implement real API calls
-3. [ ] Add form validation (zod/yup)
-4. [ ] Connect to real authentication
-5. [ ] Add error boundaries
-6. [ ] Add loading states
-7. [ ] Add testing (Jest, React Testing Library)
 
 ---
 
@@ -178,20 +148,23 @@ Types in `src/types/api.ts` are aligned with backend DTOs:
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run type-check` | Run TypeScript check |
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production |
+| `npm run lint` | ESLint |
 
 ---
 
-## Contributing
+## Styling
 
-Please refer to the main [README.md](/README.md) for contribution guidelines.
+Currently using **inline styles** (minimal). No styling framework yet.
+
+Future options: Tailwind CSS, CSS Modules, or styled-components.
 
 ---
 
-## License
+## Related Docs
 
-MIT - See [LICENSE](/LICENSE)
+- [Architecture](/docs/architecture.md)
+- [Roadmap](/docs/roadmap.md)
+- [Backend README](/backend/README.md)
