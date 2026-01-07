@@ -93,6 +93,57 @@ export function createOrderConfirmedEvent(
 }
 
 /**
+ * Order Cancelled Event
+ *
+ * Emitted when an order is cancelled.
+ * Cancellation is allowed from multiple states (DRAFT, CREATED, CONFIRMED, PAID, SHIPPED).
+ *
+ * Contains:
+ * - Order identification
+ * - Previous state (for audit)
+ * - Total at cancellation time (for potential refund workflows)
+ * - Item count for quick reference
+ */
+export interface OrderCancelledEvent extends DomainEvent {
+  readonly type: 'ORDER_CANCELLED';
+  readonly orderId: string;
+  readonly userId: string;
+  /** State before cancellation */
+  readonly previousState: string;
+  /** Total at cancellation time */
+  readonly total: {
+    readonly amount: number;
+    readonly currency: string;
+  };
+  readonly itemCount: number;
+}
+
+/**
+ * Factory function to create an OrderCancelled event
+ */
+export function createOrderCancelledEvent(
+  data: {
+    orderId: string;
+    userId: string;
+    previousState: string;
+    total: { amount: number; currency: string };
+    itemCount: number;
+  },
+  correlationId?: string,
+): OrderCancelledEvent {
+  return {
+    type: 'ORDER_CANCELLED',
+    occurredAt: new Date(),
+    correlationId,
+    orderId: data.orderId,
+    userId: data.userId,
+    previousState: data.previousState,
+    total: data.total,
+    itemCount: data.itemCount,
+  };
+}
+
+/**
  * Simple in-process event collector
  *
  * Collects domain events during a use case execution.

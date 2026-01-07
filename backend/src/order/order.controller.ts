@@ -225,7 +225,16 @@ export class OrderController {
    * Cancel an order
    * POST /api/v1/orders/:id/cancel
    *
-   * Transitions: CREATED/CONFIRMED/PAID → CANCELLED
+   * Cancels an order if allowed by the order lifecycle state machine.
+   *
+   * Allowed transitions:
+   * - DRAFT → CANCELLED
+   * - CREATED → CANCELLED
+   * - CONFIRMED → CANCELLED
+   * - PAID → CANCELLED
+   * - SHIPPED → CANCELLED
+   *
+   * Cannot cancel orders in terminal states (DELIVERED, CANCELLED).
    */
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
@@ -234,11 +243,23 @@ export class OrderController {
     @CurrentUser() user: AuthUser,
     @Headers('x-correlation-id') correlationId: string,
   ): Promise<ApiResponse<OrderDto>> {
-    const order = await this.orderService.cancelOrder(
+    logWithCorrelation('INFO', correlationId, 'Cancel order requested', 'OrderController', {
+      userId: user.id,
+      orderId,
+    });
+
+    const result = await this.orderService.cancelOrder(
       orderId,
       user.id,
       correlationId,
     );
-    return ApiResponse.success(order, 'Order cancelled successfully');
+
+    logWithCorrelation('INFO', correlationId, 'Order cancelled successfully', 'OrderController', {
+      userId: user.id,
+      orderId,
+      previousState: result.previousState,
+    });
+
+    return ApiResponse.success(result.order, 'Order cancelled successfully');
   }
 }

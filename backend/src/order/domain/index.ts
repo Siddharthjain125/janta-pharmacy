@@ -31,6 +31,8 @@ export {
 export {
   type DomainEvent,
   type OrderConfirmedEvent,
+  type OrderCancelledEvent,
   createOrderConfirmedEvent,
+  createOrderCancelledEvent,
   DomainEventCollector,
 } from './domain-events';
