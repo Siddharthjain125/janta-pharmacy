@@ -9,6 +9,7 @@ import {
   calculateItemSubtotal,
 } from '../domain/order-item';
 import { Money } from '../../catalog/domain/money';
+import { PaginationParams, PaginatedResult, createPaginatedResult } from '../queries';
 
 /**
  * Internal order representation with domain items
@@ -81,6 +82,36 @@ export class InMemoryOrderRepository implements IOrderRepository {
     userOrders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     return userOrders.map((o) => this.toDto(o));
+  }
+
+  async findByUserIdPaginated(
+    userId: string,
+    pagination: PaginationParams,
+  ): Promise<PaginatedResult<OrderDto>> {
+    // Collect all non-DRAFT orders for user (DRAFT = cart, not order history)
+    const userOrders: InternalOrder[] = [];
+
+    for (const order of this.orders.values()) {
+      if (order.userId === userId && order.status !== OrderStatus.DRAFT) {
+        userOrders.push(order);
+      }
+    }
+
+    // Sort by createdAt descending (most recent first)
+    userOrders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Get total before pagination
+    const total = userOrders.length;
+
+    // Apply pagination
+    const offset = (pagination.page - 1) * pagination.limit;
+    const paginatedOrders = userOrders.slice(offset, offset + pagination.limit);
+
+    return createPaginatedResult(
+      paginatedOrders.map((o) => this.toDto(o)),
+      total,
+      pagination,
+    );
   }
 
   async updateStatus(orderId: string, status: OrderStatus): Promise<OrderDto> {

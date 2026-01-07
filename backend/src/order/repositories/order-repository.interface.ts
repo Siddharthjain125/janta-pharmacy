@@ -1,6 +1,7 @@
 import { OrderDto, OrderItemDto } from '../dto/order.dto';
 import { OrderStatus } from '../domain/order-status';
 import { OrderItem } from '../domain/order-item';
+import { PaginationParams, PaginatedResult } from '../queries';
 
 /**
  * Order Repository Interface
@@ -30,6 +31,16 @@ export interface IOrderRepository {
    * Find all orders for a user, optionally filtered by status
    */
   findByUserId(userId: string, status?: OrderStatus): Promise<OrderDto[]>;
+
+  /**
+   * Find orders for a user with pagination
+   * Returns orders sorted by createdAt descending (most recent first)
+   * Excludes DRAFT orders (those are carts, not order history)
+   */
+  findByUserIdPaginated(
+    userId: string,
+    pagination: PaginationParams,
+  ): Promise<PaginatedResult<OrderDto>>;
 
   /**
    * Update order status

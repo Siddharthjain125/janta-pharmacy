@@ -10,6 +10,7 @@ import {
   Headers,
 } from '@nestjs/common';
 import { OrderService } from './order.service';
+import { OrderQueryService } from './order-query.service';
 import { CartService } from './cart.service';
 import { ApiResponse } from '../common/api/api-response';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -17,6 +18,11 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { OrderDto, OrderStatus } from './dto/order.dto';
 import { CheckoutResponseDto, toCheckoutResponseDto } from './dto/cart.dto';
+import {
+  OrderHistoryQueryDto,
+  OrderHistoryResponseDto,
+  OrderDetailDto,
+} from './dto/order-history.dto';
 import { logWithCorrelation } from '../common/logging/logger';
 
 /**
@@ -34,6 +40,7 @@ import { logWithCorrelation } from '../common/logging/logger';
 export class OrderController {
   constructor(
     private readonly orderService: OrderService,
+    private readonly orderQueryService: OrderQueryService,
     private readonly cartService: CartService,
   ) {}
 
@@ -42,34 +49,70 @@ export class OrderController {
   // ============================================================
 
   /**
-   * Get all orders for authenticated user
+   * Get paginated order history for authenticated user
    * GET /api/v1/orders
-   * GET /api/v1/orders?status=CONFIRMED
+   * GET /api/v1/orders?page=1&limit=10
+   *
+   * Returns orders sorted by creation date (most recent first).
+   * Excludes DRAFT orders (carts) - only shows placed orders.
    */
   @Get()
-  async getOrders(
+  async getOrderHistory(
     @CurrentUser() user: AuthUser,
-    @Query('status') status?: OrderStatus,
-  ): Promise<ApiResponse<OrderDto[]>> {
-    const orders = await this.orderService.getOrdersForUser(user.id, status);
-    return ApiResponse.success(orders, 'Orders retrieved successfully');
+    @Query() query: OrderHistoryQueryDto,
+    @Headers('x-correlation-id') correlationId: string,
+  ): Promise<ApiResponse<OrderHistoryResponseDto>> {
+    logWithCorrelation('DEBUG', correlationId, 'Fetching order history', 'OrderController', {
+      userId: user.id,
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const result = await this.orderQueryService.getOrderHistory(
+      user.id,
+      { page: query.page, limit: query.limit },
+      correlationId,
+    );
+
+    logWithCorrelation('DEBUG', correlationId, 'Order history retrieved', 'OrderController', {
+      userId: user.id,
+      returned: result.orders.length,
+      total: result.pagination.total,
+    });
+
+    return ApiResponse.success(result, 'Order history retrieved successfully');
   }
 
   /**
-   * Get order by ID
+   * Get order detail by ID
    * GET /api/v1/orders/:id
+   *
+   * Returns full order details including all items.
+   * Users can only view their own orders.
    */
   @Get(':id')
   async getOrderById(
     @Param('id') orderId: string,
     @CurrentUser() user: AuthUser,
     @Headers('x-correlation-id') correlationId: string,
-  ): Promise<ApiResponse<OrderDto>> {
-    const order = await this.orderService.getOrderById(
+  ): Promise<ApiResponse<OrderDetailDto>> {
+    logWithCorrelation('DEBUG', correlationId, 'Fetching order detail', 'OrderController', {
+      userId: user.id,
+      orderId,
+    });
+
+    const order = await this.orderQueryService.getOrderById(
       orderId,
       user.id,
       correlationId,
     );
+
+    logWithCorrelation('DEBUG', correlationId, 'Order detail retrieved', 'OrderController', {
+      userId: user.id,
+      orderId,
+      state: order.state,
+    });
+
     return ApiResponse.success(order, 'Order retrieved successfully');
   }
 
