@@ -21,9 +21,14 @@ import { OrderStatus, isTerminalStatus, isMutableStatus } from './order-status';
  * Allowed transitions map
  * Key: current status
  * Value: array of valid next statuses
+ *
+ * Checkout flow:
+ * - DRAFT → CONFIRMED: Direct checkout (primary path for simple orders)
+ * - DRAFT → CREATED: Reserved for orders requiring approval/review
+ * - CREATED → CONFIRMED: Order approved and confirmed
  */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  [OrderStatus.DRAFT]: [OrderStatus.CREATED, OrderStatus.CANCELLED],
+  [OrderStatus.DRAFT]: [OrderStatus.CREATED, OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
   [OrderStatus.CREATED]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
   [OrderStatus.CONFIRMED]: [OrderStatus.PAID, OrderStatus.CANCELLED],
   [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
@@ -130,5 +135,13 @@ export function canModifyItems(status: OrderStatus): boolean {
  */
 export function canPlaceOrder(status: OrderStatus): boolean {
   return status === OrderStatus.DRAFT;
+}
+
+/**
+ * Business rule: Can this draft be confirmed (checkout)?
+ * Only DRAFT orders can be confirmed via checkout.
+ */
+export function canConfirmOrder(status: OrderStatus): boolean {
+  return canTransition(status, OrderStatus.CONFIRMED);
 }
 

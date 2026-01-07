@@ -1,19 +1,40 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ORDER_REPOSITORY, IOrderRepository } from './repositories/order-repository.interface';
 import { OrderDto } from './dto/order.dto';
-import { OrderStatus, isDraftOrder, createOrderItem } from './domain';
 import {
-  DraftOrderAlreadyExistsException,
+  OrderStatus,
+  isDraftOrder,
+  createOrderItem,
+  canConfirmOrder,
+  validateTransition,
+  createOrderConfirmedEvent,
+  DomainEventCollector,
+  type OrderConfirmedEvent,
+} from './domain';
+import {
   NoDraftOrderException,
   OrderNotDraftException,
   OrderItemNotFoundException,
   InvalidQuantityException,
   UnauthorizedOrderAccessException,
+  EmptyCartException,
+  PrescriptionRequiredException,
+  InvalidOrderStateTransitionException,
 } from './exceptions/order.exceptions';
 import { CatalogQueryService } from '../catalog/catalog-query.service';
 import { ProductNotFoundException } from '../catalog/exceptions';
 import { Money } from '../catalog/domain/money';
 import { logWithCorrelation } from '../common/logging/logger';
+
+/**
+ * Result of a successful order confirmation (checkout)
+ */
+export interface ConfirmOrderResult {
+  /** The confirmed order */
+  order: OrderDto;
+  /** Domain events emitted during confirmation */
+  events: ReadonlyArray<OrderConfirmedEvent>;
+}
 
 /**
  * Cart Service
@@ -332,6 +353,172 @@ export class CartService {
         itemCount: draft.itemCount,
       },
     );
+  }
+
+  // ============================================================
+  // CHECKOUT COMMANDS
+  // ============================================================
+
+  /**
+   * Confirm draft order (checkout)
+   *
+   * Converts a DRAFT order into a CONFIRMED order.
+   * This is an irreversible business commitment.
+   *
+   * Business rules:
+   * - Order must exist and be in DRAFT state
+   * - Only owner can confirm their order
+   * - Cart must have at least one item
+   * - Items requiring prescription block confirmation (for now)
+   * - State transition must be valid per state machine
+   * - Total is finalized at confirmation time
+   *
+   * @throws NoDraftOrderException - No active cart found
+   * @throws UnauthorizedOrderAccessException - User doesn't own the cart
+   * @throws EmptyCartException - Cart has no items
+   * @throws PrescriptionRequiredException - Items require prescription
+   * @throws InvalidOrderStateTransitionException - State transition not allowed
+   */
+  async confirmDraftOrder(
+    userId: string,
+    correlationId: string,
+  ): Promise<ConfirmOrderResult> {
+    // 1. Get draft with ownership check
+    const draft = await this.getDraftWithOwnershipCheck(userId, correlationId);
+
+    // 2. Validate cart is not empty
+    if (draft.items.length === 0) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Checkout failed: cart is empty`,
+        'CartService',
+        { orderId: draft.id, userId },
+      );
+      throw new EmptyCartException();
+    }
+
+    // 3. Check for prescription-required items
+    await this.validateNoPrescriptionItems(draft, correlationId);
+
+    // 4. Validate state transition
+    const validation = validateTransition(draft.status, OrderStatus.CONFIRMED);
+    if (!validation.valid) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Checkout failed: invalid state transition`,
+        'CartService',
+        {
+          orderId: draft.id,
+          userId,
+          currentStatus: draft.status,
+          targetStatus: OrderStatus.CONFIRMED,
+          reason: validation.reason,
+        },
+      );
+      throw new InvalidOrderStateTransitionException(
+        draft.status,
+        OrderStatus.CONFIRMED,
+        validation.allowedTransitions,
+      );
+    }
+
+    // 5. Transition to CONFIRMED
+    const confirmedOrder = await this.orderRepository.updateStatus(
+      draft.id,
+      OrderStatus.CONFIRMED,
+    );
+
+    // 6. Create domain event
+    const eventCollector = new DomainEventCollector();
+    const orderConfirmedEvent = createOrderConfirmedEvent(
+      {
+        orderId: confirmedOrder.id,
+        userId: confirmedOrder.userId,
+        total: Money.fromMinorUnits(
+          Math.round(confirmedOrder.total.amount * 100),
+          confirmedOrder.total.currency,
+        ),
+        items: confirmedOrder.items.map((item) => ({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          subtotal: Money.fromMinorUnits(
+            Math.round(item.subtotal.amount * 100),
+            item.subtotal.currency,
+          ),
+        })),
+      },
+      correlationId,
+    );
+    eventCollector.add(orderConfirmedEvent);
+
+    // 7. Log success
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      `Order confirmed successfully`,
+      'CartService',
+      {
+        orderId: confirmedOrder.id,
+        userId,
+        itemCount: confirmedOrder.itemCount,
+        total: confirmedOrder.total.amount,
+        currency: confirmedOrder.total.currency,
+      },
+    );
+
+    return {
+      order: confirmedOrder,
+      events: eventCollector.getEventsOfType<OrderConfirmedEvent>('ORDER_CONFIRMED'),
+    };
+  }
+
+  /**
+   * Validate that cart contains no prescription-required items
+   *
+   * Looks up each item's product to check prescription requirement.
+   * This is intentionally blocking until prescription workflow is implemented.
+   */
+  private async validateNoPrescriptionItems(
+    cart: OrderDto,
+    correlationId: string,
+  ): Promise<void> {
+    const prescriptionProducts: string[] = [];
+
+    for (const item of cart.items) {
+      try {
+        const product = await this.catalogQueryService.getProductById(
+          item.productId,
+          correlationId,
+        );
+        if (product.requiresPrescription) {
+          prescriptionProducts.push(item.productName);
+        }
+      } catch (error) {
+        // If product is not found (deleted/deactivated), skip prescription check
+        // This scenario could be handled differently based on business rules
+        if (!(error instanceof ProductNotFoundException)) {
+          throw error;
+        }
+      }
+    }
+
+    if (prescriptionProducts.length > 0) {
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Checkout blocked: prescription required`,
+        'CartService',
+        {
+          orderId: cart.id,
+          userId: cart.userId,
+          prescriptionProducts,
+        },
+      );
+      throw new PrescriptionRequiredException(prescriptionProducts);
+    }
   }
 
   // ============================================================

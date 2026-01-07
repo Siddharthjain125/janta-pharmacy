@@ -229,3 +229,27 @@ export class EmptyCartException extends BusinessException {
     );
   }
 }
+
+// ============================================================
+// Checkout Exceptions
+// ============================================================
+
+/**
+ * Prescription required exception
+ *
+ * Thrown when attempting to confirm an order containing prescription-required items
+ * without a valid prescription. This is an intentional blocker until prescription
+ * verification workflow is implemented.
+ */
+export class PrescriptionRequiredException extends BusinessException {
+  public readonly prescriptionProducts: string[];
+
+  constructor(prescriptionProducts: string[]) {
+    super(
+      'PRESCRIPTION_REQUIRED',
+      `Cannot confirm order: ${prescriptionProducts.length} item(s) require a valid prescription. Prescription upload is not yet available.`,
+      HttpStatus.CONFLICT,
+    );
+    this.prescriptionProducts = prescriptionProducts;
+  }
+}

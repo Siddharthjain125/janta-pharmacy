@@ -15,6 +15,7 @@ export {
   isModifiable,
   canModifyItems,
   canPlaceOrder,
+  canConfirmOrder,
   type TransitionValidation,
 } from './order-state-machine';
 
@@ -26,3 +27,10 @@ export {
   calculateItemSubtotal,
   orderItemToDTO,
 } from './order-item';
+
+export {
+  type DomainEvent,
+  type OrderConfirmedEvent,
+  createOrderConfirmedEvent,
+  DomainEventCollector,
+} from './domain-events';
