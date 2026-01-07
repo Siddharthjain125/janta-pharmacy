@@ -221,3 +221,59 @@ export interface PaginatedResponse<T> {
   correlationId?: string;
 }
 
+// ============================================================================
+// CART TYPES
+// ============================================================================
+
+/**
+ * Cart item price representation
+ * Aligned with backend OrderPriceDto
+ */
+export interface CartPrice {
+  amount: number;
+  currency: string;
+}
+
+/**
+ * Cart item representation
+ * Aligned with backend CartItemDto
+ */
+export interface CartItem {
+  productId: string;
+  productName: string;
+  unitPrice: CartPrice;
+  quantity: number;
+  subtotal: CartPrice;
+}
+
+/**
+ * Cart (Draft Order) response
+ * Aligned with backend CartResponseDto
+ */
+export interface Cart {
+  orderId: string;
+  state: string;
+  items: CartItem[];
+  itemCount: number;
+  total: CartPrice;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Add to cart request
+ * Aligned with backend AddToCartRequestDto
+ */
+export interface AddToCartRequest {
+  productId: string;
+  quantity: number;
+}
+
+/**
+ * Update cart item request
+ * Aligned with backend UpdateCartItemRequestDto
+ */
+export interface UpdateCartItemRequest {
+  quantity: number;
+}
+
