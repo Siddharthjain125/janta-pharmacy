@@ -1,17 +1,49 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
+import { getCart } from '@/lib/cart-service';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ShoppingCart } from 'lucide-react';
 
 /**
  * Header Component
  *
  * Navigation header with auth-aware links.
  * Shows phone number for authenticated users (primary identifier).
+ * Catalog is always visible (public). Cart/Orders require auth.
  */
 export function Header() {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
+  const [cartItemCount, setCartItemCount] = useState(0);
+
+  // Fetch cart count when authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      getCart()
+        .then((cart) => {
+          setCartItemCount(cart?.itemCount || 0);
+        })
+        .catch(() => {
+          setCartItemCount(0);
+        });
+    } else {
+      setCartItemCount(0);
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Listen for cart updates (custom event)
+  useEffect(() => {
+    const handleCartUpdate = (event: CustomEvent<{ itemCount: number }>) => {
+      setCartItemCount(event.detail.itemCount);
+    };
+
+    window.addEventListener('cart-updated' as never, handleCartUpdate);
+    return () => window.removeEventListener('cart-updated' as never, handleCartUpdate);
+  }, []);
 
   /**
    * Format phone number for display
@@ -24,51 +56,56 @@ export function Header() {
   };
 
   return (
-    <header style={styles.header}>
-      <div style={styles.container}>
-        <Link href={ROUTES.HOME} style={styles.logo}>
+    <header className="sticky top-0 z-50 border-b bg-background">
+      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <Link href={ROUTES.HOME} className="font-bold text-xl text-primary no-underline">
           Janta Pharmacy
         </Link>
 
-        <nav style={styles.nav}>
-          <Link href={ROUTES.HOME} style={styles.link}>
+        <nav className="flex items-center gap-6">
+          <Link href={ROUTES.HOME} className="text-muted-foreground hover:text-foreground text-sm font-medium no-underline transition-colors">
             Home
+          </Link>
+          <Link href={ROUTES.CATALOG} className="text-muted-foreground hover:text-foreground text-sm font-medium no-underline transition-colors">
+            Catalog
           </Link>
           {isAuthenticated && (
             <>
-              <Link href={ROUTES.CATALOG} style={styles.link}>
-                Catalog
+              <Link href={ROUTES.CART} className="relative text-muted-foreground hover:text-foreground no-underline transition-colors">
+                <ShoppingCart className="h-5 w-5" />
+                {cartItemCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2.5 h-5 min-w-5 flex items-center justify-center p-0 text-[10px]">
+                    {cartItemCount}
+                  </Badge>
+                )}
               </Link>
-              <Link href={ROUTES.CART} style={styles.link}>
-                Cart
-              </Link>
-              <Link href={ROUTES.ORDERS} style={styles.link}>
+              <Link href={ROUTES.ORDERS} className="text-muted-foreground hover:text-foreground text-sm font-medium no-underline transition-colors">
                 Orders
               </Link>
             </>
           )}
         </nav>
 
-        <div style={styles.auth}>
+        <div className="flex items-center gap-4">
           {isLoading ? (
-            <span style={styles.loading}>Loading...</span>
+            <span className="text-muted-foreground text-sm">Loading...</span>
           ) : isAuthenticated && user ? (
             <>
-              <span style={styles.user} title={user.phoneNumber}>
+              <span className="text-sm font-medium" title={user.phoneNumber}>
                 {formatPhoneDisplay(user.phoneNumber)}
               </span>
-              <button onClick={logout} style={styles.button}>
+              <Button variant="outline" size="sm" onClick={logout}>
                 Logout
-              </button>
+              </Button>
             </>
           ) : (
-            <div style={styles.authLinks}>
-              <Link href={ROUTES.LOGIN} style={styles.link}>
-                Login
-              </Link>
-              <Link href={ROUTES.REGISTER} style={styles.registerLink}>
-                Register
-              </Link>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href={ROUTES.LOGIN}>Login</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href={ROUTES.REGISTER}>Register</Link>
+              </Button>
             </div>
           )}
         </div>
@@ -76,76 +113,3 @@ export function Header() {
     </header>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  header: {
-    borderBottom: '1px solid #e5e7eb',
-    padding: '1rem 0',
-    background: '#fff',
-  },
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '0 1rem',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  logo: {
-    fontWeight: 'bold',
-    fontSize: '1.25rem',
-    textDecoration: 'none',
-    color: '#059669',
-  },
-  nav: {
-    display: 'flex',
-    gap: '1.5rem',
-  },
-  link: {
-    textDecoration: 'none',
-    color: '#4b5563',
-    fontSize: '0.95rem',
-    fontWeight: '500',
-    transition: 'color 0.15s',
-  },
-  auth: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem',
-  },
-  authLinks: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1rem',
-  },
-  loading: {
-    color: '#9ca3af',
-    fontSize: '0.875rem',
-  },
-  user: {
-    color: '#374151',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-  },
-  button: {
-    padding: '0.5rem 1rem',
-    border: '1px solid #e5e7eb',
-    background: '#fff',
-    cursor: 'pointer',
-    borderRadius: '6px',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: '#4b5563',
-    transition: 'background-color 0.15s, border-color 0.15s',
-  },
-  registerLink: {
-    padding: '0.5rem 1rem',
-    background: '#059669',
-    color: '#fff',
-    textDecoration: 'none',
-    borderRadius: '6px',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    transition: 'background-color 0.15s',
-  },
-};

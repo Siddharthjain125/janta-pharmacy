@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { Header } from '@/components/Header';
+import { LoginPrompt } from '@/components/LoginPrompt';
 
 export const metadata: Metadata = {
   title: 'Janta Pharmacy',
@@ -19,12 +21,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif' }}>
+      <body>
         <AuthProvider>
           <Header />
-          <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
+          <main className="max-w-7xl mx-auto px-4 py-8">
             {children}
           </main>
+          <LoginPrompt />
         </AuthProvider>
       </body>
     </html>

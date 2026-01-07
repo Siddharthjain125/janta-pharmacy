@@ -12,6 +12,41 @@ import { apiClient } from './api-client';
 import type { Cart, ConfirmedOrder } from '@/types/api';
 
 /**
+ * Dispatch cart update event for header to refresh cart count
+ */
+function dispatchCartUpdate(cart: Cart | null): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('cart-updated', {
+        detail: { itemCount: cart?.itemCount || 0 },
+      }),
+    );
+  }
+}
+
+/**
+ * Subscribe to cart update events
+ *
+ * @param callback - Function called when cart is updated
+ * @returns Cleanup function to unsubscribe
+ */
+export function onCartUpdated(
+  callback: (cart: Cart | null) => void,
+): () => void {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  const handler = () => {
+    // Refetch cart to get updated state
+    getCart().then(callback).catch(() => callback(null));
+  };
+
+  window.addEventListener('cart-updated', handler);
+  return () => window.removeEventListener('cart-updated', handler);
+}
+
+/**
  * Get the current user's cart (draft order)
  *
  * Returns null if no cart exists.
@@ -64,6 +99,7 @@ export async function addItemToCart(
     throw new Error('Failed to add item to cart');
   }
 
+  dispatchCartUpdate(response.data);
   return response.data;
 }
 
@@ -87,6 +123,7 @@ export async function updateCartItem(
     throw new Error('Failed to update cart item');
   }
 
+  dispatchCartUpdate(response.data);
   return response.data;
 }
 
@@ -104,6 +141,7 @@ export async function removeCartItem(productId: string): Promise<Cart> {
     throw new Error('Failed to remove item from cart');
   }
 
+  dispatchCartUpdate(response.data);
   return response.data;
 }
 
@@ -136,6 +174,8 @@ export async function confirmOrder(): Promise<ConfirmedOrder> {
     throw new Error('Failed to confirm order');
   }
 
+  // Cart is now empty after checkout
+  dispatchCartUpdate(null);
   return response.data;
 }
 

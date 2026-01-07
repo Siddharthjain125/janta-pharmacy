@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 /**
  * Login Page
@@ -51,153 +55,63 @@ export default function LoginPage() {
   const displayError = localError || error;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Welcome back</h1>
-        <p style={styles.subtitle}>Sign in to your account</p>
+    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-8">
+      <Card className="w-full max-w-[400px]">
+        <CardHeader>
+          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardDescription>Sign in to your account</CardDescription>
+        </CardHeader>
+        
+        <CardContent>
+          {displayError && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm" role="alert">
+              {displayError}
+            </div>
+          )}
 
-        {displayError && (
-          <div style={styles.error} role="alert">
-            {displayError}
-          </div>
-        )}
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
+            <div className="space-y-2">
+              <Label htmlFor="login-phone">Phone Number</Label>
+              <Input
+                id="login-phone"
+                name="username"
+                type="tel"
+                inputMode="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+91 900 9090467"
+                autoComplete="username tel"
+                disabled={isLoading}
+              />
+            </div>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.field}>
-            <label htmlFor="phoneNumber" style={styles.label}>
-              Phone Number
-            </label>
-            <input
-              id="phoneNumber"
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="+92 300 1234567"
-              style={styles.input}
-              autoComplete="tel"
-              disabled={isLoading}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Password</Label>
+              <Input
+                id="login-password"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                disabled={isLoading}
+              />
+            </div>
 
-          <div style={styles.field}>
-            <label htmlFor="password" style={styles.label}>
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={styles.input}
-              autoComplete="current-password"
-              disabled={isLoading}
-            />
-          </div>
+            <Button type="submit" className="w-full mt-2" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign In'}
+            </Button>
+          </form>
 
-          <button
-            type="submit"
-            style={{
-              ...styles.button,
-              opacity: isLoading ? 0.7 : 1,
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-            }}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-
-        <p style={styles.footer}>
-          Don&apos;t have an account?{' '}
-          <Link href={ROUTES.REGISTER} style={styles.link}>
-            Register
-          </Link>
-        </p>
-      </div>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link href={ROUTES.REGISTER} className="text-primary font-medium hover:underline">
+              Register
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: 'calc(100vh - 200px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem 1rem',
-  },
-  card: {
-    width: '100%',
-    maxWidth: '400px',
-    padding: '2rem',
-    background: '#fff',
-    borderRadius: '12px',
-    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.75rem',
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  subtitle: {
-    margin: '0.5rem 0 1.5rem',
-    color: '#666',
-    fontSize: '0.95rem',
-  },
-  error: {
-    padding: '0.75rem 1rem',
-    marginBottom: '1rem',
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
-    color: '#dc2626',
-    fontSize: '0.875rem',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1rem',
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  label: {
-    fontWeight: '500',
-    fontSize: '0.875rem',
-    color: '#374151',
-  },
-  input: {
-    padding: '0.75rem 1rem',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontSize: '1rem',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-    outline: 'none',
-  },
-  button: {
-    padding: '0.875rem 1rem',
-    background: '#059669',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '1rem',
-    fontWeight: '500',
-    marginTop: '0.5rem',
-    transition: 'background-color 0.15s',
-  },
-  footer: {
-    marginTop: '1.5rem',
-    textAlign: 'center' as const,
-    color: '#666',
-    fontSize: '0.875rem',
-  },
-  link: {
-    color: '#059669',
-    fontWeight: '500',
-    textDecoration: 'none',
-  },
-};

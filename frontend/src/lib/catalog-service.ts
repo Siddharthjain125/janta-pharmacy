@@ -74,8 +74,9 @@ export async function fetchProducts(
   const queryString = params.toString();
   const endpoint = `/catalog/products${queryString ? `?${queryString}` : ''}`;
 
+  // Catalog is public - no auth required for browsing
   const response = await apiClient.get<ProductSummary[]>(endpoint, {
-    requiresAuth: true,
+    requiresAuth: false,
   });
 
   // The backend returns PaginatedResponse directly
@@ -86,8 +87,9 @@ export async function fetchProducts(
  * Fetch a single product by ID
  */
 export async function fetchProductById(id: string): Promise<Product> {
+  // Product details are public
   const response = await apiClient.get<Product>(`/catalog/products/${id}`, {
-    requiresAuth: true,
+    requiresAuth: false,
   });
 
   if (!response.data) {
@@ -101,8 +103,9 @@ export async function fetchProductById(id: string): Promise<Product> {
  * Fetch all product categories
  */
 export async function fetchCategories(): Promise<Category[]> {
+  // Categories are public
   const response = await apiClient.get<Category[]>('/catalog/categories', {
-    requiresAuth: true,
+    requiresAuth: false,
   });
 
   return response.data ?? [];

@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
 import { fetchProducts, fetchCategories } from '@/lib/catalog-service';
-import { addItemToCart } from '@/lib/cart-service';
-import type { ProductSummary, PaginationMeta, Category } from '@/types/api';
+import { addItemToCart, getCart } from '@/lib/cart-service';
+import { calculatePricingDisplay, formatPrice } from '@/lib/pricing-display';
+import type { ProductSummary, PaginationMeta, Category, Cart } from '@/types/api';
 
 /**
  * Catalog filter state derived from URL params
@@ -56,17 +57,20 @@ function buildURLParams(filters: CatalogFilters): string {
 /**
  * Catalog Page
  *
+ * PUBLIC page - no auth required for browsing.
  * Displays a list of available products with:
  * - Text search
  * - Category filter
  * - Prescription filter
  * - Pagination
  *
+ * Cart operations require authentication.
  * All filters are synced with URL for shareability.
  */
 export default function CatalogPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   // Parse initial state from URL
   const [filters, setFilters] = useState<CatalogFilters>(() =>
@@ -83,9 +87,17 @@ export default function CatalogPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cart state
+  // Cart state - tracks quantities in cart for each product
+  const [cart, setCart] = useState<Cart | null>(null);
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [cartMessage, setCartMessage] = useState<{ productId: string; message: string } | null>(null);
+
+  // Get quantity of a product in cart
+  const getCartQuantity = (productId: string): number => {
+    if (!cart) return 0;
+    const item = cart.items.find(item => item.productId === productId);
+    return item?.quantity || 0;
+  };
 
   // Load categories on mount
   useEffect(() => {
@@ -95,6 +107,20 @@ export default function CatalogPage() {
         // Categories are optional, don't block on error
       });
   }, []);
+
+  // Load cart when authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isAuthLoading) {
+      getCart()
+        .then(setCart)
+        .catch(() => {
+          // Cart might not exist yet, that's ok
+          setCart(null);
+        });
+    } else {
+      setCart(null);
+    }
+  }, [isAuthenticated, isAuthLoading]);
 
   // Update URL when filters change
   const updateURL = useCallback(
@@ -193,9 +219,15 @@ export default function CatalogPage() {
     filters.search || filters.category || filters.requiresPrescription;
 
   // Add to cart handler
-  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
+  const handleAddToCart = async (e: React.MouseEvent, productId: string, quantity: number = 1) => {
     e.preventDefault(); // Prevent navigation when clicking the button
     e.stopPropagation();
+
+    // Require login for cart operations
+    if (!isAuthenticated) {
+      router.push(`${ROUTES.LOGIN}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
 
     if (addingToCart) return; // Prevent double-clicks
 
@@ -203,7 +235,8 @@ export default function CatalogPage() {
     setCartMessage(null);
 
     try {
-      await addItemToCart(productId, 1);
+      const updatedCart = await addItemToCart(productId, quantity);
+      setCart(updatedCart);
       setCartMessage({ productId, message: 'Added to cart!' });
       // Clear message after 2 seconds
       setTimeout(() => setCartMessage(null), 2000);
@@ -215,10 +248,39 @@ export default function CatalogPage() {
     }
   };
 
+  // Update cart quantity handler (for +/- controls)
+  const handleUpdateQuantity = async (e: React.MouseEvent, productId: string, newQuantity: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated || addingToCart) return;
+
+    setAddingToCart(productId);
+
+    try {
+      if (newQuantity <= 0) {
+        // Remove from cart
+        const { removeCartItem } = await import('@/lib/cart-service');
+        const updatedCart = await removeCartItem(productId);
+        setCart(updatedCart);
+      } else {
+        // Update quantity
+        const { updateCartItem } = await import('@/lib/cart-service');
+        const updatedCart = await updateCartItem(productId, newQuantity);
+        setCart(updatedCart);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update cart';
+      setCartMessage({ productId, message });
+      setTimeout(() => setCartMessage(null), 2000);
+    } finally {
+      setAddingToCart(null);
+    }
+  };
+
   return (
-    <ProtectedRoute>
-      <div>
-        <h1 style={styles.title}>Product Catalog</h1>
+    <div>
+      <h1 style={styles.title}>Product Catalog</h1>
 
         {/* Filters */}
         <div style={styles.filters}>
@@ -336,20 +398,86 @@ export default function CatalogPage() {
                     </div>
                     <div style={styles.cardBody}>
                       <span style={styles.category}>{product.categoryLabel}</span>
-                      <span style={styles.price}>{product.price.formatted}</span>
+                      {(() => {
+                        const pricing = calculatePricingDisplay(
+                          product.price.amount,
+                          product.price.currency,
+                        );
+                        return (
+                          <div style={styles.priceContainer}>
+                            <span style={styles.mrp}>
+                              {formatPrice(pricing.mrp, pricing.currency)}
+                            </span>
+                            <span style={styles.price}>
+                              {formatPrice(pricing.sellingPrice, pricing.currency)}
+                            </span>
+                            <span style={styles.discount}>
+                              {pricing.discountPercent}% off
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </Link>
                   <div style={styles.cardActions}>
-                    <button
-                      onClick={(e) => handleAddToCart(e, product.id)}
-                      disabled={addingToCart === product.id}
-                      style={{
-                        ...styles.addToCartButton,
-                        ...(addingToCart === product.id ? styles.addToCartButtonDisabled : {}),
-                      }}
-                    >
-                      {addingToCart === product.id ? 'Adding...' : 'Add to Cart'}
-                    </button>
+                    {(() => {
+                      const qty = getCartQuantity(product.id);
+                      const isUpdating = addingToCart === product.id;
+                      
+                      if (qty > 0) {
+                        // Show quantity controls + View Cart
+                        return (
+                          <div style={styles.cartControlsRow}>
+                            <div style={styles.quantityControls}>
+                              <button
+                                onClick={(e) => handleUpdateQuantity(e, product.id, qty - 1)}
+                                disabled={isUpdating}
+                                style={{
+                                  ...styles.quantityButton,
+                                  ...(isUpdating ? styles.quantityButtonDisabled : {}),
+                                }}
+                              >
+                                −
+                              </button>
+                              <span style={styles.quantityDisplay}>
+                                {isUpdating ? '...' : qty}
+                              </span>
+                              <button
+                                onClick={(e) => handleUpdateQuantity(e, product.id, qty + 1)}
+                                disabled={isUpdating}
+                                style={{
+                                  ...styles.quantityButton,
+                                  ...(isUpdating ? styles.quantityButtonDisabled : {}),
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                            <Link
+                              href={ROUTES.CART}
+                              style={styles.viewCartButton}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View Cart
+                            </Link>
+                          </div>
+                        );
+                      }
+                      
+                      // Show Add to Cart button
+                      return (
+                        <button
+                          onClick={(e) => handleAddToCart(e, product.id)}
+                          disabled={isUpdating}
+                          style={{
+                            ...styles.addToCartButton,
+                            ...(isUpdating ? styles.addToCartButtonDisabled : {}),
+                          }}
+                        >
+                          {isUpdating ? 'Adding...' : 'Add to Cart'}
+                        </button>
+                      );
+                    })()}
                     {cartMessage?.productId === product.id && (
                       <span style={styles.cartMessage}>{cartMessage.message}</span>
                     )}
@@ -389,7 +517,6 @@ export default function CatalogPage() {
           </>
         )}
       </div>
-    </ProtectedRoute>
   );
 }
 
@@ -524,9 +651,29 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     color: '#6b7280',
   },
+  priceContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: '0.125rem',
+  },
+  mrp: {
+    fontSize: '0.75rem',
+    color: '#9ca3af',
+    textDecoration: 'line-through',
+  },
   price: {
     fontWeight: '600',
     color: '#059669',
+    fontSize: '1rem',
+  },
+  discount: {
+    fontSize: '0.6875rem',
+    fontWeight: '600',
+    color: '#dc2626',
+    background: '#fef2f2',
+    padding: '0.125rem 0.375rem',
+    borderRadius: '4px',
   },
   pagination: {
     display: 'flex',
@@ -578,5 +725,55 @@ const styles: Record<string, React.CSSProperties> = {
   cartMessage: {
     fontSize: '0.75rem',
     color: '#059669',
+  },
+  quantityControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    background: '#f3f4f6',
+    borderRadius: '6px',
+    padding: '0.25rem',
+  },
+  quantityButton: {
+    width: '32px',
+    height: '32px',
+    border: 'none',
+    background: '#059669',
+    color: 'white',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '1.125rem',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonDisabled: {
+    background: '#9ca3af',
+    cursor: 'not-allowed',
+  },
+  quantityDisplay: {
+    minWidth: '28px',
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: '0.9375rem',
+  },
+  cartControlsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
+  },
+  viewCartButton: {
+    padding: '0.5rem 0.75rem',
+    background: '#f3f4f6',
+    color: '#374151',
+    border: '1px solid #e5e7eb',
+    borderRadius: '4px',
+    fontSize: '0.8125rem',
+    fontWeight: '500',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
 };

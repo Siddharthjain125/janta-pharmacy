@@ -1,31 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ROUTES } from '@/lib/constants';
+import { useAuth } from '@/lib/auth-context';
 import { fetchProductById } from '@/lib/catalog-service';
-import { addItemToCart } from '@/lib/cart-service';
-import type { Product } from '@/types/api';
+import {
+  addItemToCart,
+  updateCartItem,
+  removeCartItem,
+  getCart,
+  onCartUpdated,
+} from '@/lib/cart-service';
+import { calculatePricingDisplay, formatPrice } from '@/lib/pricing-display';
+import { LoginPrompt } from '@/components/LoginPrompt';
+import type { Product, Cart } from '@/types/api';
 
 /**
  * Product Detail Page
  *
  * Displays full details of a single product.
- * Shows prescription requirement and category info.
+ * Shows prescription requirement, category info, and pricing.
+ * Public page - no auth required for viewing.
  */
 export default function ProductDetailPage() {
   const params = useParams();
   const productId = params.id as string;
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Cart state
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [cartMessage, setCartMessage] = useState<string | null>(null);
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     async function loadProduct() {
@@ -48,113 +59,202 @@ export default function ProductDetailPage() {
     loadProduct();
   }, [productId]);
 
+  // Load cart for authenticated users
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      getCart().then(setCart);
+    } else if (!isAuthenticated) {
+      setCart(null);
+    }
+
+    const unsubscribe = onCartUpdated(setCart);
+    return () => unsubscribe();
+  }, [isAuthenticated, isAuthLoading]);
+
+  const getCartQuantity = useCallback(() => {
+    if (!cart || !productId) return 0;
+    const item = cart.items.find((i) => i.productId === productId);
+    return item?.quantity ?? 0;
+  }, [cart, productId]);
+
   const handleAddToCart = async () => {
-    if (isAddingToCart || !product) return;
+    if (!product) return;
 
-    setIsAddingToCart(true);
-    setCartMessage(null);
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true);
+      return;
+    }
 
+    setIsUpdating(true);
     try {
       await addItemToCart(product.id, 1);
-      setCartMessage('Added to cart!');
-      setTimeout(() => setCartMessage(null), 3000);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add to cart';
-      setCartMessage(message);
     } finally {
-      setIsAddingToCart(false);
+      setIsUpdating(false);
     }
   };
 
+  const handleUpdateQuantity = async (newQty: number) => {
+    if (!product) return;
+
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      if (newQty <= 0) {
+        await removeCartItem(product.id);
+      } else {
+        await updateCartItem(product.id, newQty);
+      }
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const qty = getCartQuantity();
+
   return (
-    <ProtectedRoute>
-      <div>
-        <Link href={ROUTES.CATALOG} style={styles.backLink}>
-          ← Back to Catalog
-        </Link>
+    <div>
+      <Link href={ROUTES.CATALOG} style={styles.backLink}>
+        ← Back to Catalog
+      </Link>
 
-        {isLoading && (
-          <div style={styles.loading}>
-            <p>Loading product...</p>
-          </div>
-        )}
+      {isLoading && (
+        <div style={styles.loading}>
+          <p>Loading product...</p>
+        </div>
+      )}
 
-        {error && (
-          <div style={styles.error}>
-            <p>Error: {error}</p>
-            <Link href={ROUTES.CATALOG} style={styles.backButton}>
-              Back to Catalog
-            </Link>
-          </div>
-        )}
+      {error && (
+        <div style={styles.error}>
+          <p>Error: {error}</p>
+          <Link href={ROUTES.CATALOG} style={styles.backButton}>
+            Back to Catalog
+          </Link>
+        </div>
+      )}
 
-        {!isLoading && !error && product && (
-          <div style={styles.productContainer}>
-            <div style={styles.header}>
-              <h1 style={styles.title}>{product.name}</h1>
-              {product.requiresPrescription && (
-                <span style={styles.prescriptionBadge}>
-                  Prescription Required
-                </span>
-              )}
-            </div>
-
-            <div style={styles.details}>
-              <div style={styles.detailRow}>
-                <span style={styles.label}>Category</span>
-                <span style={styles.value}>{product.categoryLabel}</span>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.label}>Price</span>
-                <span style={styles.price}>{product.price.formatted}</span>
-              </div>
-
-              <div style={styles.detailRow}>
-                <span style={styles.label}>Status</span>
-                <span style={product.isActive ? styles.statusActive : styles.statusInactive}>
-                  {product.isActive ? 'Available' : 'Unavailable'}
-                </span>
-              </div>
-
-              {product.description && (
-                <div style={styles.descriptionSection}>
-                  <span style={styles.label}>Description</span>
-                  <p style={styles.description}>{product.description}</p>
-                </div>
-              )}
-            </div>
-
+      {!isLoading && !error && product && (
+        <div style={styles.productContainer}>
+          <div style={styles.header}>
+            <h1 style={styles.title}>{product.name}</h1>
             {product.requiresPrescription && (
-              <div style={styles.prescriptionNote}>
-                <strong>Note:</strong> This product requires a valid prescription.
-                Please have your prescription ready when placing an order.
+              <span style={styles.prescriptionBadge}>
+                Prescription Required
+              </span>
+            )}
+          </div>
+
+          <div style={styles.details}>
+            <div style={styles.detailRow}>
+              <span style={styles.label}>Category</span>
+              <span style={styles.value}>{product.categoryLabel}</span>
+            </div>
+
+            {/* Pricing with MRP, Selling Price, Discount */}
+            {(() => {
+              const pricing = calculatePricingDisplay(
+                product.price.amount,
+                product.price.currency,
+              );
+              return (
+                <div style={styles.detailRow}>
+                  <span style={styles.label}>Price</span>
+                  <div style={styles.priceContainer}>
+                    <span style={styles.mrp}>
+                      {formatPrice(pricing.mrp, pricing.currency)}
+                    </span>
+                    <span style={styles.sellingPrice}>
+                      {formatPrice(pricing.sellingPrice, pricing.currency)}
+                    </span>
+                    <span style={styles.discountBadge}>
+                      {pricing.discountPercent}% off
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={styles.detailRow}>
+              <span style={styles.label}>Status</span>
+              <span style={product.isActive ? styles.statusActive : styles.statusInactive}>
+                {product.isActive ? 'Available' : 'Unavailable'}
+              </span>
+            </div>
+
+            {product.description && (
+              <div style={styles.descriptionSection}>
+                <span style={styles.label}>Description</span>
+                <p style={styles.description}>{product.description}</p>
               </div>
             )}
+          </div>
 
-            {/* Add to Cart Section */}
-            <div style={styles.cartSection}>
+          {product.requiresPrescription && (
+            <div style={styles.prescriptionNote}>
+              <strong>Note:</strong> This product requires a valid prescription.
+              Please have your prescription ready when placing an order.
+            </div>
+          )}
+
+          {/* Add to Cart Section */}
+          <div style={styles.cartSection}>
+            {qty > 0 ? (
+              // Show quantity controls + View Cart
+              <div style={styles.cartControlsRow}>
+                <div style={styles.quantityControls}>
+                  <button
+                    onClick={() => handleUpdateQuantity(qty - 1)}
+                    disabled={isUpdating}
+                    style={{
+                      ...styles.quantityButton,
+                      ...(isUpdating ? styles.quantityButtonDisabled : {}),
+                    }}
+                  >
+                    −
+                  </button>
+                  <span style={styles.quantityDisplay}>
+                    {isUpdating ? '...' : qty}
+                  </span>
+                  <button
+                    onClick={() => handleUpdateQuantity(qty + 1)}
+                    disabled={isUpdating}
+                    style={{
+                      ...styles.quantityButton,
+                      ...(isUpdating ? styles.quantityButtonDisabled : {}),
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+                <Link href={ROUTES.CART} style={styles.viewCartButton}>
+                  View Cart →
+                </Link>
+              </div>
+            ) : (
+              // Show Add to Cart button
               <button
                 onClick={handleAddToCart}
-                disabled={isAddingToCart || !product.isActive}
+                disabled={isUpdating || !product.isActive || isAuthLoading}
                 style={{
                   ...styles.addToCartButton,
-                  ...((isAddingToCart || !product.isActive) ? styles.addToCartButtonDisabled : {}),
+                  ...((isUpdating || !product.isActive || isAuthLoading) ? styles.addToCartButtonDisabled : {}),
                 }}
               >
-                {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+                {isUpdating ? 'Adding...' : 'Add to Cart'}
               </button>
-              {cartMessage && (
-                <span style={styles.cartMessage}>{cartMessage}</span>
-              )}
-              <Link href={ROUTES.CART} style={styles.viewCartLink}>
-                View Cart →
-              </Link>
-            </div>
+            )}
           </div>
-        )}
-      </div>
-    </ProtectedRoute>
+        </div>
+      )}
+
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && (
+        <LoginPrompt onClose={() => setShowLoginPrompt(false)} />
+      )}
+    </div>
   );
 }
 
@@ -232,10 +332,30 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     color: '#111827',
   },
-  price: {
+  priceContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  },
+  mrp: {
+    fontSize: '0.875rem',
+    color: '#9ca3af',
+    textDecoration: 'line-through',
+  },
+  sellingPrice: {
     fontSize: '1.25rem',
     fontWeight: '600',
     color: '#059669',
+  },
+  discountBadge: {
+    fontSize: '0.75rem',
+    fontWeight: '600',
+    color: '#dc2626',
+    background: '#fef2f2',
+    padding: '0.125rem 0.375rem',
+    borderRadius: '4px',
   },
   statusActive: {
     color: '#059669',
@@ -267,10 +387,44 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cartSection: {
     marginTop: '1.5rem',
+  },
+  cartControlsRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '1rem',
     flexWrap: 'wrap',
+  },
+  quantityControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    background: '#f3f4f6',
+    borderRadius: '6px',
+    padding: '0.25rem',
+  },
+  quantityButton: {
+    width: '36px',
+    height: '36px',
+    border: 'none',
+    background: '#059669',
+    color: 'white',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '1.25rem',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonDisabled: {
+    background: '#9ca3af',
+    cursor: 'not-allowed',
+  },
+  quantityDisplay: {
+    minWidth: '36px',
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: '1rem',
   },
   addToCartButton: {
     padding: '0.75rem 1.5rem',
@@ -286,14 +440,14 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#9ca3af',
     cursor: 'not-allowed',
   },
-  cartMessage: {
+  viewCartButton: {
+    padding: '0.75rem 1rem',
+    background: '#f3f4f6',
+    color: '#374151',
+    border: '1px solid #e5e7eb',
+    borderRadius: '6px',
     fontSize: '0.875rem',
-    color: '#059669',
-  },
-  viewCartLink: {
-    fontSize: '0.875rem',
-    color: '#6b7280',
+    fontWeight: '500',
     textDecoration: 'none',
   },
 };
-

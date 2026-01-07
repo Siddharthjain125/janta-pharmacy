@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
 import { getCart, updateCartItem, removeCartItem, confirmOrder } from '@/lib/cart-service';
+import { calculateCartPricingBreakdown, calculatePricingDisplay, formatPrice } from '@/lib/pricing-display';
 import type { Cart, CartItem } from '@/types/api';
 
 /**
@@ -136,14 +137,6 @@ export default function CartPage() {
   // Check if checkout is possible
   const canCheckout = cart && cart.items.length > 0 && !isCheckingOut && updatingItems.size === 0;
 
-  // Format price helper
-  const formatPrice = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
-
   return (
     <ProtectedRoute>
       <div>
@@ -251,17 +244,41 @@ export default function CartPage() {
               })}
             </div>
 
-            {/* Cart Summary */}
+            {/* Cart Summary - Receipt Style */}
             <div style={styles.summary}>
-              <div style={styles.summaryRow}>
-                <span>Items in cart:</span>
-                <span>{cart.itemCount}</span>
-              </div>
-              <div style={styles.summaryTotal}>
-                <span>Total:</span>
-                <span style={styles.totalAmount}>
-                  {formatPrice(cart.total.amount, cart.total.currency)}
-                </span>
+              <h3 style={styles.summaryTitle}>Order Summary</h3>
+              <div style={styles.receiptBody}>
+                <div style={styles.receiptRow}>
+                  <span>Items ({cart.itemCount})</span>
+                  <span></span>
+                </div>
+                {/* Pricing Breakdown (UI-only) */}
+                {(() => {
+                  const breakdown = calculateCartPricingBreakdown(
+                    cart.items,
+                    cart.total.amount,
+                    cart.total.currency,
+                  );
+                  return (
+                    <>
+                      <div style={styles.receiptRow}>
+                        <span>Total MRP</span>
+                        <span>{formatPrice(breakdown.totalMrp, breakdown.currency)}</span>
+                      </div>
+                      {breakdown.totalSavings > 0 && (
+                        <div style={styles.receiptRowSavings}>
+                          <span>Discount</span>
+                          <span>−{formatPrice(breakdown.totalSavings, breakdown.currency)}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+                <div style={styles.receiptDivider}></div>
+                <div style={styles.receiptTotal}>
+                  <span>To Pay</span>
+                  <span>{formatPrice(cart.total.amount, cart.total.currency)}</span>
+                </div>
               </div>
 
               {/* Checkout Error */}
@@ -436,23 +453,39 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#f9fafb',
     borderRadius: '8px',
   },
-  summaryRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '0.5rem',
-    fontSize: '0.875rem',
-    color: '#6b7280',
-  },
-  summaryTotal: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    paddingTop: '0.75rem',
-    borderTop: '1px solid #e5e7eb',
-    fontSize: '1.125rem',
+  summaryTitle: {
+    margin: '0 0 1rem 0',
+    fontSize: '1rem',
     fontWeight: '600',
+    color: '#374151',
   },
-  totalAmount: {
-    color: '#059669',
+  receiptBody: {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+  },
+  receiptRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: '0.625rem',
+    fontSize: '0.9375rem',
+    color: '#4b5563',
+  },
+  receiptRowSavings: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: '0.625rem',
+    fontSize: '0.9375rem',
+    color: '#16a34a',
+  },
+  receiptDivider: {
+    borderTop: '1px dashed #d1d5db',
+    margin: '0.75rem 0',
+  },
+  receiptTotal: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '1.125rem',
+    fontWeight: '700',
+    color: '#111827',
   },
   actions: {
     marginTop: '1.5rem',
