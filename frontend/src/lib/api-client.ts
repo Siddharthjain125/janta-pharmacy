@@ -58,6 +58,10 @@ class ApiClient {
   private isRefreshing = false;
   private refreshPromise: Promise<boolean> | null = null;
 
+  // Track last successful refresh to avoid duplicate refreshes from in-flight requests
+  private lastRefreshTime = 0;
+  private static REFRESH_GRACE_PERIOD_MS = 1000; // Ignore 401s within 1s of a successful refresh
+
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
@@ -100,10 +104,13 @@ class ApiClient {
   /**
    * Attempt to refresh the access token
    * Returns true if refresh succeeded, false otherwise
+   *
+   * Uses a promise-based queue to ensure only one refresh happens at a time.
+   * All concurrent callers wait for the same refresh result.
    */
   private async attemptRefresh(): Promise<boolean> {
     // If already refreshing, wait for the existing refresh to complete
-    if (this.isRefreshing && this.refreshPromise) {
+    if (this.refreshPromise) {
       return this.refreshPromise;
     }
 
@@ -111,16 +118,33 @@ class ApiClient {
       return false;
     }
 
+    // Create the refresh promise FIRST to prevent race conditions
+    // Any concurrent calls will see this promise immediately
     this.isRefreshing = true;
-    this.refreshPromise = this.tokenProvider.refreshToken();
+    this.refreshPromise = (async () => {
+      try {
+        const success = await this.tokenProvider!.refreshToken();
+        if (success) {
+          // Record successful refresh time
+          this.lastRefreshTime = Date.now();
+        }
+        return success;
+      } finally {
+        // Clear state after refresh completes (success or failure)
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
 
-    try {
-      const success = await this.refreshPromise;
-      return success;
-    } finally {
-      this.isRefreshing = false;
-      this.refreshPromise = null;
-    }
+    return this.refreshPromise;
+  }
+
+  /**
+   * Check if a refresh just happened recently
+   * Used to handle race conditions with in-flight requests
+   */
+  private wasRecentlyRefreshed(): boolean {
+    return Date.now() - this.lastRefreshTime < ApiClient.REFRESH_GRACE_PERIOD_MS;
   }
 
   /**
@@ -147,6 +171,12 @@ class ApiClient {
 
     // Handle 401 Unauthorized - attempt token refresh once
     if (response.status === 401 && !isRetry && options.requiresAuth !== false) {
+      // Check if a refresh just happened (handles race condition with in-flight requests)
+      // If so, just retry immediately with the (hopefully new) token
+      if (this.wasRecentlyRefreshed()) {
+        return this.request<T>(endpoint, options, true);
+      }
+
       const refreshed = await this.attemptRefresh();
 
       if (refreshed) {

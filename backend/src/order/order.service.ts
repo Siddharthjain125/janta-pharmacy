@@ -6,6 +6,9 @@ import {
   validateTransition,
   canCancel,
   isTerminalStatus,
+  createOrderCancelledEvent,
+  DomainEventCollector,
+  type OrderCancelledEvent,
 } from './domain';
 import {
   OrderNotFoundException,
@@ -17,6 +20,18 @@ import {
   OrderAlreadyConfirmedException,
 } from './exceptions/order.exceptions';
 import { logWithCorrelation } from '../common/logging/logger';
+
+/**
+ * Result of a successful order cancellation
+ */
+export interface CancelOrderResult {
+  /** The cancelled order */
+  order: OrderDto;
+  /** Previous state before cancellation */
+  previousState: OrderStatus;
+  /** Domain events emitted during cancellation */
+  events: ReadonlyArray<OrderCancelledEvent>;
+}
 
 /**
  * Order Service
@@ -211,32 +226,55 @@ export class OrderService {
   /**
    * Cancel an order
    *
-   * Transitions:
+   * Transitions (via state machine):
+   * - DRAFT → CANCELLED
    * - CREATED → CANCELLED
    * - CONFIRMED → CANCELLED
-   * - PAID → CANCELLED (with refund implications)
+   * - PAID → CANCELLED (with refund implications - not implemented)
+   * - SHIPPED → CANCELLED
    *
    * Business rules:
-   * - Cannot cancel SHIPPED, DELIVERED, or already CANCELLED orders
+   * - Cannot cancel DELIVERED or already CANCELLED orders (terminal states)
    * - Only order owner can cancel
+   * - Cancellation goes through state machine validation
+   *
+   * @throws OrderNotFoundException - Order doesn't exist
+   * @throws UnauthorizedOrderAccessException - User doesn't own the order
+   * @throws OrderTerminalStateException - Order is in a terminal state
+   * @throws OrderCannotBeCancelledException - Order can't be cancelled from current state
    */
   async cancelOrder(
     orderId: string,
     userId: string,
     correlationId: string,
-  ): Promise<OrderDto> {
+  ): Promise<CancelOrderResult> {
     const order = await this.getOrderById(orderId, userId, correlationId);
     const previousState = order.status;
     const targetState = OrderStatus.CANCELLED;
 
-    // Check if order can be cancelled
+    // Check if order can be cancelled using state machine
     if (!canCancel(order.status)) {
       if (isTerminalStatus(order.status)) {
+        logWithCorrelation(
+          'WARN',
+          correlationId,
+          `Cannot cancel order in terminal state`,
+          'OrderService',
+          { orderId, userId, currentStatus: order.status },
+        );
         throw new OrderTerminalStateException(orderId, order.status);
       }
+      logWithCorrelation(
+        'WARN',
+        correlationId,
+        `Order cannot be cancelled from current state`,
+        'OrderService',
+        { orderId, userId, currentStatus: order.status },
+      );
       throw new OrderCannotBeCancelledException(orderId, order.status);
     }
 
+    // Validate transition through state machine
     this.validateAndLogTransition(
       correlationId,
       orderId,
@@ -246,11 +284,27 @@ export class OrderService {
       'CANCEL',
     );
 
+    // Perform the state transition
     const updatedOrder = await this.orderRepository.updateStatus(
       orderId,
       targetState,
     );
 
+    // Create domain event
+    const eventCollector = new DomainEventCollector();
+    const orderCancelledEvent = createOrderCancelledEvent(
+      {
+        orderId: updatedOrder.id,
+        userId: updatedOrder.userId,
+        previousState,
+        total: updatedOrder.total,
+        itemCount: updatedOrder.itemCount,
+      },
+      correlationId,
+    );
+    eventCollector.add(orderCancelledEvent);
+
+    // Log successful transition
     this.logStateTransition(correlationId, {
       orderId,
       userId,
@@ -259,7 +313,11 @@ export class OrderService {
       action: 'CANCEL',
     });
 
-    return updatedOrder;
+    return {
+      order: updatedOrder,
+      previousState,
+      events: eventCollector.getEventsOfType<OrderCancelledEvent>('ORDER_CANCELLED'),
+    };
   }
 
   // ============================================================

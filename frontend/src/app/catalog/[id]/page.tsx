@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ROUTES } from '@/lib/constants';
 import { fetchProductById } from '@/lib/catalog-service';
+import { addItemToCart } from '@/lib/cart-service';
 import type { Product } from '@/types/api';
 
 /**
@@ -21,6 +22,10 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Cart state
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProduct() {
@@ -42,6 +47,24 @@ export default function ProductDetailPage() {
 
     loadProduct();
   }, [productId]);
+
+  const handleAddToCart = async () => {
+    if (isAddingToCart || !product) return;
+
+    setIsAddingToCart(true);
+    setCartMessage(null);
+
+    try {
+      await addItemToCart(product.id, 1);
+      setCartMessage('Added to cart!');
+      setTimeout(() => setCartMessage(null), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add to cart';
+      setCartMessage(message);
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
   return (
     <ProtectedRoute>
@@ -108,6 +131,26 @@ export default function ProductDetailPage() {
                 Please have your prescription ready when placing an order.
               </div>
             )}
+
+            {/* Add to Cart Section */}
+            <div style={styles.cartSection}>
+              <button
+                onClick={handleAddToCart}
+                disabled={isAddingToCart || !product.isActive}
+                style={{
+                  ...styles.addToCartButton,
+                  ...((isAddingToCart || !product.isActive) ? styles.addToCartButtonDisabled : {}),
+                }}
+              >
+                {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+              </button>
+              {cartMessage && (
+                <span style={styles.cartMessage}>{cartMessage}</span>
+              )}
+              <Link href={ROUTES.CART} style={styles.viewCartLink}>
+                View Cart →
+              </Link>
+            </div>
           </div>
         )}
       </div>
@@ -221,6 +264,36 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     color: '#92400e',
     lineHeight: '1.5',
+  },
+  cartSection: {
+    marginTop: '1.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    flexWrap: 'wrap',
+  },
+  addToCartButton: {
+    padding: '0.75rem 1.5rem',
+    background: '#059669',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '1rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  addToCartButtonDisabled: {
+    background: '#9ca3af',
+    cursor: 'not-allowed',
+  },
+  cartMessage: {
+    fontSize: '0.875rem',
+    color: '#059669',
+  },
+  viewCartLink: {
+    fontSize: '0.875rem',
+    color: '#6b7280',
+    textDecoration: 'none',
   },
 };
 

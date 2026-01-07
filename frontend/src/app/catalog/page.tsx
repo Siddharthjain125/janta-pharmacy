@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ROUTES } from '@/lib/constants';
 import { fetchProducts, fetchCategories } from '@/lib/catalog-service';
+import { addItemToCart } from '@/lib/cart-service';
 import type { ProductSummary, PaginationMeta, Category } from '@/types/api';
 
 /**
@@ -81,6 +82,10 @@ export default function CatalogPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Cart state
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
+  const [cartMessage, setCartMessage] = useState<{ productId: string; message: string } | null>(null);
 
   // Load categories on mount
   useEffect(() => {
@@ -186,6 +191,29 @@ export default function CatalogPage() {
 
   const hasActiveFilters =
     filters.search || filters.category || filters.requiresPrescription;
+
+  // Add to cart handler
+  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault(); // Prevent navigation when clicking the button
+    e.stopPropagation();
+
+    if (addingToCart) return; // Prevent double-clicks
+
+    setAddingToCart(productId);
+    setCartMessage(null);
+
+    try {
+      await addItemToCart(productId, 1);
+      setCartMessage({ productId, message: 'Added to cart!' });
+      // Clear message after 2 seconds
+      setTimeout(() => setCartMessage(null), 2000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add to cart';
+      setCartMessage({ productId, message });
+    } finally {
+      setAddingToCart(null);
+    }
+  };
 
   return (
     <ProtectedRoute>
@@ -298,22 +326,35 @@ export default function CatalogPage() {
           <>
             <div style={styles.grid}>
               {products.map((product) => (
-                <Link
-                  key={product.id}
-                  href={ROUTES.PRODUCT_DETAIL(product.id)}
-                  style={styles.card}
-                >
-                  <div style={styles.cardHeader}>
-                    <span style={styles.productName}>{product.name}</span>
-                    {product.requiresPrescription && (
-                      <span style={styles.prescriptionBadge}>Rx</span>
+                <div key={product.id} style={styles.card}>
+                  <Link href={ROUTES.PRODUCT_DETAIL(product.id)} style={styles.cardLink}>
+                    <div style={styles.cardHeader}>
+                      <span style={styles.productName}>{product.name}</span>
+                      {product.requiresPrescription && (
+                        <span style={styles.prescriptionBadge}>Rx</span>
+                      )}
+                    </div>
+                    <div style={styles.cardBody}>
+                      <span style={styles.category}>{product.categoryLabel}</span>
+                      <span style={styles.price}>{product.price.formatted}</span>
+                    </div>
+                  </Link>
+                  <div style={styles.cardActions}>
+                    <button
+                      onClick={(e) => handleAddToCart(e, product.id)}
+                      disabled={addingToCart === product.id}
+                      style={{
+                        ...styles.addToCartButton,
+                        ...(addingToCart === product.id ? styles.addToCartButtonDisabled : {}),
+                      }}
+                    >
+                      {addingToCart === product.id ? 'Adding...' : 'Add to Cart'}
+                    </button>
+                    {cartMessage?.productId === product.id && (
+                      <span style={styles.cartMessage}>{cartMessage.message}</span>
                     )}
                   </div>
-                  <div style={styles.cardBody}>
-                    <span style={styles.category}>{product.categoryLabel}</span>
-                    <span style={styles.price}>{product.price.formatted}</span>
-                  </div>
-                </Link>
+                </div>
               ))}
             </div>
 
@@ -441,13 +482,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1rem',
   },
   card: {
-    display: 'block',
+    display: 'flex',
+    flexDirection: 'column',
     padding: '1rem',
     border: '1px solid #e5e7eb',
     borderRadius: '8px',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+  },
+  cardLink: {
     textDecoration: 'none',
     color: 'inherit',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
+    flex: 1,
   },
   cardHeader: {
     display: 'flex',
@@ -507,5 +552,31 @@ const styles: Record<string, React.CSSProperties> = {
   pageInfo: {
     fontSize: '0.875rem',
     color: '#6b7280',
+  },
+  cardActions: {
+    marginTop: '0.75rem',
+    paddingTop: '0.75rem',
+    borderTop: '1px solid #e5e7eb',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  addToCartButton: {
+    padding: '0.5rem 1rem',
+    background: '#059669',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    fontWeight: '500',
+  },
+  addToCartButtonDisabled: {
+    background: '#9ca3af',
+    cursor: 'not-allowed',
+  },
+  cartMessage: {
+    fontSize: '0.75rem',
+    color: '#059669',
   },
 };

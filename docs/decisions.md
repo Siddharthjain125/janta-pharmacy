@@ -38,6 +38,8 @@ This document records significant architectural decisions made for the Janta Pha
 | ADR-004 | Monorepo Structure | Accepted | 2025-12 |
 | ADR-005 | Backend Technology Stack | Accepted | 2025-12 |
 | ADR-006 | Order State Machine Pattern | Accepted | 2025-12 |
+| ADR-007 | Cart as Draft Order | Accepted | 2026-01 |
+| ADR-008 | Deferred Database Integration | Accepted | 2026-01 |
 
 ---
 
@@ -435,6 +437,121 @@ This pattern should be applied to:
 - Prescription lifecycle (uploaded → verified → approved/rejected)
 - Payment lifecycle (pending → processing → completed/failed)
 - Delivery lifecycle (assigned → picked → in-transit → delivered)
+
+---
+
+## ADR-007: Cart as Draft Order
+
+### Status
+**Accepted**
+
+### Context
+The system needs shopping cart functionality. Traditional approaches model cart as a separate entity that gets "converted" to an order at checkout. This creates:
+- Data migration complexity
+- Duplicate validation rules
+- Inconsistent domain models
+
+### Decision
+Model the cart as an **Order in DRAFT state**.
+
+The Order entity gains a new initial state (`DRAFT`) that represents a mutable cart. Checkout simply transitions DRAFT → CREATED.
+
+### Implementation
+
+```
+Order States: DRAFT → CREATED → CONFIRMED → PAID → ...
+                ↓
+           [Cart operations allowed]
+```
+
+Cart operations:
+- `createDraftOrder` — Create or return existing draft
+- `addItemToCart` — Add product (increment if exists)
+- `updateItemQuantity` — Change quantity
+- `removeItemFromCart` — Remove product
+
+Invariants:
+- One active draft per user
+- Only DRAFT orders are mutable
+- Price captured at add-time (snapshot)
+
+### Consequences
+
+**Positive:**
+- Single source of truth for order items
+- No cart-to-order migration
+- Consistent business rules
+- Reuses Order domain (Money, OrderItem, totals)
+
+**Negative:**
+- Order entity more complex
+- DRAFT state must be handled in all order queries
+
+**Mitigations:**
+- Clear separation between CartService and OrderService
+- Explicit `isDraftOrder()` checks
+
+---
+
+## ADR-008: Deferred Database Integration
+
+### Status
+**Accepted**
+
+### Context
+The project needs data persistence. Options:
+1. Integrate database immediately
+2. Use in-memory repositories, add database later
+
+### Decision
+Use **in-memory repositories** during domain development. Defer PostgreSQL integration until domain model is stable.
+
+### Rationale
+
+| Phase | Data Strategy |
+|-------|--------------|
+| Domain design | In-memory — fast iteration |
+| Domain stable | PostgreSQL — persistence |
+
+Benefits:
+- Schema changes are free (no migrations)
+- Tests run fast (no database setup)
+- Focus on business logic, not ORM
+- Repository interfaces are well-defined
+
+### Implementation
+
+```typescript
+// Interface
+interface IOrderRepository {
+  findById(id: string): Promise<Order | null>;
+  // ...
+}
+
+// Development
+class InMemoryOrderRepository implements IOrderRepository { }
+
+// Production (future)
+class PrismaOrderRepository implements IOrderRepository { }
+```
+
+Swap via dependency injection when ready.
+
+### Consequences
+
+**Positive:**
+- Faster development iteration
+- Clean repository contracts
+- No premature optimization
+
+**Negative:**
+- Data lost on restart
+- Must implement real repository later
+
+**Mitigations:**
+- Clear interface contracts
+- Sample data seeding for development
+- Explicit plan for database phase
 
 ---
 

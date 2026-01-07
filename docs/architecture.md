@@ -1,291 +1,262 @@
-# System Architecture – Janta Pharmacy
+# System Architecture — Janta Pharmacy
 
 ## 1. Overview
 
-Janta Pharmacy is a digital platform designed to enable customers to
-search medicines, upload prescriptions, place orders, and track delivery,
-while allowing pharmacy administrators to manage inventory, orders, and compliance.
+Janta Pharmacy is a digital pharmacy platform enabling customers to browse medicines, manage carts, place orders, and track delivery.
 
-This document describes the **architectural decisions**, **constraints**,
-and **high-level system structure**.  
-Implementation details are intentionally deferred.
+This document describes **architectural decisions** and **system structure**.
 
-The goal is to design a system that is:
-- Production-ready
+**Design priorities:**
+- Production-ready patterns
 - Maintainable by a small team
-- Cost-efficient in early stages
-- Capable of evolving as scale and complexity grow
+- Evolvable as complexity grows
 
 ---
 
-## 2. Problem Statement
+## 2. Architectural Style: Modular Monolith
 
-The platform must support:
-- Medicine discovery and availability checks
-- Prescription-based ordering
-- Order placement and payment
-- Auditability for regulated workflows
-- Administrative control over inventory and orders
-
-The system must prioritize **correctness, traceability, and clarity**
-over premature optimization.
-
----
-
-## 3. Primary Users
-
-- **Customers**
-  - Browse medicines
-  - Upload prescriptions
-  - Place and track orders
-
-- **Pharmacy Admin**
-  - Manage catalog and inventory
-  - Review prescriptions
-  - Process and fulfill orders
-
-- **Delivery Staff (Future)**
-  - View assigned deliveries
-  - Update delivery status
-
----
-
-## 4. Non-Goals
-
-To avoid over-engineering, the following are explicitly out of scope
-for the initial versions:
-
-- Supporting multiple pharmacies or franchises
-- Multi-country or multi-currency support
-- Ultra-low latency optimization
-- Massive scale (10M+ users)
-- Fully automated prescription validation
-
-These can be revisited as the product matures.
-
----
-
-## 5. Constraints
-
-- Small engineering team (1–3 developers initially)
-- Regulated domain where auditability matters
-- Cost-sensitive infrastructure
-- AI-assisted development workflow
-- Public codebase used as a portfolio and reference
-
-All architectural decisions are evaluated against these constraints.
-
----
-
-## 6. Architectural Style Decision
-
-### Chosen Approach: Modular Monolith
-
-The system will be built as a **modular monolith**:
-- A single deployable backend
+The system is built as a **modular monolith**:
+- Single deployable backend
 - Clear internal module boundaries
-- Strong separation of concerns
+- No shared internal state between modules
 
-#### Why a Modular Monolith?
-- Faster development and iteration for a small team
-- Simpler debugging and observability
-- Easier transactional consistency
-- Lower operational and infrastructure overhead
-- Enables future extraction into microservices if needed
+### Why Modular Monolith?
 
-#### Why Not Microservices (Yet)?
+| Factor | Monolith Advantage |
+|--------|-------------------|
+| Team size (1-3 devs) | Lower operational overhead |
+| Early stage | Faster iteration |
+| Debugging | Single process, easier tracing |
+| Transactions | Simple consistency |
+| Future | Can extract to microservices later |
+
+### Why Not Microservices?
+
 - Adds operational complexity too early
-- Requires mature DevOps and monitoring practices
-- Increases cognitive load for a small team
-- Slows down early-stage feature delivery
+- Increases cognitive load for small teams
+- Slows early-stage development
 
-This decision prioritizes **timing over trends**.
-
----
-
-## 7. High-Level System Components
-
-### Client Applications
-- Web application (customer + admin)
-- Mobile application (future)
-
-### Backend Application
-A single backend application exposing APIs and encapsulating
-all business logic.
-
-### Data Store
-- Central relational database (initially)
-- Clear data ownership per module
-
-### External Integrations (Future)
-- Payment gateway
-- Notification providers (SMS / Email)
-- Delivery partners
+**Decision:** Optimize for current constraints, not hypothetical scale.
 
 ---
 
-## 8. Core Backend Modules
+## 3. System Components
 
-The backend is organized into logical modules.
-Each module owns:
-- Its business rules
-- Its data
-- Its public interfaces
-
-### Identified Modules
-- User Management
-- Catalog & Inventory
-- Orders
-- Payments
-- Prescriptions
-- Notifications
-- Admin Operations
-
-Modules communicate via well-defined interfaces,
-not shared internal state.
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Web Frontend                        │
+│                   (Next.js / React)                     │
+└─────────────────────────┬───────────────────────────────┘
+                          │ REST API (JSON)
+┌─────────────────────────▼───────────────────────────────┐
+│                        Backend                          │
+│                       (NestJS)                          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
+│  │   Auth   │  │  Catalog │  │  Orders  │   ...        │
+│  │  Module  │  │  Module  │  │  Module  │              │
+│  └──────────┘  └──────────┘  └──────────┘              │
+│         │            │             │                    │
+│         └────────────┴─────────────┘                    │
+│              In-Memory Repositories                     │
+│           (Database deferred by design)                 │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 8.1 Order Module - Domain Design
+## 4. Backend Modules
 
-The Order module demonstrates **domain-driven design** principles
-with an explicit state machine for lifecycle management.
+Each module owns its domain, data, and interfaces.
+
+| Module | Responsibility | Status |
+|--------|----------------|--------|
+| Auth | User identity, JWT, sessions | ✅ Complete |
+| User | User profiles, roles | ✅ Complete |
+| Catalog | Products, categories, search | ✅ Complete |
+| Order | Orders, cart, lifecycle | ✅ Complete |
+| Prescription | Upload, review (future) | ⏳ Planned |
+| Payment | Payment processing (future) | ⏳ Planned |
+
+### Module Structure Pattern
+
+```
+module/
+├── domain/           # Business rules, entities, value objects
+├── dto/              # Data transfer objects
+├── exceptions/       # Domain-specific errors
+├── repositories/     # Data access interfaces + implementations
+├── *.service.ts      # Application logic
+├── *.controller.ts   # HTTP layer (thin)
+└── *.module.ts       # Dependency wiring
+```
+
+---
+
+## 5. Order Module — Domain Design
+
+The Order module demonstrates **domain-driven design** with explicit lifecycle management.
 
 ### Order Lifecycle States
 
 ```
-┌─────────┐     ┌───────────┐     ┌──────┐     ┌─────────┐     ┌───────────┐
-│ CREATED │────▶│ CONFIRMED │────▶│ PAID │────▶│ SHIPPED │────▶│ DELIVERED │
-└────┬────┘     └─────┬─────┘     └──┬───┘     └────┬────┘     └───────────┘
-     │                │              │              │              (terminal)
-     ▼                ▼              ▼              ▼
-┌───────────────────────────────────────────────────┐
-│                    CANCELLED                       │
-└───────────────────────────────────────────────────┘
-                     (terminal)
+┌───────┐     ┌─────────┐     ┌───────────┐     ┌──────┐     ┌─────────┐     ┌───────────┐
+│ DRAFT │────▶│ CREATED │────▶│ CONFIRMED │────▶│ PAID │────▶│ SHIPPED │────▶│ DELIVERED │
+└───┬───┘     └────┬────┘     └─────┬─────┘     └──┬───┘     └────┬────┘     └───────────┘
+    │              │                │              │              │              (terminal)
+    │              ▼                ▼              ▼              ▼
+    │         ┌────────────────────────────────────────────────────┐
+    │         │                    CANCELLED                       │
+    │         └────────────────────────────────────────────────────┘
+    │                              (terminal)
+    ▼
+[Cart operations: add, update, remove items]
 ```
 
 ### State Descriptions
 
-| Status | Description | Next States |
-|--------|-------------|-------------|
+| Status | Description | Allowed Transitions |
+|--------|-------------|---------------------|
+| `DRAFT` | Cart — mutable, items can be added/removed | CREATED, CANCELLED |
 | `CREATED` | Order placed, awaiting confirmation | CONFIRMED, CANCELLED |
-| `CONFIRMED` | Order validated, awaiting payment | PAID, CANCELLED |
-| `PAID` | Payment received, awaiting fulfillment | SHIPPED, CANCELLED |
-| `SHIPPED` | Order in transit | DELIVERED, CANCELLED |
-| `DELIVERED` | Order delivered (terminal) | - |
-| `CANCELLED` | Order cancelled (terminal) | - |
+| `CONFIRMED` | Validated, awaiting payment | PAID, CANCELLED |
+| `PAID` | Payment received | SHIPPED, CANCELLED |
+| `SHIPPED` | In transit | DELIVERED, CANCELLED |
+| `DELIVERED` | Complete (terminal) | — |
+| `CANCELLED` | Cancelled (terminal) | — |
 
-### Design Principles
+---
 
-1. **Explicit State Machine**
-   - All valid transitions defined in one place
-   - Invalid transitions rejected with clear errors
-   - Easy to audit and modify
+## 6. Cart = Draft Order (Key Design Decision)
 
-2. **Command-Style Methods**
-   - `createOrder()` → Initial creation
-   - `confirmOrder()` → CREATED → CONFIRMED
-   - `payForOrder()` → CONFIRMED → PAID
-   - `cancelOrder()` → * → CANCELLED
+### The Decision
 
-3. **Intent-Based API**
-   - `POST /orders` - Create order
-   - `POST /orders/:id/confirm` - Confirm order
-   - `POST /orders/:id/pay` - Record payment
-   - `POST /orders/:id/cancel` - Cancel order
+Shopping cart is **not** a separate entity. It is an Order in `DRAFT` state.
 
-4. **Domain Exceptions**
-   - `OrderNotFoundException` - Order doesn't exist
-   - `InvalidOrderStateTransitionException` - Transition not allowed
-   - `OrderTerminalStateException` - Order in final state
-   - `OrderCannotBeCancelledException` - Cancel not allowed
+### Why?
 
-### Module Structure
+| Benefit | Explanation |
+|---------|-------------|
+| Single source of truth | No cart-to-order migration |
+| Consistent invariants | Same rules apply throughout |
+| Natural lifecycle | DRAFT → CREATED is just a state transition |
+| Domain reuse | OrderItem, Money, totals all shared |
 
+### Cart Operations
+
+All cart operations are **commands** that mutate the Draft Order:
+
+| Operation | Behavior |
+|-----------|----------|
+| `createDraftOrder` | Create or return existing draft |
+| `addItemToCart` | Add product (or increment if exists) |
+| `updateItemQuantity` | Change quantity |
+| `removeItemFromCart` | Remove product |
+| Checkout (future) | Transition DRAFT → CREATED |
+
+### Invariants Enforced
+
+- **One draft per user** — Cannot have multiple carts
+- **DRAFT orders only** — Non-draft orders are immutable
+- **Ownership** — User can only modify their own cart
+- **Quantity > 0** — Invalid quantities rejected
+- **Price snapshot** — Unit price captured at add-time
+
+---
+
+## 7. Data & Repository Strategy
+
+### Current: In-Memory Repositories
+
+All modules use in-memory repositories during development:
+
+```typescript
+@Injectable()
+export class InMemoryOrderRepository implements IOrderRepository {
+  private orders: Map<string, Order> = new Map();
+  // ...
+}
 ```
-order/
-├── domain/
-│   ├── order-status.ts       # Status enum + metadata
-│   └── order-state-machine.ts # Transition rules
-├── dto/
-│   └── order.dto.ts          # Data transfer objects
-├── exceptions/
-│   └── order.exceptions.ts   # Domain exceptions
-├── repositories/
-│   ├── order-repository.interface.ts
-│   ├── in-memory-order.repository.ts
-│   └── prisma-order.repository.ts
-├── order.service.ts          # Business logic
-├── order.controller.ts       # HTTP endpoints
-└── order.module.ts           # Module wiring
-```
 
-This pattern can be replicated for other modules
-(Prescription lifecycle, Payment lifecycle, etc.).
+### Why Defer Database?
+
+| Reason | Impact |
+|--------|--------|
+| Domain must stabilize first | Schema changes are cheap in memory |
+| Focus on business logic | No ORM ceremony during design |
+| Fast tests | No database setup required |
+| Clear interfaces | Repository contracts well-defined |
+
+### Future: PostgreSQL via Prisma
+
+When domain is stable:
+1. Define Prisma schema matching domain
+2. Implement `PrismaOrderRepository` behind same interface
+3. Swap via dependency injection
 
 ---
 
-## 9. Data Ownership & Boundaries
+## 8. API Design
 
-- Each module is responsible for its own data model
-- Cross-module access is mediated through service interfaces
-- No direct table-level coupling across modules
+### Principles
 
-This ensures:
-- Clear responsibility boundaries
-- Easier refactoring
-- Future service extraction readiness
+- **REST over HTTP/JSON**
+- **Intent-based commands** — `POST /orders/:id/confirm` not `PATCH /orders/:id`
+- **Thin controllers** — Business logic in services
+- **Domain errors** — Bubble up with appropriate HTTP codes
 
----
+### Cart API
 
-## 10. Transaction & Consistency Strategy
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/cart` | Get current draft |
+| POST | `/cart` | Create or get draft |
+| POST | `/cart/items` | Add item |
+| PATCH | `/cart/items/:productId` | Update quantity |
+| DELETE | `/cart/items/:productId` | Remove item |
 
-- Transactions are scoped within module boundaries
-- Cross-module workflows are coordinated at the application layer
-- Event-based patterns may be introduced later if complexity grows
+### Order API
 
-Consistency is favored over availability in critical workflows
-(e.g., order placement, prescription validation).
-
----
-
-## 11. Security & Auditability (High-Level)
-
-- Authentication and authorization enforced at the backend
-- Role-based access control for admin operations
-- Audit logs for:
-  - Prescription actions
-  - Order lifecycle changes
-  - Inventory updates
-
-Detailed security design is documented separately.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/orders` | List user's orders |
+| GET | `/orders/:id` | Get order details |
+| POST | `/orders` | Create order |
+| POST | `/orders/:id/confirm` | Confirm |
+| POST | `/orders/:id/pay` | Record payment |
+| POST | `/orders/:id/cancel` | Cancel |
 
 ---
 
-## 12. AI-Assisted Development Philosophy
+## 9. Security Model
 
-AI tools are used to:
-- Accelerate boilerplate generation
-- Assist with refactoring and documentation
-- Speed up experimentation
-
-AI does **not**:
-- Make architectural decisions
-- Define business rules
-- Override explicit design intent
-
-Human judgment remains the source of truth.
+- **Authentication** — JWT access tokens + refresh tokens
+- **Authorization** — Role-based, enforced at service layer
+- **Ownership** — Users can only access their own data
+- **No client-provided userId** — Extracted from JWT
 
 ---
 
-## 13. What Comes Next
+## 10. What's Intentionally Deferred
 
-This architecture will be refined incrementally through:
-- System context diagrams
-- Infrastructure and deployment decisions
-- Cost modeling
-- Security and compliance detailing
+| Item | Rationale |
+|------|-----------|
+| PostgreSQL | Domain stabilization first |
+| Caching | No performance bottleneck yet |
+| Message queues | No async requirements yet |
+| Kubernetes | No deployment target |
+| Mobile app | Web-first validation |
 
-Architecture is treated as a **living document**,
-not a one-time exercise.
+These will be added when **justified by real requirements**, not speculation.
+
+---
+
+## 11. Evolution Path
+
+The architecture supports future evolution:
+
+1. **Database** — Swap in-memory → Prisma without changing services
+2. **Microservices** — Extract modules along existing boundaries
+3. **Event sourcing** — Domain events abstraction already exists
+4. **CQRS** — Read/write separation possible per module
+
+Architecture is a **living document** that evolves with the system.

@@ -13,8 +13,10 @@ export const ROUTES = {
   REGISTER: '/register',
   CATALOG: '/catalog',
   PRODUCT_DETAIL: (id: string) => `/catalog/${id}`,
+  CART: '/cart',
   ORDERS: '/orders',
   ORDER_DETAIL: (id: string) => `/orders/${id}`,
+  ORDER_CONFIRMED: (id: string) => `/orders/${id}/confirmed`,
 } as const;
 
 // Local storage keys

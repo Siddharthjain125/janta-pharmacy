@@ -221,3 +221,155 @@ export interface PaginatedResponse<T> {
   correlationId?: string;
 }
 
+// ============================================================================
+// CART TYPES
+// ============================================================================
+
+/**
+ * Cart item price representation
+ * Aligned with backend OrderPriceDto
+ */
+export interface CartPrice {
+  amount: number;
+  currency: string;
+}
+
+/**
+ * Cart item representation
+ * Aligned with backend CartItemDto
+ */
+export interface CartItem {
+  productId: string;
+  productName: string;
+  unitPrice: CartPrice;
+  quantity: number;
+  subtotal: CartPrice;
+}
+
+/**
+ * Cart (Draft Order) response
+ * Aligned with backend CartResponseDto
+ */
+export interface Cart {
+  orderId: string;
+  state: string;
+  items: CartItem[];
+  itemCount: number;
+  total: CartPrice;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Add to cart request
+ * Aligned with backend AddToCartRequestDto
+ */
+export interface AddToCartRequest {
+  productId: string;
+  quantity: number;
+}
+
+/**
+ * Update cart item request
+ * Aligned with backend UpdateCartItemRequestDto
+ */
+export interface UpdateCartItemRequest {
+  quantity: number;
+}
+
+// ============================================================================
+// CHECKOUT / CONFIRMED ORDER TYPES
+// ============================================================================
+
+/**
+ * Item in a confirmed order
+ * Aligned with backend ConfirmedOrderItemDto
+ */
+export interface ConfirmedOrderItem {
+  productId: string;
+  productName: string;
+  unitPrice: CartPrice;
+  quantity: number;
+  subtotal: CartPrice;
+}
+
+/**
+ * Confirmed order response from checkout
+ * Aligned with backend CheckoutResponseDto
+ */
+export interface ConfirmedOrder {
+  orderId: string;
+  state: OrderStatus;
+  items: ConfirmedOrderItem[];
+  itemCount: number;
+  total: CartPrice;
+  createdAt: string;
+  confirmedAt: string;
+}
+
+// ============================================================================
+// ORDER HISTORY & DETAIL TYPES
+// ============================================================================
+
+/**
+ * Order summary for history listing
+ * Aligned with backend OrderSummaryDto
+ */
+export interface OrderSummary {
+  orderId: string;
+  state: string;
+  itemCount: number;
+  total: CartPrice;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Order item for detail view
+ * Aligned with backend OrderDetailItemDto
+ */
+export interface OrderDetailItem {
+  productId: string;
+  productName: string;
+  unitPrice: CartPrice;
+  quantity: number;
+  subtotal: CartPrice;
+}
+
+/**
+ * Full order detail
+ * Aligned with backend OrderDetailDto
+ */
+export interface OrderDetail {
+  orderId: string;
+  state: string;
+  items: OrderDetailItem[];
+  itemCount: number;
+  total: CartPrice;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Paginated order history response
+ * Aligned with backend OrderHistoryResponseDto
+ */
+export interface OrderHistoryResponse {
+  orders: OrderSummary[];
+  pagination: PaginationMeta;
+}
+
+/**
+ * Cancelled order response
+ * Aligned with backend CancelOrderResponseDto
+ */
+export interface CancelledOrder {
+  orderId: string;
+  state: OrderStatus;
+  items: OrderDetailItem[];
+  itemCount: number;
+  total: CartPrice;
+  createdAt: string;
+  cancelledAt: string;
+}
+

@@ -1,271 +1,225 @@
-# 🗺️ Janta Pharmacy – Architecture-First Implementation Roadmap
+# Janta Pharmacy — Implementation Roadmap
 
 This roadmap reflects an **architecture-first, risk-driven** development approach.
 
-Instead of building features in UI order, the system is evolved by validating
-complexity early, proving architectural decisions under real domain stress,
-and only then expanding user-facing functionality.
+The system is evolved by validating complexity early, proving architectural decisions under real domain stress, and only then expanding user-facing functionality.
 
 > **The goal is not speed, but correctness, evolvability, and production realism.**
 
 ---
 
-## 📊 High-Level Progress Summary
+## Progress Summary
 
-| Phase | Focus Area | Status | Demo Ready |
-|-------|------------|--------|------------|
-| Phase 0 | Architecture Blueprint | ✅ Complete | N/A |
-| Phase 0.5 | Core Domain Validation | ✅ Complete | ❌ |
-| Phase 1 | Identity & Access | 🔜 Next | ✅ Demo 1 |
-| Phase 2 | Catalog | ⏳ Planned | ✅ Demo 2 |
-| Phase 3 | Order Completion | ⏳ Planned | ✅ Demo 3 |
-| Phase 4 | Prescription Workflow | ⏳ Planned | ✅ Demo 4 |
-| Phase 5 | Payments & Notifications | ⏳ Planned | ✅ Demo 5 |
-| Phase 6 | Admin & Operability | ⏳ Planned | ✅ Demo 6 |
-| Phase 7 | Hardening & Evolution | 🔁 Ongoing | — |
+| Phase | Focus | Status |
+|-------|-------|--------|
+| Phase 0 | Architecture Blueprint | ✅ Complete |
+| Phase 0.5 | Core Domain Validation | ✅ Complete |
+| Phase 1 | Identity & Access | ✅ Complete |
+| Phase 2 | Catalog Browsing | ✅ Complete |
+| Phase 3A | Cart (Draft Order) | ✅ Complete |
+| Phase 3B | Checkout & Order History | 🔜 Next |
+| Phase 4 | Prescription Workflow | ⏳ Planned |
+| Phase 5 | Payments & Notifications | ⏳ Planned |
 
 ---
 
-## Phase 0: Architecture & Foundation ✅
+## Phase 0: Architecture Blueprint ✅
 
-**Goal:** Design the system before committing to tools, infrastructure, or features.
+**Goal:** Design the system before committing to tools or features.
 
 ### Completed
+- System context & bounded contexts
+- Modular monolith architecture decision
+- Module ownership & data boundaries
+- Transaction & consistency rules
+- Security, audit logging, observability strategy
 
-- ✅ System context & bounded contexts
-- ✅ Modular monolith architecture
-- ✅ Module ownership & data boundaries
-- ✅ Transaction & consistency rules
-- ✅ Sync vs async interaction strategy
-- ✅ Security, audit logging, observability strategy
-- ✅ Infra assumptions & cost ranges
-- ✅ Feature roadmap & evolution plan
-
-**Outcome:** A production-grade blueprint before writing real code.
+**Outcome:** Production-grade blueprint before writing code.
 
 ---
 
 ## Phase 0.5: Core Domain Validation ✅
 
-> *Intentional Early Step*
+**Goal:** Validate architecture against the hardest domain problems first.
 
-**Goal:** Validate the architecture against the hardest domain problems first.
-
-This phase was intentionally executed before user-facing features to reduce
-architectural risk.
+This phase was intentionally executed before user-facing features to reduce architectural risk.
 
 ### Completed
-
-- ✅ Order domain model with explicit lifecycle
-- ✅ State machine enforcing valid transitions
-- ✅ Command-style APIs (confirm, pay, cancel)
-- ✅ Domain-specific error taxonomy
-- ✅ Ownership & authorization enforcement
-- ✅ Structured logging with correlation IDs
-- ✅ Domain events abstraction (no infrastructure)
-- ✅ In-memory repositories with clear contracts
+- Order domain model with explicit lifecycle
+- State machine enforcing valid transitions (DRAFT → CREATED → CONFIRMED → PAID → SHIPPED → DELIVERED)
+- Command-style APIs (confirm, pay, cancel)
+- Domain-specific error taxonomy
+- Ownership & authorization enforcement
+- Structured logging with correlation IDs
+- In-memory repositories with clear contracts
 
 ### Why This Phase Exists
 
 | Reason | Impact |
 |--------|--------|
-| Orders represent the most complex workflow | Validates core patterns |
-| Validates consistency boundaries early | Prevents late-stage refactors |
-| Proves the system can evolve without rewrites | Future-proofs architecture |
-| Enables future async workflows | No infrastructure lock-in |
+| Orders are the most complex workflow | Validates core patterns early |
+| Proves consistency boundaries | Prevents late-stage refactors |
+| Domain events abstraction | No infrastructure lock-in |
 
 **Outcome:** Architecture proven under real complexity, not toy CRUD.
 
 ---
 
-## Phase 1: Identity & Access 🔜
-
-> **Status:** Next Up
+## Phase 1: Identity & Access ✅
 
 **Goal:** Establish real user identity as the foundation for all features.
 
 ### Backend
-
-- [ ] User entity & repository
-- [ ] Registration (`POST /auth/register`)
-- [ ] Login with JWT (`POST /auth/login`)
-- [ ] Password hashing (bcrypt)
-- [ ] Refresh token flow
-- [ ] Auth guards wired to real users
+- [x] User entity with phone-based identity
+- [x] Registration (`POST /auth/register`)
+- [x] Login with JWT (`POST /auth/login`)
+- [x] Password hashing (bcrypt)
+- [x] Refresh token flow with rotation
+- [x] Auth guards wired to real users
+- [x] Role-based access control
 
 ### Frontend
+- [x] Login & registration pages
+- [x] AuthContext with token management
+- [x] Token storage & automatic refresh
+- [x] Protected routes
+- [x] Session persistence across reloads
 
-- [ ] Login & registration pages
-- [ ] Replace mock AuthContext
-- [ ] Token storage & refresh handling
-- [ ] Auth-based routing & redirects
-- [ ] Logout flow
-
-### 🎯 Demo 1
-
-> User can register, login, see their identity, and logout.
-
-**Why now:** Orders, catalog, prescriptions, and payments all depend on real identity.
+**Outcome:** Full authentication flow with JWT + refresh token rotation.
 
 ---
 
-## Phase 2: Catalog Management
+## Phase 2: Catalog Browsing ✅
 
 **Goal:** Expose a browseable, searchable medicine catalog.
 
 ### Backend
-
-- [ ] Product entity (OTC / prescription-required)
-- [ ] Category entity
-- [ ] Product listing with pagination
-- [ ] Search & filtering APIs
+- [x] Product entity with value objects (ProductId, Money)
+- [x] ProductCategory enum with metadata
+- [x] InMemoryProductRepository with sample data
+- [x] CatalogQueryService for queries
+- [x] Listing with pagination
+- [x] Search by name/description
+- [x] Filter by category & prescription requirement
+- [x] Clean DTO boundaries
 
 ### Frontend
+- [x] Product listing page (`/catalog`)
+- [x] Category filter, search input, prescription toggle
+- [x] Pagination controls
+- [x] URL state persistence
+- [x] Product detail page (`/catalog/[id]`)
+- [x] Loading, empty, error states
 
-- [ ] Product listing page
-- [ ] Category sidebar
-- [ ] Search bar
-- [ ] Product detail page
-
-### 🎯 Demo 2
-
-> Logged-in user can browse and search medicines.
+**Outcome:** Full catalog browsing with search, filtering, pagination.
 
 ---
 
-## Phase 3: Order Completion
+## Phase 3A: Cart (Draft Order) ✅
 
-**Goal:** Turn the validated order domain into a full user flow.
+**Goal:** Implement shopping cart as Draft Order domain model.
+
+### Design Decision: Cart = Draft Order
+
+The cart is **not** a separate entity. It is an Order in `DRAFT` state.
+
+| Approach | Why Chosen |
+|----------|------------|
+| Reuses Order domain | Single source of truth for order items |
+| Natural lifecycle | DRAFT → CREATED on checkout |
+| Consistent invariants | Same rules apply to cart and order |
 
 ### Backend
-
-- [ ] OrderItem entity
-- [ ] Add/remove items
-- [ ] Order total calculation
-- [ ] User & catalog integration
-- [ ] Order history with pagination
+- [x] OrderItem domain entity with price snapshot
+- [x] Draft Order (Order in DRAFT state)
+- [x] CartService with command-style use cases:
+  - createDraftOrder
+  - addItemToCart
+  - updateItemQuantity
+  - removeItemFromCart
+- [x] Invariants enforced:
+  - One active draft per user
+  - Only DRAFT orders are mutable
+  - Ownership checks
+  - Quantity > 0
+  - Unit price captured at add-time
+- [x] CartController (`/cart` endpoints)
+- [x] Comprehensive tests
 
 ### Frontend
+- [x] Add to Cart from catalog listing
+- [x] Add to Cart from product detail
+- [x] Cart page (`/cart`) with:
+  - Item list (name, price, quantity, subtotal)
+  - Quantity controls (increment/decrement)
+  - Remove item
+  - Order total
+- [x] Loading, empty, error states
+- [x] Cart link in navigation
 
-- [ ] Shopping cart
-- [ ] Checkout flow
-- [ ] Order summary
-- [ ] Order history & details
-- [ ] Cancel order flow
-- [ ] Order status visualization
-
-### 🎯 Demo 3
-
-> User can add items, place orders, view history, cancel eligible orders.
+**Outcome:** Shopping cart backed by Draft Order domain model.
 
 ---
 
-## Phase 4: Prescription Workflow
+## Phase 3B: Checkout & Order History 🔜
+
+**Goal:** Complete the order flow from cart to placed order.
+
+### Backend (Planned)
+- [ ] Checkout command (DRAFT → CREATED)
+- [ ] Order history query with pagination
+- [ ] Prescription-required product handling
+
+### Frontend (Planned)
+- [ ] Checkout flow
+- [ ] Order confirmation
+- [ ] Order history page
+- [ ] Order detail page
+- [ ] Cancel order flow
+
+**Outcome:** User can place orders and view history.
+
+---
+
+## Phase 4: Prescription Workflow ⏳
 
 **Goal:** Support regulated medicine workflows.
 
-### Backend
-
 - [ ] Prescription entity
-- [ ] Upload endpoint
-- [ ] Review lifecycle (pending → approved/rejected)
+- [ ] Upload and review lifecycle
 - [ ] Prescription-order linkage
-- [ ] Admin approval endpoints
-
-### Frontend
-
-- [ ] Prescription upload
-- [ ] Status tracking
-- [ ] Admin review UI
-
-### 🎯 Demo 4
-
-> Prescription medicines require admin approval before order confirmation.
+- [ ] Admin approval UI
 
 ---
 
-## Phase 5: Payments & Notifications
+## Phase 5: Payments & Notifications ⏳
 
 **Goal:** Make orders commercially complete.
 
-### Backend
-
 - [ ] Payment gateway integration
-- [ ] Payment initiation
 - [ ] Webhook handling
-- [ ] Order state updates
-- [ ] Email / SMS notifications
-
-### Frontend
-
-- [ ] Payment flow
-- [ ] Success / failure pages
-- [ ] Notification preferences
-
-### 🎯 Demo 5
-
-> User can pay and receive confirmations.
+- [ ] Email/SMS notifications
 
 ---
 
-## Phase 6: Admin Operations & Observability
+## Intentionally Deferred
 
-**Goal:** Make the system operable in production.
+The following are **explicitly deferred** until justified by requirements:
 
-### Backend & Frontend
-
-- [ ] Inventory management
-- [ ] Admin dashboards
-- [ ] Audit log viewer
-- [ ] Metrics & health endpoints
-- [ ] Access-controlled admin UI
-
-### 🎯 Demo 6
-
-> Admins can operate and monitor the system.
-
----
-
-## Phase 7: Hardening & Evolution
-
-> **Status:** Ongoing
-
-- [ ] Performance profiling
-- [ ] Caching strategies
-- [ ] Background processing
-- [ ] Delivery integrations
-- [ ] API versioning
-- [ ] Rate limiting refinement
-
----
-
-## 🎬 Demo Timeline
-
-| Demo | After Phase | What User Can Do |
-|------|-------------|------------------|
-| **Demo 1** | Phase 1 | Register, login, see identity, logout |
-| **Demo 2** | Phase 2 | Browse and search medicine catalog |
-| **Demo 3** | Phase 3 | Add to cart, place order, view history |
-| **Demo 4** | Phase 4 | Upload prescription, admin approval flow |
-| **Demo 5** | Phase 5 | Pay for order, receive confirmation |
-| **Demo 6** | Phase 6 | Admin: manage inventory, view orders |
+| Item | Rationale |
+|------|-----------|
+| Database (PostgreSQL) | Domain must stabilize first |
+| Infrastructure (Terraform, K8s) | No deployment target yet |
+| Mobile app | Web-first validation |
+| Admin dashboard | Core flows first |
+| Performance optimization | Premature before scale |
 
 ---
 
 ## Roadmap Principles
 
-1. **Architecture before features** – Design decisions precede implementation
-2. **Risk before convenience** – Tackle hard problems early
-3. **Domain correctness over speed** – Get the model right first
-4. **Infrastructure only when justified** – No premature optimization
-5. **Every phase leaves the system evolvable** – No dead ends
-6. **Demos validate progress** – Not vanity metrics
-
----
-
-## Final Architect Note
-
-> The system intentionally validates complexity early (Orders, state machines,
-> domain events) before completing user-facing flows.
->
-> **This reflects how production systems are designed, not how tutorials are written.**
+1. **Architecture before features** — Design decisions precede implementation
+2. **Risk before convenience** — Tackle hard problems early
+3. **Domain correctness over speed** — Get the model right first
+4. **Infrastructure only when justified** — No premature optimization
+5. **Every phase leaves the system evolvable** — No dead ends

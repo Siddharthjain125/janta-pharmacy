@@ -39,6 +39,9 @@ export function Header() {
               <Link href={ROUTES.CATALOG} style={styles.link}>
                 Catalog
               </Link>
+              <Link href={ROUTES.CART} style={styles.link}>
+                Cart
+              </Link>
               <Link href={ROUTES.ORDERS} style={styles.link}>
                 Orders
               </Link>
