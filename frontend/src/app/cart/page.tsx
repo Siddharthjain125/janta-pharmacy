@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ROUTES } from '@/lib/constants';
-import { getCart, updateCartItem, removeCartItem } from '@/lib/cart-service';
+import { getCart, updateCartItem, removeCartItem, confirmOrder } from '@/lib/cart-service';
 import type { Cart, CartItem } from '@/types/api';
 
 /**
@@ -20,12 +21,17 @@ import type { Cart, CartItem } from '@/types/api';
  * No local state management - backend is source of truth.
  */
 export default function CartPage() {
+  const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Track which items have pending operations
   const [updatingItems, setUpdatingItems] = useState<Set<string>>(new Set());
+
+  // Checkout state
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Fetch cart on mount
   const fetchCart = useCallback(async () => {
@@ -103,6 +109,28 @@ export default function CartPage() {
       handleUpdateQuantity(item.productId, item.quantity - 1);
     }
   };
+
+  // Checkout handler
+  const handleCheckout = async () => {
+    if (isCheckingOut || !cart || cart.items.length === 0) return;
+
+    setIsCheckingOut(true);
+    setCheckoutError(null);
+
+    try {
+      const confirmedOrder = await confirmOrder();
+      // Navigate to order confirmation page
+      router.push(ROUTES.ORDER_CONFIRMED(confirmedOrder.orderId));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Checkout failed';
+      setCheckoutError(message);
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  // Check if checkout is possible
+  const canCheckout = cart && cart.items.length > 0 && !isCheckingOut && updatingItems.size === 0;
 
   // Format price helper
   const formatPrice = (amount: number, currency: string) => {
@@ -231,6 +259,25 @@ export default function CartPage() {
                   {formatPrice(cart.total.amount, cart.total.currency)}
                 </span>
               </div>
+
+              {/* Checkout Error */}
+              {checkoutError && (
+                <div style={styles.checkoutError}>
+                  {checkoutError}
+                </div>
+              )}
+
+              {/* Checkout Button */}
+              <button
+                onClick={handleCheckout}
+                disabled={!canCheckout}
+                style={{
+                  ...styles.checkoutButton,
+                  ...(!canCheckout ? styles.checkoutButtonDisabled : {}),
+                }}
+              >
+                {isCheckingOut ? 'Processing...' : 'Place Order'}
+              </button>
             </div>
 
             {/* Actions */}
@@ -413,6 +460,31 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#6b7280',
     textDecoration: 'none',
     fontSize: '0.875rem',
+  },
+  checkoutError: {
+    marginTop: '1rem',
+    padding: '0.75rem',
+    background: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '6px',
+    color: '#dc2626',
+    fontSize: '0.875rem',
+  },
+  checkoutButton: {
+    marginTop: '1rem',
+    width: '100%',
+    padding: '0.875rem 1.5rem',
+    background: '#059669',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '1rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  checkoutButtonDisabled: {
+    background: '#9ca3af',
+    cursor: 'not-allowed',
   },
 };
 

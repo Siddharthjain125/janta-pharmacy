@@ -9,7 +9,7 @@
  */
 
 import { apiClient } from './api-client';
-import type { ApiResponse, Cart } from '@/types/api';
+import type { Cart, ConfirmedOrder } from '@/types/api';
 
 /**
  * Get the current user's cart (draft order)
@@ -102,6 +102,38 @@ export async function removeCartItem(productId: string): Promise<Cart> {
 
   if (!response.data) {
     throw new Error('Failed to remove item from cart');
+  }
+
+  return response.data;
+}
+
+// ============================================================================
+// CHECKOUT
+// ============================================================================
+
+/**
+ * Confirm the current draft order (checkout)
+ *
+ * Converts the user's cart (DRAFT order) into a CONFIRMED order.
+ * This is an irreversible action.
+ *
+ * Business rules enforced by backend:
+ * - Cart must exist and be in DRAFT state
+ * - Cart must have at least one item
+ * - No prescription-required items (until workflow exists)
+ *
+ * @returns The confirmed order details
+ * @throws Error if checkout fails (empty cart, invalid state, prescription required, etc.)
+ */
+export async function confirmOrder(): Promise<ConfirmedOrder> {
+  const response = await apiClient.post<ConfirmedOrder>(
+    '/orders/checkout',
+    undefined,
+    { requiresAuth: true },
+  );
+
+  if (!response.data) {
+    throw new Error('Failed to confirm order');
   }
 
   return response.data;

@@ -16,6 +16,7 @@ export const ROUTES = {
   CART: '/cart',
   ORDERS: '/orders',
   ORDER_DETAIL: (id: string) => `/orders/${id}`,
+  ORDER_CONFIRMED: (id: string) => `/orders/${id}/confirmed`,
 } as const;
 
 // Local storage keys

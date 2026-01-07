@@ -277,3 +277,33 @@ export interface UpdateCartItemRequest {
   quantity: number;
 }
 
+// ============================================================================
+// CHECKOUT / CONFIRMED ORDER TYPES
+// ============================================================================
+
+/**
+ * Item in a confirmed order
+ * Aligned with backend ConfirmedOrderItemDto
+ */
+export interface ConfirmedOrderItem {
+  productId: string;
+  productName: string;
+  unitPrice: CartPrice;
+  quantity: number;
+  subtotal: CartPrice;
+}
+
+/**
+ * Confirmed order response from checkout
+ * Aligned with backend CheckoutResponseDto
+ */
+export interface ConfirmedOrder {
+  orderId: string;
+  state: OrderStatus;
+  items: ConfirmedOrderItem[];
+  itemCount: number;
+  total: CartPrice;
+  createdAt: string;
+  confirmedAt: string;
+}
+
