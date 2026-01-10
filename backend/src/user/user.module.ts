@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { USER_REPOSITORY } from './repositories/user-repository.interface';
-import { InMemoryUserRepository } from './repositories/in-memory-user.repository';
+import { UserRepositoryProvider } from '../database/repository.providers';
 
 /**
  * User Module
@@ -20,6 +20,11 @@ import { InMemoryUserRepository } from './repositories/in-memory-user.repository
  * - Does NOT handle authorization (that's in AuthModule)
  * - Other modules depend on UserService for identity
  *
+ * Repository Selection:
+ * - Uses REPOSITORY_TYPE env var or auto-detects from DATABASE_URL
+ * - 'memory': InMemoryUserRepository (tests, dev without DB)
+ * - 'prisma': PrismaUserRepository (production, dev with DB)
+ *
  * Exports:
  * - UserService: For other modules to look up users
  * - User types: For type safety across modules
@@ -28,10 +33,7 @@ import { InMemoryUserRepository } from './repositories/in-memory-user.repository
   controllers: [UserController],
   providers: [
     UserService,
-    {
-      provide: USER_REPOSITORY,
-      useClass: InMemoryUserRepository,
-    },
+    UserRepositoryProvider,
   ],
   exports: [
     UserService,

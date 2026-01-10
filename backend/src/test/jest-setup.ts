@@ -5,6 +5,14 @@
  * This file runs before each test file.
  */
 
+// =============================================================================
+// Force in-memory repositories for tests
+// =============================================================================
+// This ensures tests always use in-memory repositories regardless of
+// environment configuration. Tests should be isolated and not depend on
+// external databases.
+process.env.REPOSITORY_TYPE = 'memory';
+
 // Suppress console output during tests for cleaner output
 // Comment out these lines if you need to debug test failures
 beforeAll(() => {
