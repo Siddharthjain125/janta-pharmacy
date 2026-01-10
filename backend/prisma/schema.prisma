@@ -1,6 +1,12 @@
 // =============================================================================
 // Janta Pharmacy - Prisma Schema
 // =============================================================================
+// This schema defines the database structure for the pharmacy system.
+// 
+// To apply changes:
+//   npm run prisma:migrate     # Create and apply migration
+//   npm run prisma:generate    # Regenerate Prisma client
+// =============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -12,65 +18,171 @@ datasource db {
 }
 
 // =============================================================================
-// ORDER DOMAIN (Implemented)
+// USER DOMAIN
 // =============================================================================
 
-model Order {
-  id        String      @id @default(uuid())
-  userId    String
-  status    OrderStatus @default(CREATED)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@map("orders")
-}
-
-enum OrderStatus {
-  CREATED
-  CANCELLED
-}
-
-// =============================================================================
-// PLACEHOLDER MODELS (Not yet implemented)
-// =============================================================================
-
+/// User account in the system
+/// Primary identifier is phoneNumber (unique, required)
 model User {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String     @id @default(uuid())
+  phoneNumber String     @unique @map("phone_number")
+  name        String?
+  email       String?    @unique
+  role        UserRole   @default(CUSTOMER)
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
+  // Relations
+  orders      Order[]
+  credentials Credential[]
+
+  @@index([phoneNumber])
+  @@index([email])
+  @@index([role])
   @@map("users")
 }
 
-model Product {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("products")
+/// User roles for authorization
+enum UserRole {
+  CUSTOMER
+  STAFF
+  PHARMACIST
+  ADMIN
 }
 
-model Category {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("categories")
+/// User account status
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
 }
 
+// =============================================================================
+// AUTHENTICATION DOMAIN
+// =============================================================================
+
+/// User credentials for authentication
+/// Separated from User to support multiple auth methods
+model Credential {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([userId])
+  @@map("credentials")
+}
+
+/// Refresh tokens for JWT authentication
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// =============================================================================
+// ORDER DOMAIN
+// =============================================================================
+
+/// Order representing a customer's purchase
+/// Status follows a state machine: DRAFT -> CREATED -> CONFIRMED -> PAID -> SHIPPED -> DELIVERED
+/// Can be CANCELLED from most non-terminal states
+model Order {
+  id        String      @id @default(uuid())
+  userId    String      @map("user_id")
+  status    OrderStatus @default(DRAFT)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+/// Order status representing the lifecycle state
+enum OrderStatus {
+  DRAFT      // Cart - mutable, not yet committed
+  CREATED    // Order placed, awaiting confirmation
+  CONFIRMED  // Confirmed, awaiting payment
+  PAID       // Payment received
+  SHIPPED    // Order shipped
+  DELIVERED  // Order delivered (terminal)
+  CANCELLED  // Order cancelled (terminal)
+}
+
+/// Line item within an order
+/// Captures product snapshot at time of adding (price, name won't change)
 model OrderItem {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+  id                 String   @id @default(uuid())
+  orderId            String   @map("order_id")
+  productId          String   @map("product_id")
+  productName        String   @map("product_name")
+  unitPriceAmount    Int      @map("unit_price_amount") // In minor units (paise)
+  unitPriceCurrency  String   @default("INR") @map("unit_price_currency")
+  quantity           Int
+  addedAt            DateTime @default(now()) @map("added_at")
 
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, productId])
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
-model Prescription {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// =============================================================================
+// CATALOG DOMAIN
+// =============================================================================
 
-  @@map("prescriptions")
+/// Product in the pharmacy catalog
+model Product {
+  id                   String          @id @default(uuid())
+  name                 String
+  description          String?
+  category             ProductCategory
+  priceAmount          Int             @map("price_amount") // In minor units (paise)
+  priceCurrency        String          @default("INR") @map("price_currency")
+  requiresPrescription Boolean         @default(false) @map("requires_prescription")
+  isActive             Boolean         @default(true) @map("is_active")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([isActive])
+  @@index([requiresPrescription])
+  @@index([name])
+  @@map("products")
+}
+
+/// Product categories
+enum ProductCategory {
+  GENERAL
+  PRESCRIPTION
+  AYURVEDIC
+  PERSONAL_CARE
+  BABY_CARE
+  HEALTH_DEVICES
+  SUPPLEMENTS
+  FIRST_AID
 }

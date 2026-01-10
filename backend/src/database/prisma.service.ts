@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 
 /**
  * Prisma Service
- * 
+ *
  * Wraps PrismaClient and handles lifecycle.
  * Gracefully handles missing DATABASE_URL for development.
  */
@@ -21,16 +21,17 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     if (!process.env.DATABASE_URL) {
       this.logger.warn(
         'DATABASE_URL not set. Database features disabled. ' +
-        'Create backend/.env with DATABASE_URL to enable.',
+          'Create backend/.env with DATABASE_URL to enable.',
       );
       return;
     }
 
     try {
       this.client = new PrismaClient({
-        log: process.env.NODE_ENV === 'development'
-          ? ['warn', 'error']
-          : ['error'],
+        log:
+          process.env.NODE_ENV === 'development'
+            ? ['warn', 'error']
+            : ['error'],
       });
       await this.client.$connect();
       this._isConnected = true;
@@ -61,28 +62,31 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.client;
   }
 
+  // ==========================================================================
   // Proxy common Prisma properties for convenience
-  get order() {
-    return this.getClient().order;
-  }
+  // ==========================================================================
 
   get user() {
     return this.getClient().user;
   }
 
-  get product() {
-    return this.getClient().product;
+  get credential() {
+    return this.getClient().credential;
   }
 
-  get category() {
-    return this.getClient().category;
+  get refreshToken() {
+    return this.getClient().refreshToken;
   }
 
-  get prescription() {
-    return this.getClient().prescription;
+  get order() {
+    return this.getClient().order;
   }
 
   get orderItem() {
     return this.getClient().orderItem;
+  }
+
+  get product() {
+    return this.getClient().product;
   }
 }
