@@ -6,6 +6,8 @@ Janta Pharmacy is a digital pharmacy platform enabling customers to browse medic
 
 This document describes **architectural decisions** and **system structure**.
 
+> 📘 **Looking for request flow?** See [flow.md](./flow.md) for step-by-step diagrams showing how requests move through the system.
+
 **Design priorities:**
 - Production-ready patterns
 - Maintainable by a small team
