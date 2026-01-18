@@ -36,6 +36,7 @@ model User {
   // Relations
   orders      Order[]
   credentials Credential[]
+  addresses   Address[]
 
   @@index([phoneNumber])
   @@index([email])
@@ -86,17 +87,43 @@ model RefreshToken {
   userId    String   @map("user_id")
   token     String   @unique
   expiresAt DateTime @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+  @@index([revokedAt])
   @@map("refresh_tokens")
 }
 
 // =============================================================================
 // ORDER DOMAIN
 // =============================================================================
+
+/// Address owned by a user (standalone aggregate)
+model Address {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  label      String
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String   @map("postal_code")
+  country    String
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([createdAt])
+  @@map("addresses")
+}
 
 /// Order representing a customer's purchase
 /// Status follows a state machine: DRAFT -> CREATED -> CONFIRMED -> PAID -> SHIPPED -> DELIVERED

@@ -7,6 +7,11 @@ import { USER_REPOSITORY } from '../user/repositories/user-repository.interface'
 import { InMemoryUserRepository } from '../user/repositories/in-memory-user.repository';
 import { PrismaUserRepository } from '../user/repositories/prisma-user.repository';
 
+// Address repositories
+import { ADDRESS_REPOSITORY } from '../address/repositories/address-repository.interface';
+import { InMemoryAddressRepository } from '../address/repositories/in-memory-address.repository';
+import { PrismaAddressRepository } from '../address/repositories/prisma-address.repository';
+
 // Order repositories
 import { ORDER_REPOSITORY } from '../order/repositories/order-repository.interface';
 import { InMemoryOrderRepository } from '../order/repositories/in-memory-order.repository';
@@ -62,6 +67,21 @@ export const UserRepositoryProvider: Provider = {
       return new PrismaUserRepository(prismaService);
     }
     return new InMemoryUserRepository();
+  },
+  inject: [PrismaService],
+};
+
+// =============================================================================
+// Address Repository Provider
+// =============================================================================
+
+export const AddressRepositoryProvider: Provider = {
+  provide: ADDRESS_REPOSITORY,
+  useFactory: (prismaService: PrismaService) => {
+    if (isPrismaEnabled()) {
+      return new PrismaAddressRepository(prismaService);
+    }
+    return new InMemoryAddressRepository();
   },
   inject: [PrismaService],
 };

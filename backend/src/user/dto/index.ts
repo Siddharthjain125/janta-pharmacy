@@ -10,3 +10,4 @@ export {
   UserProfileDto,
   toUserProfileDto,
 } from './user.dto';
+export { UserContextDto } from './user-context.dto';

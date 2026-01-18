@@ -4,3 +4,4 @@ export {
   IRefreshTokenRepository,
 } from './refresh-token-repository.interface';
 export { InMemoryRefreshTokenRepository } from './in-memory-refresh-token.repository';
+export { PrismaRefreshTokenRepository } from './prisma-refresh-token.repository';
