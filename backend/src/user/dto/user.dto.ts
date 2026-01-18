@@ -1,3 +1,4 @@
+import { IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
 import { UserStatus } from '../domain/user-status';
 import { UserRole } from '../domain/user-role';
 
@@ -38,6 +39,22 @@ export interface CreateUserDto {
 export interface UpdateUserDto {
   email?: string | null;
   name?: string | null;
+}
+
+/**
+ * Request body for updating authenticated user's profile (self-only)
+ */
+export class UpdateMyUserProfileDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 100)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  phoneNumber?: string;
 }
 
 /**
@@ -148,4 +165,3 @@ export function toUserProfileDto(user: {
     updatedAt: user.updatedAt.toISOString(),
   };
 }
-

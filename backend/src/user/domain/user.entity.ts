@@ -54,6 +54,7 @@ export interface CreateUserData {
  * Data that can be updated on a user
  */
 export interface UpdateUserData {
+  phoneNumber?: string;
   email?: string | null;
   name?: string | null;
   roles?: UserRole[];
@@ -64,11 +65,7 @@ export interface UpdateUserData {
  * Factory function to create a new User
  * Ensures all invariants are satisfied
  */
-export function createUser(
-  id: string,
-  data: CreateUserData,
-  now: Date = new Date(),
-): User {
+export function createUser(id: string, data: CreateUserData, now: Date = new Date()): User {
   return {
     id,
     phoneNumber: normalizePhoneNumber(data.phoneNumber),
@@ -106,4 +103,3 @@ export function isValidPhoneNumber(phone: string): boolean {
   // Basic validation: + followed by 10-15 digits
   return /^\+\d{10,15}$/.test(normalized);
 }
-

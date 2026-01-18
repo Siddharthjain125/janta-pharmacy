@@ -5,6 +5,7 @@ import { USER_REPOSITORY } from './repositories/user-repository.interface';
 import { UserRepositoryProvider } from '../database/repository.providers';
 import { AuthModule } from '../auth/auth.module';
 import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-case';
+import { UpdateMyUserProfileUseCase } from './use-cases/update-my-user-profile.use-case';
 
 /**
  * User Module
@@ -38,6 +39,7 @@ import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-cas
     UserService,
     UserRepositoryProvider,
     GetMyUserProfileUseCase,
+    UpdateMyUserProfileUseCase,
   ],
   exports: [
     UserService,

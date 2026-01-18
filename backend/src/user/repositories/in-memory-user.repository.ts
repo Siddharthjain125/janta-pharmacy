@@ -1,13 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { IUserRepository } from './user-repository.interface';
-import {
-  User,
-  CreateUserData,
-  UpdateUserData,
-  createUser,
-  normalizePhoneNumber,
-} from '../domain';
+import { User, CreateUserData, UpdateUserData, createUser, normalizePhoneNumber } from '../domain';
 
 /**
  * In-Memory User Repository
@@ -90,6 +84,23 @@ export class InMemoryUserRepository implements IUserRepository {
     const existing = this.users.get(id);
     if (!existing) return null;
 
+    // If phone number is being changed, check uniqueness
+    if (data.phoneNumber !== undefined) {
+      const normalizedPhone = normalizePhoneNumber(data.phoneNumber);
+      if (normalizedPhone !== existing.phoneNumber) {
+        if (this.phoneIndex.has(normalizedPhone)) {
+          const existingUserId = this.phoneIndex.get(normalizedPhone);
+          if (existingUserId !== id) {
+            throw new Error(`Phone number already exists: ${normalizedPhone}`);
+          }
+        }
+
+        // Remove old phone from index and add new
+        this.phoneIndex.delete(existing.phoneNumber);
+        this.phoneIndex.set(normalizedPhone, id);
+      }
+    }
+
     // If email is being changed, check uniqueness
     if (data.email !== undefined && data.email !== existing.email) {
       if (data.email && this.emailIndex.has(data.email.toLowerCase())) {
@@ -112,6 +123,10 @@ export class InMemoryUserRepository implements IUserRepository {
 
     const updated: User = {
       ...existing,
+      phoneNumber:
+        data.phoneNumber !== undefined
+          ? normalizePhoneNumber(data.phoneNumber)
+          : existing.phoneNumber,
       email: data.email !== undefined ? data.email : existing.email,
       name: data.name !== undefined ? data.name : existing.name,
       roles: data.roles !== undefined ? data.roles : existing.roles,
@@ -123,10 +138,7 @@ export class InMemoryUserRepository implements IUserRepository {
     return updated;
   }
 
-  async findAll(options?: {
-    limit?: number;
-    offset?: number;
-  }): Promise<User[]> {
+  async findAll(options?: { limit?: number; offset?: number }): Promise<User[]> {
     const allUsers = Array.from(this.users.values());
     const offset = options?.offset ?? 0;
     const limit = options?.limit ?? allUsers.length;
@@ -168,4 +180,3 @@ export class InMemoryUserRepository implements IUserRepository {
     return this.users.size;
   }
 }
-

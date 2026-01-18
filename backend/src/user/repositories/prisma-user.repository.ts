@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { IUserRepository } from './user-repository.interface';
-import {
-  User,
-  CreateUserData,
-  UpdateUserData,
-  normalizePhoneNumber,
-} from '../domain';
+import { User, CreateUserData, UpdateUserData, normalizePhoneNumber } from '../domain';
 import { UserRole } from '../domain/user-role';
 import { UserStatus } from '../domain/user-status';
 import {
@@ -93,9 +88,13 @@ export class PrismaUserRepository implements IUserRepository {
 
   async update(id: string, data: UpdateUserData): Promise<User | null> {
     try {
+      const normalizedPhone =
+        data.phoneNumber !== undefined ? normalizePhoneNumber(data.phoneNumber) : undefined;
+
       const user = await this.prisma.user.update({
         where: { id },
         data: {
+          ...(normalizedPhone !== undefined && { phoneNumber: normalizedPhone }),
           ...(data.name !== undefined && { name: data.name }),
           ...(data.email !== undefined && {
             email: data.email?.toLowerCase() ?? null,
@@ -231,4 +230,3 @@ export class PrismaUserRepository implements IUserRepository {
     );
   }
 }
-
