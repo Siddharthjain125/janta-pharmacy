@@ -100,4 +100,3 @@ export function isMutableStatus(status: OrderStatus): boolean {
 export function isDraftOrder(status: OrderStatus): boolean {
   return status === OrderStatus.DRAFT;
 }
-

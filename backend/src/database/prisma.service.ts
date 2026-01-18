@@ -28,10 +28,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
     try {
       this.client = new PrismaClient({
-        log:
-          process.env.NODE_ENV === 'development'
-            ? ['warn', 'error']
-            : ['error'],
+        log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
       });
       await this.client.$connect();
       this._isConnected = true;

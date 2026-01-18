@@ -122,4 +122,3 @@ interface PushNotificationDto {
   body: string;
   data?: Record<string, unknown>;
 }
-

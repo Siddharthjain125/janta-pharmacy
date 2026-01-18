@@ -90,10 +90,7 @@ export class Money {
    */
   add(other: Money): Money {
     this.assertSameCurrency(other);
-    return new Money(
-      this.amountInMinorUnits + other.amountInMinorUnits,
-      this.currencyCode,
-    );
+    return new Money(this.amountInMinorUnits + other.amountInMinorUnits, this.currencyCode);
   }
 
   /**
@@ -103,10 +100,7 @@ export class Money {
     if (quantity < 0) {
       throw new Error('Quantity cannot be negative');
     }
-    return new Money(
-      Math.round(this.amountInMinorUnits * quantity),
-      this.currencyCode,
-    );
+    return new Money(Math.round(this.amountInMinorUnits * quantity), this.currencyCode);
   }
 
   /**
@@ -150,4 +144,3 @@ export class Money {
     }
   }
 }
-

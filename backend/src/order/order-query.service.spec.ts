@@ -351,9 +351,9 @@ describe('OrderQueryService', () => {
       it('should throw UnauthorizedOrderAccessException when accessing other user order', async () => {
         const order = await orderRepository.createOrder(otherUserId, OrderStatus.CONFIRMED);
 
-        await expect(
-          queryService.getOrderById(order.id, userId, correlationId),
-        ).rejects.toThrow(UnauthorizedOrderAccessException);
+        await expect(queryService.getOrderById(order.id, userId, correlationId)).rejects.toThrow(
+          UnauthorizedOrderAccessException,
+        );
       });
 
       it('should not expose other user order details on access attempt', async () => {
@@ -396,21 +396,13 @@ describe('OrderQueryService', () => {
       expect(history.orders).toHaveLength(3);
 
       // But all orders should be viewable by ID
-      const confirmedDetail = await queryService.getOrderById(
-        confirmed.id,
-        userId,
-        correlationId,
-      );
+      const confirmedDetail = await queryService.getOrderById(confirmed.id, userId, correlationId);
       expect(confirmedDetail.state).toBe(OrderStatus.CONFIRMED);
 
       const paidDetail = await queryService.getOrderById(paid.id, userId, correlationId);
       expect(paidDetail.state).toBe(OrderStatus.PAID);
 
-      const cancelledDetail = await queryService.getOrderById(
-        cancelled.id,
-        userId,
-        correlationId,
-      );
+      const cancelledDetail = await queryService.getOrderById(cancelled.id, userId, correlationId);
       expect(cancelledDetail.state).toBe(OrderStatus.CANCELLED);
     });
 
@@ -440,4 +432,3 @@ describe('OrderQueryService', () => {
     });
   });
 });
-

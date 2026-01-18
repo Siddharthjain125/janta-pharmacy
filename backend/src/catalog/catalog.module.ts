@@ -29,10 +29,7 @@ import { ProductRepositoryProvider } from '../database/repository.providers';
  */
 @Module({
   controllers: [CatalogController],
-  providers: [
-    CatalogQueryService,
-    ProductRepositoryProvider,
-  ],
+  providers: [CatalogQueryService, ProductRepositoryProvider],
   exports: [
     // Export query service for other modules
     CatalogQueryService,

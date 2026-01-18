@@ -54,10 +54,7 @@ export function normalizePagination(params?: Partial<PaginationParams>): Paginat
 /**
  * Calculate pagination metadata
  */
-export function createPaginationMeta(
-  total: number,
-  params: PaginationParams,
-): PaginationMeta {
+export function createPaginationMeta(total: number, params: PaginationParams): PaginationMeta {
   const totalPages = Math.ceil(total / params.limit) || 1;
   return {
     page: params.page,
@@ -82,4 +79,3 @@ export function createPaginatedResult<T>(
     pagination: createPaginationMeta(total, params),
   };
 }
-

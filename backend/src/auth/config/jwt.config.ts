@@ -64,4 +64,3 @@ export interface JwtPayload {
   /** Token type (for future refresh token support) */
   type: 'access' | 'refresh';
 }
-

@@ -59,21 +59,11 @@ export class OrderService {
   /**
    * Get order by ID with ownership verification
    */
-  async getOrderById(
-    orderId: string,
-    userId: string,
-    correlationId: string,
-  ): Promise<OrderDto> {
+  async getOrderById(orderId: string, userId: string, correlationId: string): Promise<OrderDto> {
     const order = await this.orderRepository.findById(orderId);
 
     if (!order) {
-      logWithCorrelation(
-        'WARN',
-        correlationId,
-        `Order not found`,
-        'OrderService',
-        { orderId },
-      );
+      logWithCorrelation('WARN', correlationId, `Order not found`, 'OrderService', { orderId });
       throw new OrderNotFoundException(orderId);
     }
 
@@ -94,10 +84,7 @@ export class OrderService {
   /**
    * Get all orders for the authenticated user
    */
-  async getOrdersForUser(
-    userId: string,
-    status?: OrderStatus,
-  ): Promise<OrderDto[]> {
+  async getOrdersForUser(userId: string, status?: OrderStatus): Promise<OrderDto[]> {
     return this.orderRepository.findByUserId(userId, status);
   }
 
@@ -133,11 +120,7 @@ export class OrderService {
    * - Order must be in CREATED status
    * - Only order owner can confirm
    */
-  async confirmOrder(
-    orderId: string,
-    userId: string,
-    correlationId: string,
-  ): Promise<OrderDto> {
+  async confirmOrder(orderId: string, userId: string, correlationId: string): Promise<OrderDto> {
     const order = await this.getOrderById(orderId, userId, correlationId);
     const previousState = order.status;
     const targetState = OrderStatus.CONFIRMED;
@@ -156,10 +139,7 @@ export class OrderService {
       'CONFIRM',
     );
 
-    const updatedOrder = await this.orderRepository.updateStatus(
-      orderId,
-      targetState,
-    );
+    const updatedOrder = await this.orderRepository.updateStatus(orderId, targetState);
 
     this.logStateTransition(correlationId, {
       orderId,
@@ -184,11 +164,7 @@ export class OrderService {
    * Note: This is the command to record payment.
    * Actual payment processing would be handled by PaymentService.
    */
-  async payForOrder(
-    orderId: string,
-    userId: string,
-    correlationId: string,
-  ): Promise<OrderDto> {
+  async payForOrder(orderId: string, userId: string, correlationId: string): Promise<OrderDto> {
     const order = await this.getOrderById(orderId, userId, correlationId);
     const previousState = order.status;
     const targetState = OrderStatus.PAID;
@@ -207,10 +183,7 @@ export class OrderService {
       'PAY',
     );
 
-    const updatedOrder = await this.orderRepository.updateStatus(
-      orderId,
-      targetState,
-    );
+    const updatedOrder = await this.orderRepository.updateStatus(orderId, targetState);
 
     this.logStateTransition(correlationId, {
       orderId,
@@ -285,10 +258,7 @@ export class OrderService {
     );
 
     // Perform the state transition
-    const updatedOrder = await this.orderRepository.updateStatus(
-      orderId,
-      targetState,
-    );
+    const updatedOrder = await this.orderRepository.updateStatus(orderId, targetState);
 
     // Create domain event
     const eventCollector = new DomainEventCollector();
@@ -354,11 +324,7 @@ export class OrderService {
         },
       );
 
-      throw new InvalidOrderStateTransitionException(
-        from,
-        to,
-        validation.allowedTransitions,
-      );
+      throw new InvalidOrderStateTransitionException(from, to, validation.allowedTransitions);
     }
   }
 

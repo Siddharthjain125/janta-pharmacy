@@ -111,37 +111,25 @@ export class CartService {
    * - User can only have one active draft
    * - Returns existing draft if one exists
    */
-  async createDraftOrder(
-    userId: string,
-    correlationId: string,
-  ): Promise<OrderDto> {
+  async createDraftOrder(userId: string, correlationId: string): Promise<OrderDto> {
     // Check for existing draft
     const existingDraft = await this.orderRepository.findDraftByUserId(userId);
 
     if (existingDraft) {
-      logWithCorrelation(
-        'DEBUG',
-        correlationId,
-        `Returning existing draft order`,
-        'CartService',
-        { orderId: existingDraft.id, userId },
-      );
+      logWithCorrelation('DEBUG', correlationId, `Returning existing draft order`, 'CartService', {
+        orderId: existingDraft.id,
+        userId,
+      });
       return existingDraft;
     }
 
     // Create new draft
-    const draft = await this.orderRepository.createOrder(
-      userId,
-      OrderStatus.DRAFT,
-    );
+    const draft = await this.orderRepository.createOrder(userId, OrderStatus.DRAFT);
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      `Created new draft order (cart)`,
-      'CartService',
-      { orderId: draft.id, userId },
-    );
+    logWithCorrelation('INFO', correlationId, `Created new draft order (cart)`, 'CartService', {
+      orderId: draft.id,
+      userId,
+    });
 
     return draft;
   }
@@ -193,20 +181,14 @@ export class CartService {
     // Add to cart (repository handles duplicate detection)
     const updatedCart = await this.orderRepository.addItem(draft.id, orderItem);
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      `Added item to cart`,
-      'CartService',
-      {
-        orderId: draft.id,
-        userId,
-        productId,
-        productName: product.name,
-        quantity,
-        unitPrice: product.price.amount,
-      },
-    );
+    logWithCorrelation('INFO', correlationId, `Added item to cart`, 'CartService', {
+      orderId: draft.id,
+      userId,
+      productId,
+      productName: product.name,
+      quantity,
+      unitPrice: product.price.amount,
+    });
 
     return updatedCart;
   }
@@ -234,18 +216,12 @@ export class CartService {
 
     const updatedCart = await this.orderRepository.removeItem(draft.id, productId);
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      `Removed item from cart`,
-      'CartService',
-      {
-        orderId: draft.id,
-        userId,
-        productId,
-        productName: item.productName,
-      },
-    );
+    logWithCorrelation('INFO', correlationId, `Removed item from cart`, 'CartService', {
+      orderId: draft.id,
+      userId,
+      productId,
+      productName: item.productName,
+    });
 
     return updatedCart;
   }
@@ -283,20 +259,14 @@ export class CartService {
       quantity,
     );
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      `Updated item quantity in cart`,
-      'CartService',
-      {
-        orderId: draft.id,
-        userId,
-        productId,
-        productName: item.productName,
-        previousQuantity,
-        newQuantity: quantity,
-      },
-    );
+    logWithCorrelation('INFO', correlationId, `Updated item quantity in cart`, 'CartService', {
+      orderId: draft.id,
+      userId,
+      productId,
+      productName: item.productName,
+      previousQuantity,
+      newQuantity: quantity,
+    });
 
     return updatedCart;
   }
@@ -314,17 +284,11 @@ export class CartService {
     const previousItemCount = draft.itemCount;
     const updatedCart = await this.orderRepository.clearItems(draft.id);
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      `Cleared cart`,
-      'CartService',
-      {
-        orderId: draft.id,
-        userId,
-        removedItemCount: previousItemCount,
-      },
-    );
+    logWithCorrelation('INFO', correlationId, `Cleared cart`, 'CartService', {
+      orderId: draft.id,
+      userId,
+      removedItemCount: previousItemCount,
+    });
 
     return updatedCart;
   }
@@ -342,17 +306,11 @@ export class CartService {
 
     await this.orderRepository.updateStatus(draft.id, OrderStatus.CANCELLED);
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      `Abandoned cart (cancelled draft)`,
-      'CartService',
-      {
-        orderId: draft.id,
-        userId,
-        itemCount: draft.itemCount,
-      },
-    );
+    logWithCorrelation('INFO', correlationId, `Abandoned cart (cancelled draft)`, 'CartService', {
+      orderId: draft.id,
+      userId,
+      itemCount: draft.itemCount,
+    });
   }
 
   // ============================================================
@@ -379,22 +337,16 @@ export class CartService {
    * @throws PrescriptionRequiredException - Items require prescription
    * @throws InvalidOrderStateTransitionException - State transition not allowed
    */
-  async confirmDraftOrder(
-    userId: string,
-    correlationId: string,
-  ): Promise<ConfirmOrderResult> {
+  async confirmDraftOrder(userId: string, correlationId: string): Promise<ConfirmOrderResult> {
     // 1. Get draft with ownership check
     const draft = await this.getDraftWithOwnershipCheck(userId, correlationId);
 
     // 2. Validate cart is not empty
     if (draft.items.length === 0) {
-      logWithCorrelation(
-        'WARN',
-        correlationId,
-        `Checkout failed: cart is empty`,
-        'CartService',
-        { orderId: draft.id, userId },
-      );
+      logWithCorrelation('WARN', correlationId, `Checkout failed: cart is empty`, 'CartService', {
+        orderId: draft.id,
+        userId,
+      });
       throw new EmptyCartException();
     }
 
@@ -425,10 +377,7 @@ export class CartService {
     }
 
     // 5. Transition to CONFIRMED
-    const confirmedOrder = await this.orderRepository.updateStatus(
-      draft.id,
-      OrderStatus.CONFIRMED,
-    );
+    const confirmedOrder = await this.orderRepository.updateStatus(draft.id, OrderStatus.CONFIRMED);
 
     // 6. Create domain event
     const eventCollector = new DomainEventCollector();
@@ -455,19 +404,13 @@ export class CartService {
     eventCollector.add(orderConfirmedEvent);
 
     // 7. Log success
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      `Order confirmed successfully`,
-      'CartService',
-      {
-        orderId: confirmedOrder.id,
-        userId,
-        itemCount: confirmedOrder.itemCount,
-        total: confirmedOrder.total.amount,
-        currency: confirmedOrder.total.currency,
-      },
-    );
+    logWithCorrelation('INFO', correlationId, `Order confirmed successfully`, 'CartService', {
+      orderId: confirmedOrder.id,
+      userId,
+      itemCount: confirmedOrder.itemCount,
+      total: confirmedOrder.total.amount,
+      currency: confirmedOrder.total.currency,
+    });
 
     return {
       order: confirmedOrder,
@@ -481,10 +424,7 @@ export class CartService {
    * Looks up each item's product to check prescription requirement.
    * This is intentionally blocking until prescription workflow is implemented.
    */
-  private async validateNoPrescriptionItems(
-    cart: OrderDto,
-    correlationId: string,
-  ): Promise<void> {
+  private async validateNoPrescriptionItems(cart: OrderDto, correlationId: string): Promise<void> {
     const prescriptionProducts: string[] = [];
 
     for (const item of cart.items) {
@@ -592,4 +532,3 @@ export class CartService {
     }
   }
 }
-

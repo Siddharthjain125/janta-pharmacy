@@ -77,11 +77,7 @@ export interface IOrderRepository {
   /**
    * Update quantity of an existing item
    */
-  updateItemQuantity(
-    orderId: string,
-    productId: string,
-    quantity: number,
-  ): Promise<OrderDto>;
+  updateItemQuantity(orderId: string, productId: string, quantity: number): Promise<OrderDto>;
 
   /**
    * Remove an item from an order

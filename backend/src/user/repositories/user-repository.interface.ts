@@ -60,10 +60,7 @@ export interface IUserRepository {
   /**
    * Find all users with optional pagination
    */
-  findAll(options?: {
-    limit?: number;
-    offset?: number;
-  }): Promise<User[]>;
+  findAll(options?: { limit?: number; offset?: number }): Promise<User[]>;
 
   /**
    * Count total users
@@ -76,4 +73,3 @@ export interface IUserRepository {
    */
   delete(id: string): Promise<boolean>;
 }
-

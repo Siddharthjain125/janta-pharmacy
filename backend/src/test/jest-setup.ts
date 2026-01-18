@@ -31,4 +31,3 @@ afterAll(() => {
  * bcrypt is intentionally slow (security feature)
  */
 jest.setTimeout(10000);
-

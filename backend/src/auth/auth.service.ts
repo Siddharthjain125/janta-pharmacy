@@ -3,10 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { randomBytes } from 'crypto';
 import { UserService } from '../user/user.service';
 import { canAuthenticate } from '../user/domain';
-import {
-  PASSWORD_HASHER,
-  IPasswordHasher,
-} from './interfaces/password-hasher.interface';
+import { PASSWORD_HASHER, IPasswordHasher } from './interfaces/password-hasher.interface';
 import {
   CREDENTIAL_REPOSITORY,
   ICredentialRepository,
@@ -140,13 +137,10 @@ export class AuthService {
       value: passwordHash,
     });
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      'User registered successfully',
-      'AuthService',
-      { userId: user.id, phoneNumber: normalizedPhone },
-    );
+    logWithCorrelation('INFO', correlationId, 'User registered successfully', 'AuthService', {
+      userId: user.id,
+      phoneNumber: normalizedPhone,
+    });
 
     // 8. Return minimal response
     return {
@@ -179,34 +173,24 @@ export class AuthService {
     // 1. Find user by phone number
     const user = await this.userService.getUserByPhoneNumber(normalizedPhone);
     if (!user) {
-      logWithCorrelation(
-        'WARN',
-        correlationId,
-        'Login failed: user not found',
-        'AuthService',
-        { phoneNumber: normalizedPhone },
-      );
+      logWithCorrelation('WARN', correlationId, 'Login failed: user not found', 'AuthService', {
+        phoneNumber: normalizedPhone,
+      });
       // Intentionally vague error to prevent enumeration
       throw new InvalidCredentialsException();
     }
 
     // 2. Check if user can authenticate
     if (!canAuthenticate(user.status)) {
-      logWithCorrelation(
-        'WARN',
-        correlationId,
-        'Login failed: account not active',
-        'AuthService',
-        { userId: user.id, status: user.status },
-      );
+      logWithCorrelation('WARN', correlationId, 'Login failed: account not active', 'AuthService', {
+        userId: user.id,
+        status: user.status,
+      });
       throw new AccountNotActiveException();
     }
 
     // 3. Find password credential
-    const credential = await this.credentialRepository.findByUserIdAndType(
-      user.id,
-      'password',
-    );
+    const credential = await this.credentialRepository.findByUserIdAndType(user.id, 'password');
     if (!credential || !credential.value) {
       logWithCorrelation(
         'WARN',
@@ -219,18 +203,11 @@ export class AuthService {
     }
 
     // 4. Verify password
-    const isValidPassword = await this.passwordHasher.compare(
-      dto.password,
-      credential.value,
-    );
+    const isValidPassword = await this.passwordHasher.compare(dto.password, credential.value);
     if (!isValidPassword) {
-      logWithCorrelation(
-        'WARN',
-        correlationId,
-        'Login failed: invalid password',
-        'AuthService',
-        { userId: user.id },
-      );
+      logWithCorrelation('WARN', correlationId, 'Login failed: invalid password', 'AuthService', {
+        userId: user.id,
+      });
       throw new InvalidCredentialsException();
     }
 
@@ -249,13 +226,10 @@ export class AuthService {
     // 6. Generate and persist refresh token
     const refreshToken = await this.createRefreshToken(user.id);
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      'Login successful',
-      'AuthService',
-      { userId: user.id, phoneNumber: normalizedPhone },
-    );
+    logWithCorrelation('INFO', correlationId, 'Login successful', 'AuthService', {
+      userId: user.id,
+      phoneNumber: normalizedPhone,
+    });
 
     // 7. Return tokens and user info
     return {
@@ -279,9 +253,7 @@ export class AuthService {
     const MIN_LENGTH = 8;
 
     if (!password || password.length < MIN_LENGTH) {
-      throw new WeakPasswordException(
-        `Password must be at least ${MIN_LENGTH} characters long`,
-      );
+      throw new WeakPasswordException(`Password must be at least ${MIN_LENGTH} characters long`);
     }
 
     // Check for at least one letter and one number
@@ -349,9 +321,7 @@ export class AuthService {
     correlationId: string,
   ): Promise<RefreshTokenResponseDto> {
     // 1. Find the refresh token
-    const existingToken = await this.refreshTokenRepository.findByToken(
-      dto.refreshToken,
-    );
+    const existingToken = await this.refreshTokenRepository.findByToken(dto.refreshToken);
 
     if (!existingToken) {
       logWithCorrelation(
@@ -379,13 +349,9 @@ export class AuthService {
 
     // 3. Check if token is expired
     if (existingToken.expiresAt <= new Date()) {
-      logWithCorrelation(
-        'WARN',
-        correlationId,
-        'Refresh failed: token expired',
-        'AuthService',
-        { userId: existingToken.userId },
-      );
+      logWithCorrelation('WARN', correlationId, 'Refresh failed: token expired', 'AuthService', {
+        userId: existingToken.userId,
+      });
       throw new RefreshTokenExpiredException();
     }
 
@@ -432,13 +398,9 @@ export class AuthService {
     // 8. Generate new refresh token
     const newRefreshToken = await this.createRefreshToken(user.id);
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      'Token refresh successful',
-      'AuthService',
-      { userId: user.id },
-    );
+    logWithCorrelation('INFO', correlationId, 'Token refresh successful', 'AuthService', {
+      userId: user.id,
+    });
 
     return {
       accessToken,
@@ -472,10 +434,7 @@ export class AuthService {
   /**
    * Revoke all refresh tokens for a user (logout from all devices)
    */
-  async revokeAllUserTokens(
-    userId: string,
-    correlationId: string,
-  ): Promise<number> {
+  async revokeAllUserTokens(userId: string, correlationId: string): Promise<number> {
     const revokedCount = await this.refreshTokenRepository.revokeAllByUserId(userId);
 
     logWithCorrelation(

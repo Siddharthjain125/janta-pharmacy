@@ -3,4 +3,3 @@ export {
   ProductSearchResult,
   createSearchResult,
 } from './product-search-criteria';
-

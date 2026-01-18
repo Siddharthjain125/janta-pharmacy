@@ -57,12 +57,6 @@ import { AuditService } from './audit/audit.service';
     NotificationService,
     AuditService,
   ],
-  exports: [
-    Logger,
-    PaymentService,
-    NotificationService,
-    AuditService,
-  ],
+  exports: [Logger, PaymentService, NotificationService, AuditService],
 })
 export class AppModule {}
-

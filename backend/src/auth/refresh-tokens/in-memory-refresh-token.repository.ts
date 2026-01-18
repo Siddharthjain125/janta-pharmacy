@@ -177,4 +177,3 @@ export class InMemoryRefreshTokenRepository implements IRefreshTokenRepository {
     return this.tokensByValue.size;
   }
 }
-

@@ -3,11 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { IOrderRepository } from './order-repository.interface';
 import { OrderDto, OrderItemDto, OrderPriceDto } from '../dto/order.dto';
 import { OrderStatus } from '../domain/order-status';
-import {
-  OrderItem,
-  orderItemToDTO,
-  calculateItemSubtotal,
-} from '../domain/order-item';
+import { OrderItem, orderItemToDTO, calculateItemSubtotal } from '../domain/order-item';
 import { Money } from '../../catalog/domain/money';
 import { PaginationParams, PaginatedResult, createPaginatedResult } from '../queries';
 
@@ -44,10 +40,7 @@ export class InMemoryOrderRepository implements IOrderRepository {
   // Standard Order Operations
   // ============================================================
 
-  async createOrder(
-    userId: string,
-    status: OrderStatus = OrderStatus.CREATED,
-  ): Promise<OrderDto> {
+  async createOrder(userId: string, status: OrderStatus = OrderStatus.CREATED): Promise<OrderDto> {
     const now = new Date();
     const order: InternalOrder = {
       id: uuidv4(),
@@ -165,9 +158,7 @@ export class InMemoryOrderRepository implements IOrderRepository {
     }
 
     // Check if product already exists in order
-    const existingIndex = order.items.findIndex(
-      (i) => i.productId === item.productId,
-    );
+    const existingIndex = order.items.findIndex((i) => i.productId === item.productId);
 
     let updatedItems: OrderItem[];
 

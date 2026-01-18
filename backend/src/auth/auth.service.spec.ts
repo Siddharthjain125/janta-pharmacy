@@ -330,10 +330,7 @@ describe('AuthService', () => {
     const correlationId = 'test-correlation-id';
 
     // Helper to register a user before testing login
-    async function registerTestUser(
-      phoneNumber = '+919876543210',
-      password = 'SecurePass123',
-    ) {
+    async function registerTestUser(phoneNumber = '+919876543210', password = 'SecurePass123') {
       await authService.registerUser({ phoneNumber, password }, correlationId);
       return { phoneNumber, password };
     }
@@ -477,12 +474,8 @@ describe('AuthService', () => {
 
         // Response should not contain password
         expect((result as unknown as Record<string, unknown>).password).toBeUndefined();
-        expect(
-          (result.user as unknown as Record<string, unknown>).password,
-        ).toBeUndefined();
-        expect(
-          (result.user as unknown as Record<string, unknown>).passwordHash,
-        ).toBeUndefined();
+        expect((result.user as unknown as Record<string, unknown>).password).toBeUndefined();
+        expect((result.user as unknown as Record<string, unknown>).passwordHash).toBeUndefined();
       });
     });
   });
@@ -491,10 +484,7 @@ describe('AuthService', () => {
     const correlationId = 'test-correlation-id';
 
     // Helper to register and login a user
-    async function loginTestUser(
-      phoneNumber = '+919876543210',
-      password = 'SecurePass123',
-    ) {
+    async function loginTestUser(phoneNumber = '+919876543210', password = 'SecurePass123') {
       await authService.registerUser({ phoneNumber, password }, correlationId);
       return authService.login({ phoneNumber, password }, correlationId);
     }
@@ -551,10 +541,7 @@ describe('AuthService', () => {
         const originalRefreshToken = loginResult.refreshToken;
 
         // Use the refresh token
-        await authService.refreshToken(
-          { refreshToken: originalRefreshToken },
-          correlationId,
-        );
+        await authService.refreshToken({ refreshToken: originalRefreshToken }, correlationId);
 
         // Old token should be revoked
         const oldToken = await refreshTokenRepository.findByToken(originalRefreshToken);
@@ -583,17 +570,11 @@ describe('AuthService', () => {
         const originalRefreshToken = loginResult.refreshToken;
 
         // First use should succeed
-        await authService.refreshToken(
-          { refreshToken: originalRefreshToken },
-          correlationId,
-        );
+        await authService.refreshToken({ refreshToken: originalRefreshToken }, correlationId);
 
         // Second use should fail (token was revoked)
         await expect(
-          authService.refreshToken(
-            { refreshToken: originalRefreshToken },
-            correlationId,
-          ),
+          authService.refreshToken({ refreshToken: originalRefreshToken }, correlationId),
         ).rejects.toThrow(RefreshTokenRevokedException);
       });
 
@@ -623,17 +604,14 @@ describe('AuthService', () => {
     describe('invalid token handling', () => {
       it('should reject non-existent refresh token', async () => {
         await expect(
-          authService.refreshToken(
-            { refreshToken: 'non-existent-token-12345' },
-            correlationId,
-          ),
+          authService.refreshToken({ refreshToken: 'non-existent-token-12345' }, correlationId),
         ).rejects.toThrow(InvalidRefreshTokenException);
       });
 
       it('should reject empty refresh token', async () => {
-        await expect(
-          authService.refreshToken({ refreshToken: '' }, correlationId),
-        ).rejects.toThrow(InvalidRefreshTokenException);
+        await expect(authService.refreshToken({ refreshToken: '' }, correlationId)).rejects.toThrow(
+          InvalidRefreshTokenException,
+        );
       });
 
       it('should reject expired refresh token', async () => {
@@ -649,17 +627,11 @@ describe('AuthService', () => {
             expiresAt: new Date(Date.now() - 1000), // 1 second ago
           };
           // Access private map for testing (in real tests, we might use time manipulation)
-          (refreshTokenRepository as any).tokensByValue.set(
-            loginResult.refreshToken,
-            expiredToken,
-          );
+          (refreshTokenRepository as any).tokensByValue.set(loginResult.refreshToken, expiredToken);
         }
 
         await expect(
-          authService.refreshToken(
-            { refreshToken: loginResult.refreshToken },
-            correlationId,
-          ),
+          authService.refreshToken({ refreshToken: loginResult.refreshToken }, correlationId),
         ).rejects.toThrow(RefreshTokenExpiredException);
       });
     });

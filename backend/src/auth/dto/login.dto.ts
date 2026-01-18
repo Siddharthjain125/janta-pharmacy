@@ -41,4 +41,3 @@ export interface LoginResponseDto {
     roles: string[];
   };
 }
-

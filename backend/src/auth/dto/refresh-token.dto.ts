@@ -31,4 +31,3 @@ export interface RefreshTokenResponseDto {
   /** Access token expiration time in seconds */
   expiresIn: number;
 }
-

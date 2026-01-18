@@ -50,14 +50,16 @@ export class ProductSearchCriteria {
   /**
    * Create a new criteria with default values
    */
-  static create(params: {
-    searchText?: string | null;
-    category?: ProductCategory | null;
-    requiresPrescription?: boolean | null;
-    activeOnly?: boolean;
-    page?: number;
-    limit?: number;
-  } = {}): ProductSearchCriteria {
+  static create(
+    params: {
+      searchText?: string | null;
+      category?: ProductCategory | null;
+      requiresPrescription?: boolean | null;
+      activeOnly?: boolean;
+      page?: number;
+      limit?: number;
+    } = {},
+  ): ProductSearchCriteria {
     return new ProductSearchCriteria(params);
   }
 
@@ -72,11 +74,7 @@ export class ProductSearchCriteria {
    * Check if any filters are applied
    */
   get hasFilters(): boolean {
-    return (
-      this.searchText !== null ||
-      this.category !== null ||
-      this.requiresPrescription !== null
-    );
+    return this.searchText !== null || this.category !== null || this.requiresPrescription !== null;
   }
 
   /**
@@ -160,4 +158,3 @@ export function createSearchResult<T>(
     hasPreviousPage: criteria.page > 1,
   };
 }
-

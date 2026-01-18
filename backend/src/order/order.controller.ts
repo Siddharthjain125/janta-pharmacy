@@ -106,11 +106,7 @@ export class OrderController {
       orderId,
     });
 
-    const order = await this.orderQueryService.getOrderById(
-      orderId,
-      user.id,
-      correlationId,
-    );
+    const order = await this.orderQueryService.getOrderById(orderId, user.id, correlationId);
 
     logWithCorrelation('DEBUG', correlationId, 'Order detail retrieved', 'OrderController', {
       userId: user.id,
@@ -158,10 +154,7 @@ export class OrderController {
       total: result.order.total.amount,
     });
 
-    return ApiResponse.success(
-      toCheckoutResponseDto(result.order),
-      'Order confirmed successfully',
-    );
+    return ApiResponse.success(toCheckoutResponseDto(result.order), 'Order confirmed successfully');
   }
 
   /**
@@ -194,11 +187,7 @@ export class OrderController {
     @CurrentUser() user: AuthUser,
     @Headers('x-correlation-id') correlationId: string,
   ): Promise<ApiResponse<OrderDto>> {
-    const order = await this.orderService.confirmOrder(
-      orderId,
-      user.id,
-      correlationId,
-    );
+    const order = await this.orderService.confirmOrder(orderId, user.id, correlationId);
     return ApiResponse.success(order, 'Order confirmed successfully');
   }
 
@@ -218,11 +207,7 @@ export class OrderController {
     @CurrentUser() user: AuthUser,
     @Headers('x-correlation-id') correlationId: string,
   ): Promise<ApiResponse<OrderDto>> {
-    const order = await this.orderService.payForOrder(
-      orderId,
-      user.id,
-      correlationId,
-    );
+    const order = await this.orderService.payForOrder(orderId, user.id, correlationId);
     return ApiResponse.success(order, 'Order payment recorded successfully');
   }
 
@@ -260,11 +245,7 @@ export class OrderController {
       orderId,
     });
 
-    const result = await this.orderService.cancelOrder(
-      orderId,
-      user.id,
-      correlationId,
-    );
+    const result = await this.orderService.cancelOrder(orderId, user.id, correlationId);
 
     logWithCorrelation('INFO', correlationId, 'Order cancelled successfully', 'OrderController', {
       userId: user.id,

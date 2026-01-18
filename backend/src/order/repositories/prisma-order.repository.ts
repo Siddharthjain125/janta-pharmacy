@@ -5,11 +5,7 @@ import { OrderDto, OrderItemDto } from '../dto/order.dto';
 import { OrderStatus } from '../domain/order-status';
 import { OrderItem, orderItemToDTO, calculateItemSubtotal } from '../domain/order-item';
 import { Money } from '../../catalog/domain/money';
-import {
-  PaginatedResult,
-  PaginationParams,
-  createPaginatedResult,
-} from '../queries/pagination';
+import { PaginatedResult, PaginationParams, createPaginatedResult } from '../queries/pagination';
 import {
   Order as PrismaOrder,
   OrderItem as PrismaOrderItem,
@@ -39,10 +35,7 @@ export class PrismaOrderRepository implements IOrderRepository {
   // Standard Order Operations
   // ============================================================
 
-  async createOrder(
-    userId: string,
-    status: OrderStatus = OrderStatus.CREATED,
-  ): Promise<OrderDto> {
+  async createOrder(userId: string, status: OrderStatus = OrderStatus.CREATED): Promise<OrderDto> {
     const order = await this.prisma.order.create({
       data: {
         userId,

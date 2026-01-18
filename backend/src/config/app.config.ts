@@ -25,4 +25,3 @@ export default registerAs('app', () => ({
     enableMetrics: process.env.ENABLE_METRICS === 'true',
   },
 }));
-

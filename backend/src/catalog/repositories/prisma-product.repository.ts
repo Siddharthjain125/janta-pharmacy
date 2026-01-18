@@ -1,17 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { IProductRepository } from './product-repository.interface';
-import {
-  Product,
-  ProductCategory,
-  Money,
-  createProduct,
-} from '../domain';
-import {
-  ProductSearchCriteria,
-  ProductSearchResult,
-  createSearchResult,
-} from '../queries';
+import { Product, ProductCategory, Money, createProduct } from '../domain';
+import { ProductSearchCriteria, ProductSearchResult, createSearchResult } from '../queries';
 import {
   Product as PrismaProduct,
   ProductCategory as PrismaProductCategory,
@@ -166,4 +157,3 @@ export class PrismaProductRepository implements IProductRepository {
     return mapping[category];
   }
 }
-

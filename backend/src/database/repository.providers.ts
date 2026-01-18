@@ -95,4 +95,3 @@ export const ProductRepositoryProvider: Provider = {
   },
   inject: [PrismaService],
 };
-

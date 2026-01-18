@@ -1,15 +1,7 @@
 import { CatalogQueryService, ProductListParams } from './catalog-query.service';
 import { InMemoryProductRepository } from './repositories/in-memory-product.repository';
-import {
-  Product,
-  ProductCategory,
-  Money,
-  createProduct,
-} from './domain';
-import {
-  ProductNotFoundException,
-  InvalidProductCategoryException,
-} from './exceptions';
+import { Product, ProductCategory, Money, createProduct } from './domain';
+import { ProductNotFoundException, InvalidProductCategoryException } from './exceptions';
 
 /**
  * CatalogQueryService Tests
@@ -55,9 +47,9 @@ describe('CatalogQueryService', () => {
     });
 
     it('should throw ProductNotFoundException for non-existent product', async () => {
-      await expect(
-        service.getProductById('non-existent-id', correlationId),
-      ).rejects.toThrow(ProductNotFoundException);
+      await expect(service.getProductById('non-existent-id', correlationId)).rejects.toThrow(
+        ProductNotFoundException,
+      );
     });
 
     it('should throw ProductNotFoundException for inactive product', async () => {
@@ -73,9 +65,9 @@ describe('CatalogQueryService', () => {
       });
       (repository as any).products.set('inactive-prod', inactiveProduct);
 
-      await expect(
-        service.getProductById('inactive-prod', correlationId),
-      ).rejects.toThrow(ProductNotFoundException);
+      await expect(service.getProductById('inactive-prod', correlationId)).rejects.toThrow(
+        ProductNotFoundException,
+      );
     });
 
     it('should work without correlation ID', async () => {
@@ -133,73 +125,50 @@ describe('CatalogQueryService', () => {
 
     describe('search by name', () => {
       it('should find products by exact name match', async () => {
-        const result = await service.listProducts(
-          { search: 'Paracetamol' },
-          correlationId,
-        );
+        const result = await service.listProducts({ search: 'Paracetamol' }, correlationId);
 
         expect(result.items.length).toBe(1);
         expect(result.items[0].name).toContain('Paracetamol');
       });
 
       it('should perform case-insensitive search', async () => {
-        const result = await service.listProducts(
-          { search: 'paracetamol' },
-          correlationId,
-        );
+        const result = await service.listProducts({ search: 'paracetamol' }, correlationId);
 
         expect(result.items.length).toBe(1);
         expect(result.items[0].name).toContain('Paracetamol');
       });
 
       it('should find products by partial name match', async () => {
-        const result = await service.listProducts(
-          { search: 'Vita' },
-          correlationId,
-        );
+        const result = await service.listProducts({ search: 'Vita' }, correlationId);
 
         expect(result.items.length).toBeGreaterThanOrEqual(1);
-        const hasVitamin = result.items.some((p) =>
-          p.name.toLowerCase().includes('vita'),
-        );
+        const hasVitamin = result.items.some((p) => p.name.toLowerCase().includes('vita'));
         expect(hasVitamin).toBe(true);
       });
 
       it('should search in product description', async () => {
-        const result = await service.listProducts(
-          { search: 'immunity' },
-          correlationId,
-        );
+        const result = await service.listProducts({ search: 'immunity' }, correlationId);
 
         // "immunity" appears in description of Chyawanprash and Vitamin D3
         expect(result.items.length).toBeGreaterThanOrEqual(1);
       });
 
       it('should return empty results for non-matching search', async () => {
-        const result = await service.listProducts(
-          { search: 'xyznonexistent' },
-          correlationId,
-        );
+        const result = await service.listProducts({ search: 'xyznonexistent' }, correlationId);
 
         expect(result.items.length).toBe(0);
         expect(result.total).toBe(0);
       });
 
       it('should handle empty search string gracefully', async () => {
-        const result = await service.listProducts(
-          { search: '' },
-          correlationId,
-        );
+        const result = await service.listProducts({ search: '' }, correlationId);
 
         // Empty search should return all products
         expect(result.items.length).toBeGreaterThan(0);
       });
 
       it('should handle whitespace-only search string', async () => {
-        const result = await service.listProducts(
-          { search: '   ' },
-          correlationId,
-        );
+        const result = await service.listProducts({ search: '   ' }, correlationId);
 
         // Whitespace-only should be treated as no search
         expect(result.items.length).toBeGreaterThan(0);
@@ -208,10 +177,7 @@ describe('CatalogQueryService', () => {
 
     describe('filter by category', () => {
       it('should filter by PRESCRIPTION category', async () => {
-        const result = await service.listProducts(
-          { category: 'PRESCRIPTION' },
-          correlationId,
-        );
+        const result = await service.listProducts({ category: 'PRESCRIPTION' }, correlationId);
 
         expect(result.items.length).toBeGreaterThan(0);
         result.items.forEach((product) => {
@@ -220,10 +186,7 @@ describe('CatalogQueryService', () => {
       });
 
       it('should filter by AYURVEDIC category', async () => {
-        const result = await service.listProducts(
-          { category: 'AYURVEDIC' },
-          correlationId,
-        );
+        const result = await service.listProducts({ category: 'AYURVEDIC' }, correlationId);
 
         expect(result.items.length).toBe(2); // Chyawanprash and Ashwagandha
         result.items.forEach((product) => {
@@ -232,10 +195,7 @@ describe('CatalogQueryService', () => {
       });
 
       it('should handle lowercase category code', async () => {
-        const result = await service.listProducts(
-          { category: 'general' },
-          correlationId,
-        );
+        const result = await service.listProducts({ category: 'general' }, correlationId);
 
         expect(result.items.length).toBeGreaterThan(0);
         result.items.forEach((product) => {
@@ -261,10 +221,7 @@ describe('CatalogQueryService', () => {
         });
         (repository as any).products.set('single-prod', product);
 
-        const result = await service.listProducts(
-          { category: 'PRESCRIPTION' },
-          correlationId,
-        );
+        const result = await service.listProducts({ category: 'PRESCRIPTION' }, correlationId);
 
         expect(result.items.length).toBe(0);
         expect(result.total).toBe(0);
@@ -273,10 +230,7 @@ describe('CatalogQueryService', () => {
 
     describe('filter by requiresPrescription', () => {
       it('should filter to only prescription-required products', async () => {
-        const result = await service.listProducts(
-          { requiresPrescription: true },
-          correlationId,
-        );
+        const result = await service.listProducts({ requiresPrescription: true }, correlationId);
 
         expect(result.items.length).toBeGreaterThan(0);
         result.items.forEach((product) => {
@@ -285,10 +239,7 @@ describe('CatalogQueryService', () => {
       });
 
       it('should filter to only non-prescription products', async () => {
-        const result = await service.listProducts(
-          { requiresPrescription: false },
-          correlationId,
-        );
+        const result = await service.listProducts({ requiresPrescription: false }, correlationId);
 
         expect(result.items.length).toBeGreaterThan(0);
         result.items.forEach((product) => {
@@ -310,18 +261,13 @@ describe('CatalogQueryService', () => {
         const allResult = await service.listProducts({}, correlationId);
 
         // Sum should equal total
-        expect(prescriptionResult.total + nonPrescriptionResult.total).toBe(
-          allResult.total,
-        );
+        expect(prescriptionResult.total + nonPrescriptionResult.total).toBe(allResult.total);
       });
     });
 
     describe('pagination', () => {
       it('should return first page with custom limit', async () => {
-        const result = await service.listProducts(
-          { page: 1, limit: 5 },
-          correlationId,
-        );
+        const result = await service.listProducts({ page: 1, limit: 5 }, correlationId);
 
         expect(result.items.length).toBe(5);
         expect(result.page).toBe(1);
@@ -331,10 +277,7 @@ describe('CatalogQueryService', () => {
       });
 
       it('should return second page correctly', async () => {
-        const result = await service.listProducts(
-          { page: 2, limit: 5 },
-          correlationId,
-        );
+        const result = await service.listProducts({ page: 2, limit: 5 }, correlationId);
 
         expect(result.items.length).toBe(5);
         expect(result.page).toBe(2);
@@ -343,10 +286,7 @@ describe('CatalogQueryService', () => {
       });
 
       it('should return last page with fewer items', async () => {
-        const result = await service.listProducts(
-          { page: 3, limit: 5 },
-          correlationId,
-        );
+        const result = await service.listProducts({ page: 3, limit: 5 }, correlationId);
 
         expect(result.items.length).toBe(3); // 13 total, 5+5+3
         expect(result.page).toBe(3);
@@ -355,10 +295,7 @@ describe('CatalogQueryService', () => {
       });
 
       it('should return empty items for page beyond total', async () => {
-        const result = await service.listProducts(
-          { page: 100, limit: 5 },
-          correlationId,
-        );
+        const result = await service.listProducts({ page: 100, limit: 5 }, correlationId);
 
         expect(result.items.length).toBe(0);
         expect(result.page).toBe(100);
@@ -366,19 +303,13 @@ describe('CatalogQueryService', () => {
       });
 
       it('should calculate totalPages correctly', async () => {
-        const result = await service.listProducts(
-          { limit: 5 },
-          correlationId,
-        );
+        const result = await service.listProducts({ limit: 5 }, correlationId);
 
         expect(result.totalPages).toBe(3); // ceil(13/5) = 3
       });
 
       it('should handle single-page result', async () => {
-        const result = await service.listProducts(
-          { limit: 100 },
-          correlationId,
-        );
+        const result = await service.listProducts({ limit: 100 }, correlationId);
 
         expect(result.totalPages).toBe(1);
         expect(result.hasNextPage).toBe(false);
@@ -386,25 +317,16 @@ describe('CatalogQueryService', () => {
       });
 
       it('should clamp page to minimum 1', async () => {
-        const result = await service.listProducts(
-          { page: -5, limit: 5 },
-          correlationId,
-        );
+        const result = await service.listProducts({ page: -5, limit: 5 }, correlationId);
 
         expect(result.page).toBe(1);
       });
 
       it('should clamp limit to 1-100 range', async () => {
-        const tooSmall = await service.listProducts(
-          { limit: -1 },
-          correlationId,
-        );
+        const tooSmall = await service.listProducts({ limit: -1 }, correlationId);
         expect(tooSmall.limit).toBe(1);
 
-        const tooLarge = await service.listProducts(
-          { limit: 500 },
-          correlationId,
-        );
+        const tooLarge = await service.listProducts({ limit: 500 }, correlationId);
         expect(tooLarge.limit).toBe(100);
       });
     });
@@ -536,4 +458,3 @@ describe('CatalogQueryService', () => {
     });
   });
 });
-

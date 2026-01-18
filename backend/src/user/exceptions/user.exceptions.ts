@@ -13,11 +13,7 @@ import { BusinessException } from '../../common/exceptions/business.exception';
  */
 export class UserNotFoundException extends BusinessException {
   constructor(identifier: string, type: 'id' | 'phone' | 'email' = 'id') {
-    super(
-      `User not found with ${type}: ${identifier}`,
-      'USER_NOT_FOUND',
-      HttpStatus.NOT_FOUND,
-    );
+    super(`User not found with ${type}: ${identifier}`, 'USER_NOT_FOUND', HttpStatus.NOT_FOUND);
   }
 }
 
@@ -41,11 +37,7 @@ export class PhoneNumberAlreadyExistsException extends BusinessException {
  */
 export class EmailAlreadyExistsException extends BusinessException {
   constructor() {
-    super(
-      'Email address is already registered',
-      'EMAIL_EXISTS',
-      HttpStatus.CONFLICT,
-    );
+    super('Email address is already registered', 'EMAIL_EXISTS', HttpStatus.CONFLICT);
   }
 }
 
@@ -93,11 +85,6 @@ export class UserSuspendedException extends BusinessException {
  */
 export class UserDeactivatedException extends BusinessException {
   constructor() {
-    super(
-      'User account is deactivated',
-      'USER_DEACTIVATED',
-      HttpStatus.FORBIDDEN,
-    );
+    super('User account is deactivated', 'USER_DEACTIVATED', HttpStatus.FORBIDDEN);
   }
 }
-

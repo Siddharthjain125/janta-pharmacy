@@ -30,12 +30,7 @@ import { CatalogModule } from '../catalog/catalog.module';
     CatalogModule, // For product validation in CartService
   ],
   controllers: [OrderController, CartController],
-  providers: [
-    OrderService,
-    OrderQueryService,
-    CartService,
-    OrderRepositoryProvider,
-  ],
+  providers: [OrderService, OrderQueryService, CartService, OrderRepositoryProvider],
   exports: [OrderService, OrderQueryService, CartService],
 })
 export class OrderModule {}

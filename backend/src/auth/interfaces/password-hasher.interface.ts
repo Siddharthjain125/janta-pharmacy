@@ -35,4 +35,3 @@ export interface IPasswordHasher {
    */
   compare(plainText: string, hash: string): Promise<boolean>;
 }
-

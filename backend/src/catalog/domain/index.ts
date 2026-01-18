@@ -18,10 +18,4 @@ export {
 } from './product-category';
 
 // Entity and factory
-export {
-  Product,
-  CreateProductData,
-  createProduct,
-  productToDTO,
-} from './product.entity';
-
+export { Product, CreateProductData, createProduct, productToDTO } from './product.entity';

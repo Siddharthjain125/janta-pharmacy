@@ -60,4 +60,3 @@ export class BcryptPasswordHasher implements IPasswordHasher {
     }
   }
 }
-

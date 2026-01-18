@@ -35,4 +35,3 @@ export interface RegisterUserResponseDto {
   /** Message for the client */
   message: string;
 }
-

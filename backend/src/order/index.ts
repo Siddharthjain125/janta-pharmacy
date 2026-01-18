@@ -56,10 +56,7 @@ export {
 } from './domain';
 
 // Repository
-export {
-  ORDER_REPOSITORY,
-  type IOrderRepository,
-} from './repositories/order-repository.interface';
+export { ORDER_REPOSITORY, type IOrderRepository } from './repositories/order-repository.interface';
 
 // Exceptions
 export {

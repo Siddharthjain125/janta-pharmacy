@@ -1,10 +1,5 @@
 import { InMemoryProductRepository } from './in-memory-product.repository';
-import {
-  Product,
-  ProductCategory,
-  Money,
-  createProduct,
-} from '../domain';
+import { Product, ProductCategory, Money, createProduct } from '../domain';
 import { ProductSearchCriteria } from '../queries';
 
 /**
@@ -123,9 +118,7 @@ describe('InMemoryProductRepository', () => {
         const criteria = ProductSearchCriteria.create({ activeOnly: true });
         const result = await repository.search(criteria);
 
-        const inactiveFound = result.items.some(
-          (p) => p.id.toString() === 'inactive-search',
-        );
+        const inactiveFound = result.items.some((p) => p.id.toString() === 'inactive-search');
         expect(inactiveFound).toBe(false);
       });
 
@@ -144,9 +137,7 @@ describe('InMemoryProductRepository', () => {
         const criteria = ProductSearchCriteria.create({ activeOnly: false });
         const result = await repository.search(criteria);
 
-        const inactiveFound = result.items.some(
-          (p) => p.id.toString() === 'inactive-include',
-        );
+        const inactiveFound = result.items.some((p) => p.id.toString() === 'inactive-include');
         expect(inactiveFound).toBe(true);
       });
     });
@@ -170,8 +161,8 @@ describe('InMemoryProductRepository', () => {
 
         expect(result.items.length).toBeGreaterThanOrEqual(1);
         // Amoxicillin has "Antibiotic" in description
-        const hasAntibiotic = result.items.some(
-          (p) => p.description?.toLowerCase().includes('antibiotic'),
+        const hasAntibiotic = result.items.some((p) =>
+          p.description?.toLowerCase().includes('antibiotic'),
         );
         expect(hasAntibiotic).toBe(true);
       });
@@ -181,9 +172,7 @@ describe('InMemoryProductRepository', () => {
         const result = await repository.search(criteria);
 
         // Should find "Sunscreen"
-        const hasSunscreen = result.items.some((p) =>
-          p.name.toLowerCase().includes('sun'),
-        );
+        const hasSunscreen = result.items.some((p) => p.name.toLowerCase().includes('sun'));
         expect(hasSunscreen).toBe(true);
       });
 
@@ -495,4 +484,3 @@ describe('InMemoryProductRepository', () => {
     });
   });
 });
-

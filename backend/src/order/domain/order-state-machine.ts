@@ -40,10 +40,7 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 /**
  * Check if a transition from one status to another is allowed
  */
-export function canTransition(
-  from: OrderStatus,
-  to: OrderStatus,
-): boolean {
+export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
   if (isTerminalStatus(from)) {
     return false;
   }
@@ -71,10 +68,7 @@ export interface TransitionValidation {
 /**
  * Validate a state transition with detailed result
  */
-export function validateTransition(
-  from: OrderStatus,
-  to: OrderStatus,
-): TransitionValidation {
+export function validateTransition(from: OrderStatus, to: OrderStatus): TransitionValidation {
   if (isTerminalStatus(from)) {
     return {
       valid: false,
@@ -107,11 +101,7 @@ export function canCancel(status: OrderStatus): boolean {
  * Business rule: Has the order been paid?
  */
 export function isPaid(status: OrderStatus): boolean {
-  return [
-    OrderStatus.PAID,
-    OrderStatus.SHIPPED,
-    OrderStatus.DELIVERED,
-  ].includes(status);
+  return [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED].includes(status);
 }
 
 /**
@@ -144,4 +134,3 @@ export function canPlaceOrder(status: OrderStatus): boolean {
 export function canConfirmOrder(status: OrderStatus): boolean {
   return canTransition(status, OrderStatus.CONFIRMED);
 }
-

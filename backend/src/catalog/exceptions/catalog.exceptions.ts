@@ -13,11 +13,7 @@ import { BusinessException } from '../../common/exceptions/business.exception';
  */
 export class ProductNotFoundException extends BusinessException {
   constructor(productId: string) {
-    super(
-      'PRODUCT_NOT_FOUND',
-      `Product not found: ${productId}`,
-      HttpStatus.NOT_FOUND,
-    );
+    super('PRODUCT_NOT_FOUND', `Product not found: ${productId}`, HttpStatus.NOT_FOUND);
   }
 }
 
@@ -26,11 +22,7 @@ export class ProductNotFoundException extends BusinessException {
  */
 export class ProductNotAvailableException extends BusinessException {
   constructor(productId: string) {
-    super(
-      'PRODUCT_NOT_AVAILABLE',
-      `Product is not available: ${productId}`,
-      HttpStatus.GONE,
-    );
+    super('PRODUCT_NOT_AVAILABLE', `Product is not available: ${productId}`, HttpStatus.GONE);
   }
 }
 
@@ -52,11 +44,6 @@ export class InvalidProductCategoryException extends BusinessException {
  */
 export class InvalidProductIdException extends BusinessException {
   constructor(productId: string) {
-    super(
-      'INVALID_PRODUCT_ID',
-      `Invalid product ID format: ${productId}`,
-      HttpStatus.BAD_REQUEST,
-    );
+    super('INVALID_PRODUCT_ID', `Invalid product ID format: ${productId}`, HttpStatus.BAD_REQUEST);
   }
 }
-
