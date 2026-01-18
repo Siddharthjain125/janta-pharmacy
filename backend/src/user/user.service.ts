@@ -7,14 +7,7 @@ import {
   canAuthenticate,
   UserStatus,
 } from './domain';
-import {
-  CreateUserDto,
-  UpdateUserDto,
-  UserDto,
-  toUserDto,
-  UserProfileDto,
-  toUserProfileDto,
-} from './dto';
+import { CreateUserDto, UpdateUserDto, UserDto, toUserDto } from './dto';
 import {
   UserNotFoundException,
   PhoneNumberAlreadyExistsException,
@@ -117,20 +110,6 @@ export class UserService {
       throw new UserNotFoundException(normalizedPhone, 'phone');
     }
     return toUserDto(user);
-  }
-
-  /**
-   * Get user's own profile (unmasked phone number)
-   */
-  async getSelfProfile(
-    userId: string,
-    correlationId: string,
-  ): Promise<UserProfileDto> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new UserNotFoundException(userId, 'id');
-    }
-    return toUserProfileDto(user);
   }
 
   /**

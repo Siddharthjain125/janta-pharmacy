@@ -16,6 +16,7 @@ import { ApiResponse } from '../common/api/api-response';
 import { CreateUserDto, UpdateUserDto, UserDto, UserProfileDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-case';
 
 /**
  * User Controller
@@ -29,7 +30,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
  */
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly getMyUserProfileUseCase: GetMyUserProfileUseCase,
+  ) {}
 
   /**
    * Create a new user
@@ -61,7 +65,7 @@ export class UserController {
     @CurrentUser('id') userId: string,
     @Headers('x-correlation-id') correlationId: string,
   ): Promise<ApiResponse<UserProfileDto>> {
-    const profile = await this.userService.getSelfProfile(userId, correlationId);
+    const profile = await this.getMyUserProfileUseCase.execute(userId);
     return ApiResponse.success(profile, 'Profile retrieved successfully');
   }
 

@@ -1,16 +1,14 @@
-import { UserService } from './user.service';
-import { InMemoryUserRepository } from './repositories/in-memory-user.repository';
-import { UserNotFoundException } from './exceptions';
+import { InMemoryUserRepository } from '../repositories/in-memory-user.repository';
+import { GetMyUserProfileUseCase } from './get-my-user-profile.use-case';
+import { UserNotFoundException } from '../exceptions';
 
-describe('UserService - getSelfProfile', () => {
-  let userService: UserService;
+describe('GetMyUserProfileUseCase', () => {
   let userRepository: InMemoryUserRepository;
-
-  const correlationId = 'test-correlation-id';
+  let useCase: GetMyUserProfileUseCase;
 
   beforeEach(() => {
     userRepository = new InMemoryUserRepository();
-    userService = new UserService(userRepository);
+    useCase = new GetMyUserProfileUseCase(userRepository);
   });
 
   afterEach(() => {
@@ -24,7 +22,7 @@ describe('UserService - getSelfProfile', () => {
       name: 'Profile User',
     });
 
-    const profile = await userService.getSelfProfile(user.id, correlationId);
+    const profile = await useCase.execute(user.id);
 
     expect(profile).toEqual({
       id: user.id,
@@ -39,8 +37,6 @@ describe('UserService - getSelfProfile', () => {
   });
 
   it('should throw when user is not found', async () => {
-    await expect(
-      userService.getSelfProfile('missing-user-id', correlationId),
-    ).rejects.toThrow(UserNotFoundException);
+    await expect(useCase.execute('missing-user-id')).rejects.toThrow(UserNotFoundException);
   });
 });

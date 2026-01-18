@@ -190,3 +190,8 @@ docker-compose.override.yml
 *.temp
 .history/
 .fuse_hidden*
+
+# ====================
+# Prisma Migrations (local-only)
+# ====================
+backend/prisma/migrations/

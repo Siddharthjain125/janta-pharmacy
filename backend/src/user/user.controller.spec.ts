@@ -6,17 +6,18 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserProfileDto } from './dto';
 import { UserRole } from './domain/user-role';
 import { UserStatus } from './domain/user-status';
+import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-case';
 
 describe('UserController - GET /users/me', () => {
   let controller: UserController;
-  let userService: jest.Mocked<UserService>;
+  let getMyUserProfileUseCase: jest.Mocked<GetMyUserProfileUseCase>;
 
   beforeEach(() => {
-    userService = {
-      getSelfProfile: jest.fn(),
-    } as unknown as jest.Mocked<UserService>;
+    getMyUserProfileUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<GetMyUserProfileUseCase>;
 
-    controller = new UserController(userService);
+    controller = new UserController({} as UserService, getMyUserProfileUseCase);
   });
 
   it('should be protected by JwtAuthGuard', () => {
@@ -40,11 +41,11 @@ describe('UserController - GET /users/me', () => {
       updatedAt: new Date().toISOString(),
     };
 
-    userService.getSelfProfile.mockResolvedValue(profile);
+    getMyUserProfileUseCase.execute.mockResolvedValue(profile);
 
     const result = await controller.getCurrentUser('user-id', 'corr-id');
 
-    expect(userService.getSelfProfile).toHaveBeenCalledWith('user-id', 'corr-id');
+    expect(getMyUserProfileUseCase.execute).toHaveBeenCalledWith('user-id');
     expect(result.success).toBe(true);
     expect(result.data).toEqual(profile);
     expect(result.message).toBe('Profile retrieved successfully');
