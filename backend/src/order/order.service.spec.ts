@@ -157,17 +157,17 @@ describe('OrderService - cancelOrder', () => {
     it('should throw OrderTerminalStateException for CANCELLED order', async () => {
       const order = await orderRepository.createOrder(userId, OrderStatus.CANCELLED);
 
-      await expect(
-        orderService.cancelOrder(order.id, userId, correlationId),
-      ).rejects.toThrow(OrderTerminalStateException);
+      await expect(orderService.cancelOrder(order.id, userId, correlationId)).rejects.toThrow(
+        OrderTerminalStateException,
+      );
     });
 
     it('should throw OrderTerminalStateException for DELIVERED order', async () => {
       const order = await orderRepository.createOrder(userId, OrderStatus.DELIVERED);
 
-      await expect(
-        orderService.cancelOrder(order.id, userId, correlationId),
-      ).rejects.toThrow(OrderTerminalStateException);
+      await expect(orderService.cancelOrder(order.id, userId, correlationId)).rejects.toThrow(
+        OrderTerminalStateException,
+      );
     });
 
     it('should include current status in terminal state exception', async () => {
@@ -178,9 +178,7 @@ describe('OrderService - cancelOrder', () => {
         fail('Expected OrderTerminalStateException');
       } catch (error) {
         expect(error).toBeInstanceOf(OrderTerminalStateException);
-        expect((error as OrderTerminalStateException).currentStatus).toBe(
-          OrderStatus.CANCELLED,
-        );
+        expect((error as OrderTerminalStateException).currentStatus).toBe(OrderStatus.CANCELLED);
       }
     });
   });
@@ -193,9 +191,9 @@ describe('OrderService - cancelOrder', () => {
     it('should throw UnauthorizedOrderAccessException when user does not own order', async () => {
       const order = await orderRepository.createOrder(otherUserId, OrderStatus.CONFIRMED);
 
-      await expect(
-        orderService.cancelOrder(order.id, userId, correlationId),
-      ).rejects.toThrow(UnauthorizedOrderAccessException);
+      await expect(orderService.cancelOrder(order.id, userId, correlationId)).rejects.toThrow(
+        UnauthorizedOrderAccessException,
+      );
     });
 
     it('should not expose order details in unauthorized exception', async () => {
@@ -232,9 +230,9 @@ describe('OrderService - cancelOrder', () => {
       await orderService.cancelOrder(order.id, userId, correlationId);
 
       // Second cancel fails (order is now in terminal CANCELLED state)
-      await expect(
-        orderService.cancelOrder(order.id, userId, correlationId),
-      ).rejects.toThrow(OrderTerminalStateException);
+      await expect(orderService.cancelOrder(order.id, userId, correlationId)).rejects.toThrow(
+        OrderTerminalStateException,
+      );
     });
 
     it('should preserve cancelled state after failed second attempt', async () => {
@@ -275,9 +273,7 @@ describe('OrderService - cancelOrder', () => {
       await orderService.cancelOrder(order.id, userId, correlationId);
 
       // Attempting to re-confirm should fail
-      await expect(
-        orderService.confirmOrder(order.id, userId, correlationId),
-      ).rejects.toThrow(); // OrderAlreadyConfirmedException or similar
+      await expect(orderService.confirmOrder(order.id, userId, correlationId)).rejects.toThrow(); // OrderAlreadyConfirmedException or similar
     });
 
     it('should prevent payment on cancelled order', async () => {
@@ -285,9 +281,7 @@ describe('OrderService - cancelOrder', () => {
       await orderService.cancelOrder(order.id, userId, correlationId);
 
       // Attempting to pay should fail
-      await expect(
-        orderService.payForOrder(order.id, userId, correlationId),
-      ).rejects.toThrow(); // OrderNotConfirmedException or similar
+      await expect(orderService.payForOrder(order.id, userId, correlationId)).rejects.toThrow(); // OrderNotConfirmedException or similar
     });
   });
 
@@ -348,11 +342,10 @@ describe('OrderService - cancelOrder', () => {
 
       for (const status of terminalStates) {
         const order = await orderRepository.createOrder(userId, status);
-        await expect(
-          orderService.cancelOrder(order.id, userId, correlationId),
-        ).rejects.toThrow(OrderTerminalStateException);
+        await expect(orderService.cancelOrder(order.id, userId, correlationId)).rejects.toThrow(
+          OrderTerminalStateException,
+        );
       }
     });
   });
 });
-

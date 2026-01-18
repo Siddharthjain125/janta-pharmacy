@@ -7,4 +7,3 @@ export {
   UserSuspendedException,
   UserDeactivatedException,
 } from './user.exceptions';
-

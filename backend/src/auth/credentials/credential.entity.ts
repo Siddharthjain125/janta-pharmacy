@@ -54,4 +54,3 @@ export interface CreateCredentialData {
   type: CredentialType;
   value: string | null;
 }
-

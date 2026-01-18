@@ -12,17 +12,17 @@ export { UserModule } from './user.module';
 export { UserService } from './user.service';
 
 // Domain types (for type safety)
-export {
-  User,
-  UserStatus,
-  UserRole,
-  canAuthenticate,
-  hasMinimumRole,
-} from './domain';
+export { User, UserStatus, UserRole, canAuthenticate, hasMinimumRole } from './domain';
 
 // DTOs (for API contracts)
-export { UserDto, UserSelfDto, CreateUserDto, UpdateUserDto } from './dto';
+export {
+  UserDto,
+  UserSelfDto,
+  UserProfileDto,
+  CreateUserDto,
+  UpdateUserDto,
+  UpdateMyUserProfileDto,
+} from './dto';
 
 // Repository interface (for testing/mocking)
 export { USER_REPOSITORY, IUserRepository } from './repositories';
-

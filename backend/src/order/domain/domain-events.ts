@@ -195,4 +195,3 @@ export class DomainEventCollector {
     this.events.length = 0;
   }
 }
-

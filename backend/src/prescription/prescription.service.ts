@@ -11,11 +11,7 @@ export class PrescriptionService {
   /**
    * Find all prescriptions with pagination
    */
-  async findAll(
-    page: number,
-    limit: number,
-    status?: string,
-  ): Promise<unknown[]> {
+  async findAll(page: number, limit: number, status?: string): Promise<unknown[]> {
     // TODO: Implement with database
     return [
       {
@@ -44,11 +40,7 @@ export class PrescriptionService {
   /**
    * Find prescriptions by user ID
    */
-  async findByUserId(
-    userId: string,
-    page: number,
-    limit: number,
-  ): Promise<unknown[]> {
+  async findByUserId(userId: string, page: number, limit: number): Promise<unknown[]> {
     // TODO: Implement with database
     return [];
   }
@@ -61,7 +53,7 @@ export class PrescriptionService {
     return {
       id: 'new-prescription-id',
       status: 'pending',
-      ...createPrescriptionDto as object,
+      ...(createPrescriptionDto as object),
       uploadedAt: new Date().toISOString(),
     };
   }
@@ -74,7 +66,7 @@ export class PrescriptionService {
     return {
       id,
       status: 'verified',
-      ...verifyDto as object,
+      ...(verifyDto as object),
       verifiedAt: new Date().toISOString(),
     };
   }
@@ -87,7 +79,7 @@ export class PrescriptionService {
     return {
       id,
       status: 'rejected',
-      ...rejectDto as object,
+      ...(rejectDto as object),
       rejectedAt: new Date().toISOString(),
     };
   }
@@ -99,7 +91,7 @@ export class PrescriptionService {
     // TODO: Implement with database
     return {
       prescriptionId: id,
-      ...linkDto as object,
+      ...(linkDto as object),
       linkedAt: new Date().toISOString(),
     };
   }
@@ -128,4 +120,3 @@ export class PrescriptionService {
     return false;
   }
 }
-

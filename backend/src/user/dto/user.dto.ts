@@ -1,3 +1,4 @@
+import { IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
 import { UserStatus } from '../domain/user-status';
 import { UserRole } from '../domain/user-role';
 
@@ -38,6 +39,22 @@ export interface CreateUserDto {
 export interface UpdateUserDto {
   email?: string | null;
   name?: string | null;
+}
+
+/**
+ * Request body for updating authenticated user's profile (self-only)
+ */
+export class UpdateMyUserProfileDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 100)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  phoneNumber?: string;
 }
 
 /**
@@ -110,3 +127,41 @@ export function toUserSelfDto(user: {
   };
 }
 
+/**
+ * User profile DTO for authenticated users (read-only)
+ */
+export interface UserProfileDto {
+  id: string;
+  phoneNumber: string;
+  email: string | null;
+  name: string | null;
+  roles: UserRole[];
+  status: UserStatus;
+  createdAt: string; // ISO 8601 string
+  updatedAt: string; // ISO 8601 string
+}
+
+/**
+ * Convert domain User to UserProfileDto (unmasked phone)
+ */
+export function toUserProfileDto(user: {
+  id: string;
+  phoneNumber: string;
+  email: string | null;
+  name: string | null;
+  roles: UserRole[];
+  status: UserStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}): UserProfileDto {
+  return {
+    id: user.id,
+    phoneNumber: user.phoneNumber,
+    email: user.email,
+    name: user.name,
+    roles: user.roles,
+    status: user.status,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  };
+}

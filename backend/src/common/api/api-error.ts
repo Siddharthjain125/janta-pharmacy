@@ -6,7 +6,7 @@ import { HttpStatus } from '@nestjs/common';
  * Provides consistent error responses across the application.
  */
 export class ApiError {
-  readonly success: false = false;
+  readonly success = false as const;
   readonly error: ErrorDetails;
   readonly timestamp: string;
   readonly correlationId?: string;
@@ -48,42 +48,21 @@ export class ApiError {
   /**
    * Create an unauthorized error
    */
-  static unauthorized(
-    message = 'Authentication required',
-    correlationId?: string,
-  ): ApiError {
-    return new ApiError(
-      'UNAUTHORIZED',
-      message,
-      HttpStatus.UNAUTHORIZED,
-      undefined,
-      correlationId,
-    );
+  static unauthorized(message = 'Authentication required', correlationId?: string): ApiError {
+    return new ApiError('UNAUTHORIZED', message, HttpStatus.UNAUTHORIZED, undefined, correlationId);
   }
 
   /**
    * Create a forbidden error
    */
-  static forbidden(
-    message = 'Access denied',
-    correlationId?: string,
-  ): ApiError {
-    return new ApiError(
-      'FORBIDDEN',
-      message,
-      HttpStatus.FORBIDDEN,
-      undefined,
-      correlationId,
-    );
+  static forbidden(message = 'Access denied', correlationId?: string): ApiError {
+    return new ApiError('FORBIDDEN', message, HttpStatus.FORBIDDEN, undefined, correlationId);
   }
 
   /**
    * Create a not found error
    */
-  static notFound(
-    resource: string,
-    correlationId?: string,
-  ): ApiError {
+  static notFound(resource: string, correlationId?: string): ApiError {
     return new ApiError(
       'NOT_FOUND',
       `${resource} not found`,
@@ -96,26 +75,14 @@ export class ApiError {
   /**
    * Create a conflict error
    */
-  static conflict(
-    message: string,
-    correlationId?: string,
-  ): ApiError {
-    return new ApiError(
-      'CONFLICT',
-      message,
-      HttpStatus.CONFLICT,
-      undefined,
-      correlationId,
-    );
+  static conflict(message: string, correlationId?: string): ApiError {
+    return new ApiError('CONFLICT', message, HttpStatus.CONFLICT, undefined, correlationId);
   }
 
   /**
    * Create an internal server error
    */
-  static internal(
-    message = 'An unexpected error occurred',
-    correlationId?: string,
-  ): ApiError {
+  static internal(message = 'An unexpected error occurred', correlationId?: string): ApiError {
     return new ApiError(
       'INTERNAL_ERROR',
       message,
@@ -156,4 +123,3 @@ export enum ErrorCode {
   PRESCRIPTION_REQUIRED = 'PRESCRIPTION_REQUIRED',
   PAYMENT_FAILED = 'PAYMENT_FAILED',
 }
-

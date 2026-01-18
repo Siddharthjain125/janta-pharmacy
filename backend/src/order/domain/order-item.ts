@@ -43,10 +43,7 @@ export interface CreateOrderItemData {
  * Factory function to create a new OrderItem
  * Validates invariants before creation
  */
-export function createOrderItem(
-  data: CreateOrderItemData,
-  now: Date = new Date(),
-): OrderItem {
+export function createOrderItem(data: CreateOrderItemData, now: Date = new Date()): OrderItem {
   if (!data.productId || data.productId.trim().length === 0) {
     throw new Error('Product ID cannot be empty');
   }
@@ -75,10 +72,7 @@ export function createOrderItem(
 /**
  * Create a copy of an OrderItem with updated quantity
  */
-export function updateOrderItemQuantity(
-  item: OrderItem,
-  newQuantity: number,
-): OrderItem {
+export function updateOrderItemQuantity(item: OrderItem, newQuantity: number): OrderItem {
   if (newQuantity <= 0) {
     throw new Error('Quantity must be greater than 0');
   }
@@ -121,4 +115,3 @@ export function orderItemToDTO(item: OrderItem): {
     addedAt: item.addedAt.toISOString(),
   };
 }
-

@@ -5,7 +5,7 @@ export const ROLES_KEY = 'roles';
 
 /**
  * Decorator to specify required roles for a route
- * 
+ *
  * Usage:
  *   @Roles(UserRole.ADMIN)
  *   @Roles(UserRole.ADMIN, UserRole.PHARMACIST)

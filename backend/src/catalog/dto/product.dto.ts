@@ -115,4 +115,3 @@ export function toCategoryDto(category: ProductCategory): CategoryDto {
     description: metadata.description,
   };
 }
-

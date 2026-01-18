@@ -20,4 +20,3 @@ import { PrescriptionRepository } from './prescription.repository';
   exports: [PrescriptionService, PrescriptionRepository],
 })
 export class PrescriptionModule {}
-

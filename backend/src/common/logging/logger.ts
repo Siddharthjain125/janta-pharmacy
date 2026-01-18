@@ -55,5 +55,7 @@ export function logWithCorrelation(
   const timestamp = new Date().toISOString();
   const ctx = context || 'Application';
   const dataStr = data ? ` ${JSON.stringify(data)}` : '';
-  console.log(`[${timestamp}] [${level.padEnd(7)}] [${correlationId}] [${ctx}] ${message}${dataStr}`);
+  console.log(
+    `[${timestamp}] [${level.padEnd(7)}] [${correlationId}] [${ctx}] ${message}${dataStr}`,
+  );
 }

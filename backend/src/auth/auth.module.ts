@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -47,7 +47,7 @@ import { getJwtConfig } from './config/jwt.config';
  */
 @Module({
   imports: [
-    UserModule, // For user identity management
+    forwardRef(() => UserModule), // For user identity management
 
     // JWT configuration
     JwtModule.registerAsync({

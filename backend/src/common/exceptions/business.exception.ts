@@ -41,4 +41,3 @@ export class ConflictException extends BusinessException {
     super('CONFLICT', message, HttpStatus.CONFLICT);
   }
 }
-

@@ -58,25 +58,16 @@ export class OrderQueryService {
     const normalizedPagination = normalizePagination(pagination);
 
     // Fetch paginated orders
-    const result = await this.orderRepository.findByUserIdPaginated(
-      userId,
-      normalizedPagination,
-    );
+    const result = await this.orderRepository.findByUserIdPaginated(userId, normalizedPagination);
 
     if (correlationId) {
-      logWithCorrelation(
-        'DEBUG',
-        correlationId,
-        `Fetched order history`,
-        'OrderQueryService',
-        {
-          userId,
-          page: result.pagination.page,
-          limit: result.pagination.limit,
-          total: result.pagination.total,
-          returned: result.items.length,
-        },
-      );
+      logWithCorrelation('DEBUG', correlationId, `Fetched order history`, 'OrderQueryService', {
+        userId,
+        page: result.pagination.page,
+        limit: result.pagination.limit,
+        total: result.pagination.total,
+        returned: result.items.length,
+      });
     }
 
     return toOrderHistoryResponseDto(result.items, result.pagination);
@@ -106,13 +97,10 @@ export class OrderQueryService {
     // Check existence
     if (!order) {
       if (correlationId) {
-        logWithCorrelation(
-          'WARN',
-          correlationId,
-          `Order not found`,
-          'OrderQueryService',
-          { orderId, userId },
-        );
+        logWithCorrelation('WARN', correlationId, `Order not found`, 'OrderQueryService', {
+          orderId,
+          userId,
+        });
       }
       throw new OrderNotFoundException(orderId);
     }
@@ -132,16 +120,13 @@ export class OrderQueryService {
     }
 
     if (correlationId) {
-      logWithCorrelation(
-        'DEBUG',
-        correlationId,
-        `Fetched order details`,
-        'OrderQueryService',
-        { orderId, userId, state: order.status },
-      );
+      logWithCorrelation('DEBUG', correlationId, `Fetched order details`, 'OrderQueryService', {
+        orderId,
+        userId,
+        state: order.status,
+      });
     }
 
     return toOrderDetailDto(order);
   }
 }
-

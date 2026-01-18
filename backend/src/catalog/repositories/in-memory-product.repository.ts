@@ -1,16 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IProductRepository } from './product-repository.interface';
-import {
-  Product,
-  ProductCategory,
-  Money,
-  createProduct,
-} from '../domain';
-import {
-  ProductSearchCriteria,
-  ProductSearchResult,
-  createSearchResult,
-} from '../queries';
+import { Product, ProductCategory, Money, createProduct } from '../domain';
+import { ProductSearchCriteria, ProductSearchResult, createSearchResult } from '../queries';
 
 /**
  * In-Memory Product Repository
@@ -80,10 +71,7 @@ export class InMemoryProductRepository implements IProductRepository {
   /**
    * Apply filtering options to product list
    */
-  private applyFilters(
-    products: Product[],
-    criteria: ProductSearchCriteria,
-  ): Product[] {
+  private applyFilters(products: Product[], criteria: ProductSearchCriteria): Product[] {
     let results = products;
 
     // Filter by active status
@@ -98,9 +86,7 @@ export class InMemoryProductRepository implements IProductRepository {
 
     // Filter by prescription requirement
     if (criteria.requiresPrescription !== null) {
-      results = results.filter(
-        (p) => p.requiresPrescription === criteria.requiresPrescription,
-      );
+      results = results.filter((p) => p.requiresPrescription === criteria.requiresPrescription);
     }
 
     return results;
@@ -110,10 +96,7 @@ export class InMemoryProductRepository implements IProductRepository {
    * Apply text search to product list
    * Case-insensitive search on name and description
    */
-  private applyTextSearch(
-    products: Product[],
-    searchText: string,
-  ): Product[] {
+  private applyTextSearch(products: Product[], searchText: string): Product[] {
     const normalizedQuery = searchText.toLowerCase().trim();
 
     if (!normalizedQuery) {
@@ -130,10 +113,7 @@ export class InMemoryProductRepository implements IProductRepository {
   /**
    * Apply pagination to product list
    */
-  private applyPagination(
-    products: Product[],
-    criteria: ProductSearchCriteria,
-  ): Product[] {
+  private applyPagination(products: Product[], criteria: ProductSearchCriteria): Product[] {
     return products.slice(criteria.offset, criteria.offset + criteria.limit);
   }
 

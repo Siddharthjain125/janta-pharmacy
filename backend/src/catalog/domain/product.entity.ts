@@ -107,4 +107,3 @@ export function productToDTO(product: Product): {
     updatedAt: product.updatedAt.toISOString(),
   };
 }
-

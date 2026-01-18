@@ -10,12 +10,7 @@ export class ApiResponse<T> {
   readonly timestamp: string;
   readonly correlationId?: string;
 
-  private constructor(
-    success: boolean,
-    data: T | null,
-    message: string,
-    correlationId?: string,
-  ) {
+  private constructor(success: boolean, data: T | null, message: string, correlationId?: string) {
     this.success = success;
     this.data = data;
     this.message = message;
@@ -37,10 +32,7 @@ export class ApiResponse<T> {
   /**
    * Create an error response
    */
-  static error<T = null>(
-    message: string,
-    correlationId?: string,
-  ): ApiResponse<T> {
+  static error<T = null>(message: string, correlationId?: string): ApiResponse<T> {
     return new ApiResponse<T>(false, null, message, correlationId);
   }
 
@@ -87,4 +79,3 @@ export interface PaginatedResponse<T> {
   timestamp: string;
   correlationId?: string;
 }
-

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Patch,
   Post,
   Put,
   Param,
@@ -9,10 +10,21 @@ import {
   HttpCode,
   HttpStatus,
   Headers,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ApiResponse } from '../common/api/api-response';
-import { CreateUserDto, UpdateUserDto, UserDto, UserSelfDto } from './dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UpdateMyUserProfileDto,
+  UserDto,
+  UserProfileDto,
+} from './dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-case';
+import { UpdateMyUserProfileUseCase } from './use-cases/update-my-user-profile.use-case';
 
 /**
  * User Controller
@@ -26,7 +38,11 @@ import { CreateUserDto, UpdateUserDto, UserDto, UserSelfDto } from './dto';
  */
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly getMyUserProfileUseCase: GetMyUserProfileUseCase,
+    private readonly updateMyUserProfileUseCase: UpdateMyUserProfileUseCase,
+  ) {}
 
   /**
    * Create a new user
@@ -50,16 +66,27 @@ export class UserController {
    * GET /api/v1/users/me
    *
    * Returns unmasked phone number for authenticated user.
-   * TODO: Requires authentication guard
+   * Requires authentication guard.
    */
   @Get('me')
-  async getCurrentUser(
-    @Headers('x-user-id') userId: string, // TODO: Replace with @CurrentUser decorator
-    @Headers('x-correlation-id') correlationId: string,
-  ): Promise<ApiResponse<UserSelfDto>> {
-    // TODO: Get userId from JWT token via guard
-    const profile = await this.userService.getSelfProfile(userId, correlationId);
+  @UseGuards(JwtAuthGuard)
+  async getCurrentUser(@CurrentUser('id') userId: string): Promise<ApiResponse<UserProfileDto>> {
+    const profile = await this.getMyUserProfileUseCase.execute(userId);
     return ApiResponse.success(profile, 'Profile retrieved successfully');
+  }
+
+  /**
+   * Update current user's profile (self-only)
+   * PATCH /api/v1/users/me
+   */
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  async updateCurrentUser(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateMyUserProfileDto,
+  ): Promise<ApiResponse<UserProfileDto>> {
+    const profile = await this.updateMyUserProfileUseCase.execute(userId, dto);
+    return ApiResponse.success(profile, 'Profile updated successfully');
   }
 
   /**

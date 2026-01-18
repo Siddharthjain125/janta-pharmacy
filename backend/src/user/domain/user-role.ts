@@ -32,10 +32,7 @@ export const ROLE_HIERARCHY: UserRole[] = [
 /**
  * Check if a role has at least the required permission level
  */
-export function hasMinimumRole(
-  userRole: UserRole,
-  requiredRole: UserRole,
-): boolean {
+export function hasMinimumRole(userRole: UserRole, requiredRole: UserRole): boolean {
   const userIndex = ROLE_HIERARCHY.indexOf(userRole);
   const requiredIndex = ROLE_HIERARCHY.indexOf(requiredRole);
   return userIndex >= requiredIndex;
@@ -45,4 +42,3 @@ export function hasMinimumRole(
  * Default role for new users
  */
 export const DEFAULT_USER_ROLE = UserRole.CUSTOMER;
-

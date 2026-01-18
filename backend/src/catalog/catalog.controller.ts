@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  Headers,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, Headers } from '@nestjs/common';
 import { CatalogQueryService } from './catalog-query.service';
 import { ApiResponse, PaginatedResponse, PaginationMeta } from '../common/api/api-response';
 import { ProductDto, ProductSummaryDto, CategoryDto } from './dto';

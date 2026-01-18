@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import {
-  Credential,
-  CreateCredentialData,
-  CredentialType,
-} from './credential.entity';
+import { Credential, CreateCredentialData, CredentialType } from './credential.entity';
 import { ICredentialRepository } from './credential-repository.interface';
 
 /**
@@ -25,9 +21,7 @@ export class InMemoryCredentialRepository implements ICredentialRepository {
     // Check for existing credential of same type
     const existing = await this.findByUserIdAndType(data.userId, data.type);
     if (existing) {
-      throw new Error(
-        `Credential of type '${data.type}' already exists for user ${data.userId}`,
-      );
+      throw new Error(`Credential of type '${data.type}' already exists for user ${data.userId}`);
     }
 
     const now = new Date();
@@ -44,10 +38,7 @@ export class InMemoryCredentialRepository implements ICredentialRepository {
     return credential;
   }
 
-  async findByUserIdAndType(
-    userId: string,
-    type: CredentialType,
-  ): Promise<Credential | null> {
+  async findByUserIdAndType(userId: string, type: CredentialType): Promise<Credential | null> {
     for (const credential of this.credentials.values()) {
       if (credential.userId === userId && credential.type === type) {
         return credential;
@@ -99,4 +90,3 @@ export class InMemoryCredentialRepository implements ICredentialRepository {
     return credential !== null;
   }
 }
-

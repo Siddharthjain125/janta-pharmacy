@@ -225,4 +225,3 @@ export function toCancelOrderResponseDto(order: OrderDto): CancelOrderResponseDt
     cancelledAt: order.updatedAt.toISOString(), // updatedAt reflects cancellation time
   };
 }
-

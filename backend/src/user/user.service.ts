@@ -7,7 +7,7 @@ import {
   canAuthenticate,
   UserStatus,
 } from './domain';
-import { CreateUserDto, UpdateUserDto, UserDto, toUserDto, toUserSelfDto, UserSelfDto } from './dto';
+import { CreateUserDto, UpdateUserDto, UserDto, toUserDto } from './dto';
 import {
   UserNotFoundException,
   PhoneNumberAlreadyExistsException,
@@ -40,10 +40,7 @@ export class UserService {
   /**
    * Create a new user identity
    */
-  async createUser(
-    dto: CreateUserDto,
-    correlationId: string,
-  ): Promise<UserDto> {
+  async createUser(dto: CreateUserDto, correlationId: string): Promise<UserDto> {
     // Validate phone number format
     if (!isValidPhoneNumber(dto.phoneNumber)) {
       throw new InvalidPhoneNumberException();
@@ -72,13 +69,10 @@ export class UserService {
       name: dto.name,
     });
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      'User created',
-      'UserService',
-      { userId: user.id, phoneNumber: normalizedPhone },
-    );
+    logWithCorrelation('INFO', correlationId, 'User created', 'UserService', {
+      userId: user.id,
+      phoneNumber: normalizedPhone,
+    });
 
     return toUserDto(user);
   }
@@ -86,10 +80,7 @@ export class UserService {
   /**
    * Find user by ID
    */
-  async findById(
-    userId: string,
-    correlationId: string,
-  ): Promise<UserDto> {
+  async findById(userId: string, correlationId: string): Promise<UserDto> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new UserNotFoundException(userId, 'id');
@@ -100,10 +91,7 @@ export class UserService {
   /**
    * Find user by phone number
    */
-  async findByPhoneNumber(
-    phoneNumber: string,
-    correlationId: string,
-  ): Promise<UserDto> {
+  async findByPhoneNumber(phoneNumber: string, correlationId: string): Promise<UserDto> {
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     const user = await this.userRepository.findByPhoneNumber(normalizedPhone);
     if (!user) {
@@ -113,27 +101,9 @@ export class UserService {
   }
 
   /**
-   * Get user's own profile (unmasked phone number)
-   */
-  async getSelfProfile(
-    userId: string,
-    correlationId: string,
-  ): Promise<UserSelfDto> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new UserNotFoundException(userId, 'id');
-    }
-    return toUserSelfDto(user);
-  }
-
-  /**
    * Update user profile
    */
-  async updateUser(
-    userId: string,
-    dto: UpdateUserDto,
-    correlationId: string,
-  ): Promise<UserDto> {
+  async updateUser(userId: string, dto: UpdateUserDto, correlationId: string): Promise<UserDto> {
     const existing = await this.userRepository.findById(userId);
     if (!existing) {
       throw new UserNotFoundException(userId, 'id');
@@ -156,13 +126,7 @@ export class UserService {
       throw new UserNotFoundException(userId, 'id');
     }
 
-    logWithCorrelation(
-      'INFO',
-      correlationId,
-      'User updated',
-      'UserService',
-      { userId },
-    );
+    logWithCorrelation('INFO', correlationId, 'User updated', 'UserService', { userId });
 
     return toUserDto(updated);
   }

@@ -4,7 +4,7 @@ import { AuthUser } from '../interfaces/auth-user.interface';
 
 /**
  * Decorator to extract current authenticated user from request
- * 
+ *
  * Usage:
  *   @CurrentUser() user: AuthUser
  *   @CurrentUser('id') userId: string

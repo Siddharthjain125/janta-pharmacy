@@ -92,4 +92,3 @@ export function getAllCategories(): ProductCategory[] {
 export function categoryRequiresPrescription(category: ProductCategory): boolean {
   return PRODUCT_CATEGORY_METADATA[category].requiresPrescription;
 }
-

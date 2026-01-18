@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { CatalogController } from './catalog.controller';
 import { CatalogQueryService } from './catalog-query.service';
 import { PRODUCT_REPOSITORY } from './repositories/product-repository.interface';
-import { InMemoryProductRepository } from './repositories/in-memory-product.repository';
+import { ProductRepositoryProvider } from '../database/repository.providers';
 
 /**
  * Catalog Module
@@ -22,20 +22,14 @@ import { InMemoryProductRepository } from './repositories/in-memory-product.repo
  * - Does NOT handle product creation/updates (admin operation)
  * - Other modules depend on this for product information
  *
- * Current implementation:
- * - In-memory repository with sample data
- * - Read-only REST endpoints
- * - No external dependencies
+ * Repository Selection:
+ * - Uses REPOSITORY_TYPE env var or auto-detects from DATABASE_URL
+ * - 'memory': InMemoryProductRepository (tests, dev without DB)
+ * - 'prisma': PrismaProductRepository (production, dev with DB)
  */
 @Module({
   controllers: [CatalogController],
-  providers: [
-    CatalogQueryService,
-    {
-      provide: PRODUCT_REPOSITORY,
-      useClass: InMemoryProductRepository,
-    },
-  ],
+  providers: [CatalogQueryService, ProductRepositoryProvider],
   exports: [
     // Export query service for other modules
     CatalogQueryService,

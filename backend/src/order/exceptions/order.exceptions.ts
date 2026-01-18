@@ -7,11 +7,7 @@ import { OrderStatus } from '../domain/order-status';
  */
 export class OrderNotFoundException extends BusinessException {
   constructor(orderId: string) {
-    super(
-      'ORDER_NOT_FOUND',
-      `Order with id '${orderId}' not found`,
-      HttpStatus.NOT_FOUND,
-    );
+    super('ORDER_NOT_FOUND', `Order with id '${orderId}' not found`, HttpStatus.NOT_FOUND);
   }
 }
 

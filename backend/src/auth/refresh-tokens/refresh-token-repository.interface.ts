@@ -62,4 +62,3 @@ export interface IRefreshTokenRepository {
    */
   isValid(token: string): Promise<boolean>;
 }
-

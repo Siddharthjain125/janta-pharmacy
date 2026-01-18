@@ -9,10 +9,7 @@ import {
   toProductSummaryDto,
   toCategoryDto,
 } from './dto';
-import {
-  ProductSearchCriteria,
-  ProductSearchResult,
-} from './queries';
+import { ProductSearchCriteria, ProductSearchResult } from './queries';
 import { ProductNotFoundException, InvalidProductCategoryException } from './exceptions';
 import { logWithCorrelation } from '../common/logging/logger';
 
@@ -127,10 +124,7 @@ export class CatalogQueryService {
    * Get product by ID
    * @throws ProductNotFoundException if product not found or inactive
    */
-  async getProductById(
-    productId: string,
-    correlationId?: string,
-  ): Promise<ProductDto> {
+  async getProductById(productId: string, correlationId?: string): Promise<ProductDto> {
     const product = await this.productRepository.findById(productId);
 
     if (!product) {

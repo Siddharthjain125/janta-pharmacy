@@ -4,4 +4,3 @@ export {
   InvalidProductCategoryException,
   InvalidProductIdException,
 } from './catalog.exceptions';
-

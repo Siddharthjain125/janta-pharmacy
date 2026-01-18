@@ -34,4 +34,3 @@ export default registerAs('security', () => ({
     frameguard: true,
   },
 }));
-

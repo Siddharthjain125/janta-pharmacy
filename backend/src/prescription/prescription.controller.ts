@@ -71,10 +71,7 @@ export class PrescriptionController {
    * Verify prescription (admin only)
    */
   @Put(':id/verify')
-  async verify(
-    @Param('id') id: string,
-    @Body() verifyDto: unknown,
-  ): Promise<ApiResponse<unknown>> {
+  async verify(@Param('id') id: string, @Body() verifyDto: unknown): Promise<ApiResponse<unknown>> {
     const prescription = await this.prescriptionService.verify(id, verifyDto);
     return ApiResponse.success(prescription, 'Prescription verified successfully');
   }
@@ -83,10 +80,7 @@ export class PrescriptionController {
    * Reject prescription (admin only)
    */
   @Put(':id/reject')
-  async reject(
-    @Param('id') id: string,
-    @Body() rejectDto: unknown,
-  ): Promise<ApiResponse<unknown>> {
+  async reject(@Param('id') id: string, @Body() rejectDto: unknown): Promise<ApiResponse<unknown>> {
     const prescription = await this.prescriptionService.reject(id, rejectDto);
     return ApiResponse.success(prescription, 'Prescription rejected');
   }
@@ -103,4 +97,3 @@ export class PrescriptionController {
     return ApiResponse.success(result, 'Prescription linked to order successfully');
   }
 }
-

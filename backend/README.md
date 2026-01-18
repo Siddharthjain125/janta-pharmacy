@@ -13,23 +13,114 @@ Production-grade backend built with **NestJS** and **TypeScript**, following a *
 | Module | Status | Description |
 |--------|--------|-------------|
 | Auth | ✅ Complete | JWT + refresh tokens, phone-based identity |
-| User | ✅ Complete | User profiles, roles |
+| User | ✅ Complete | User profiles, roles (persisted) |
 | Catalog | ✅ Complete | Products, search, filtering, pagination |
 | Order | ✅ Complete | Order lifecycle, state machine |
 | Cart | ✅ Complete | Draft Order model |
+| Database | ✅ Complete | PostgreSQL + Prisma ORM |
 | Prescription | 🚧 Scaffold | Future: upload, review |
 
 ---
 
 ## Quick Start
 
+### Option 1: With Database (Recommended)
+
 ```bash
 cd backend
+
+# Start PostgreSQL (requires Docker)
+docker-compose up -d
+
+# Install dependencies
 npm install
+
+# Generate Prisma client
+npm run prisma:generate
+
+# Run database migrations
+npm run prisma:migrate
+
+# Seed initial data (admin, users, products)
+npm run db:seed
+
+# Start development server
 npm run start:dev
 ```
 
+### Option 2: Without Database (In-Memory)
+
+```bash
+cd backend
+npm install
+REPOSITORY_TYPE=memory npm run start:dev
+```
+
 **API Base URL:** http://localhost:3001/api/v1
+
+---
+
+## Database Setup
+
+### PostgreSQL with Docker
+
+The project includes a `docker-compose.yml` for local PostgreSQL:
+
+```bash
+# Start PostgreSQL
+docker-compose up -d
+
+# Stop PostgreSQL
+docker-compose down
+
+# Stop and remove data
+docker-compose down -v
+```
+
+### Environment Configuration
+
+Copy `env.example` to `.env`:
+
+```bash
+cp env.example .env
+```
+
+Key environment variables:
+
+```env
+# Database connection (PostgreSQL)
+DATABASE_URL="postgresql://janta:janta_dev_password@localhost:5432/janta_pharmacy?schema=public"
+
+# Repository selection: 'prisma' (default with DATABASE_URL) or 'memory'
+REPOSITORY_TYPE=prisma
+
+# JWT secrets
+JWT_SECRET=your-secret-here
+REFRESH_TOKEN_SECRET=your-refresh-secret-here
+```
+
+### Database Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run prisma:generate` | Generate Prisma client |
+| `npm run prisma:migrate` | Create and apply migrations |
+| `npm run prisma:migrate:deploy` | Deploy migrations (production) |
+| `npm run prisma:studio` | Open Prisma Studio GUI |
+| `npm run db:seed` | Seed initial data |
+| `npm run db:reset` | Reset database and re-run migrations |
+| `npm run db:setup` | Run migrations + seed (full setup) |
+
+### Seed Data
+
+After running `npm run db:seed`, the following accounts are created:
+
+| Role | Phone | Password |
+|------|-------|----------|
+| Admin | +919999900000 | admin123 |
+| Pharmacist | +919999900001 | pharma123 |
+| Staff | +919999900002 | staff123 |
+| Customer | +919876543210 | customer123 |
 
 ---
 
@@ -44,15 +135,34 @@ src/
 ├── catalog/            # Product catalog (read-only)
 ├── order/              # Orders + Cart (Draft Order)
 ├── common/             # Shared utilities (logging, errors, API response)
-└── database/           # Prisma service (deferred)
+└── database/           # Prisma service, repository providers
 ```
 
 ### Key Patterns
 
 - **Domain-driven design** — Business rules in domain layer
 - **Command-style APIs** — Intent-based endpoints (`/orders/:id/confirm`)
-- **Repository abstraction** — In-memory now, database later
+- **Repository abstraction** — Switchable between in-memory and Prisma
 - **Thin controllers** — Logic in services, controllers just route
+
+### Repository Strategy
+
+The codebase supports both in-memory and Prisma repositories:
+
+```typescript
+// Environment-based selection
+// In .env:
+REPOSITORY_TYPE=prisma  // Use PostgreSQL
+REPOSITORY_TYPE=memory  // Use in-memory (auto-detected if no DATABASE_URL)
+```
+
+Tests always use in-memory repositories for isolation.
+
+Guarantees:
+- Runtime uses Prisma repositories when `REPOSITORY_TYPE=prisma` or `DATABASE_URL` is set.
+- Tests always force in-memory repositories.
+- Selection is environment-based and explicit.
+- No feature flags or complex DI logic are used.
 
 ---
 
@@ -115,22 +225,16 @@ DRAFT → CREATED → CONFIRMED → PAID → SHIPPED → DELIVERED
 
 ---
 
-## Data Strategy
+## User Roles
 
-Currently using **in-memory repositories**. Database integration deferred until domain is stable.
+| Role | Description |
+|------|-------------|
+| CUSTOMER | Regular users placing orders |
+| STAFF | Pharmacy staff with limited access |
+| PHARMACIST | Licensed pharmacist for prescription verification |
+| ADMIN | Full system administrator |
 
-```typescript
-// All repositories implement interfaces
-interface IOrderRepository {
-  findById(id: string): Promise<Order | null>;
-  // ...
-}
-
-// Current: InMemoryOrderRepository
-// Future: PrismaOrderRepository (same interface)
-```
-
-See [ADR-008](/docs/decisions.md#adr-008-deferred-database-integration) for rationale.
+Roles are persisted in the database and enforced via guards.
 
 ---
 
@@ -142,19 +246,7 @@ npm test -- --watch      # Watch mode
 npm test -- --coverage   # Coverage report
 ```
 
-Tests use real in-memory repositories, not mocks.
-
----
-
-## Configuration
-
-```bash
-# .env
-PORT=3001
-JWT_SECRET=your-secret-here
-JWT_EXPIRES_IN=15m
-REFRESH_TOKEN_EXPIRES_IN=7d
-```
+Tests automatically use in-memory repositories for isolation (no database required).
 
 ---
 
@@ -167,6 +259,10 @@ REFRESH_TOKEN_EXPIRES_IN=7d
 | `npm run start:prod` | Start production |
 | `npm run lint` | ESLint |
 | `npm test` | Run tests |
+| `npm run prisma:generate` | Generate Prisma client |
+| `npm run prisma:migrate` | Run migrations |
+| `npm run db:seed` | Seed database |
+| `npm run db:setup` | Full database setup |
 
 ---
 

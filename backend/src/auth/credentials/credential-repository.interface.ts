@@ -57,4 +57,3 @@ export interface ICredentialRepository {
    */
   hasCredential(userId: string, type: CredentialType): Promise<boolean>;
 }
-

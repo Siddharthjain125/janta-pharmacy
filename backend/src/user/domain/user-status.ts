@@ -49,4 +49,3 @@ export const USER_STATUS_METADATA: Record<
 export function canAuthenticate(status: UserStatus): boolean {
   return USER_STATUS_METADATA[status]?.canAuthenticate ?? false;
 }
-

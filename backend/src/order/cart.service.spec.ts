@@ -88,9 +88,9 @@ describe('CartService', () => {
 
   describe('getCartOrFail', () => {
     it('should throw NoDraftOrderException when no cart exists', async () => {
-      await expect(
-        cartService.getCartOrFail(userId, correlationId),
-      ).rejects.toThrow(NoDraftOrderException);
+      await expect(cartService.getCartOrFail(userId, correlationId)).rejects.toThrow(
+        NoDraftOrderException,
+      );
     });
 
     it('should return cart when exists', async () => {
@@ -135,12 +135,7 @@ describe('CartService', () => {
 
   describe('addItemToCart', () => {
     it('should create cart if none exists when adding item', async () => {
-      const cart = await cartService.addItemToCart(
-        userId,
-        validProductId,
-        1,
-        correlationId,
-      );
+      const cart = await cartService.addItemToCart(userId, validProductId, 1, correlationId);
 
       expect(cart).toBeDefined();
       expect(cart.status).toBe(OrderStatus.DRAFT);
@@ -148,12 +143,7 @@ describe('CartService', () => {
     });
 
     it('should add item with correct product snapshot', async () => {
-      const cart = await cartService.addItemToCart(
-        userId,
-        validProductId,
-        2,
-        correlationId,
-      );
+      const cart = await cartService.addItemToCart(userId, validProductId, 2, correlationId);
 
       const item = cart.items[0];
       expect(item.productId).toBe(validProductId);
@@ -166,12 +156,7 @@ describe('CartService', () => {
 
     it('should increment quantity when adding same product', async () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId);
-      const cart = await cartService.addItemToCart(
-        userId,
-        validProductId,
-        3,
-        correlationId,
-      );
+      const cart = await cartService.addItemToCart(userId, validProductId, 3, correlationId);
 
       expect(cart.items.length).toBe(1);
       expect(cart.items[0].quantity).toBe(5);
@@ -180,12 +165,7 @@ describe('CartService', () => {
 
     it('should add multiple different products', async () => {
       await cartService.addItemToCart(userId, validProductId, 1, correlationId);
-      const cart = await cartService.addItemToCart(
-        userId,
-        validProductId2,
-        2,
-        correlationId,
-      );
+      const cart = await cartService.addItemToCart(userId, validProductId2, 2, correlationId);
 
       expect(cart.items.length).toBe(2);
       expect(cart.itemCount).toBe(3); // 1 + 2
@@ -193,12 +173,7 @@ describe('CartService', () => {
 
     it('should calculate correct total with multiple items', async () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId); // 2 * 25 = 50
-      const cart = await cartService.addItemToCart(
-        userId,
-        validProductId2,
-        1,
-        correlationId,
-      ); // 1 * 45 = 45
+      const cart = await cartService.addItemToCart(userId, validProductId2, 1, correlationId); // 1 * 45 = 45
 
       expect(cart.total.amount).toBe(95);
     });
@@ -260,11 +235,7 @@ describe('CartService', () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId);
       await cartService.addItemToCart(userId, validProductId2, 1, correlationId);
 
-      const cart = await cartService.removeItemFromCart(
-        userId,
-        validProductId,
-        correlationId,
-      );
+      const cart = await cartService.removeItemFromCart(userId, validProductId, correlationId);
 
       expect(cart.items.length).toBe(1);
       expect(cart.items[0].productId).toBe(validProductId2);
@@ -288,11 +259,7 @@ describe('CartService', () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId);
       await cartService.addItemToCart(userId, validProductId2, 1, correlationId);
 
-      const cart = await cartService.removeItemFromCart(
-        userId,
-        validProductId,
-        correlationId,
-      );
+      const cart = await cartService.removeItemFromCart(userId, validProductId, correlationId);
 
       expect(cart.total.amount).toBe(45); // Only validProductId2 remains
     });
@@ -302,12 +269,7 @@ describe('CartService', () => {
     it('should update item quantity', async () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId);
 
-      const cart = await cartService.updateItemQuantity(
-        userId,
-        validProductId,
-        5,
-        correlationId,
-      );
+      const cart = await cartService.updateItemQuantity(userId, validProductId, 5, correlationId);
 
       expect(cart.items[0].quantity).toBe(5);
       expect(cart.items[0].subtotal.amount).toBe(125);
@@ -339,12 +301,7 @@ describe('CartService', () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId);
       await cartService.addItemToCart(userId, validProductId2, 1, correlationId);
 
-      const cart = await cartService.updateItemQuantity(
-        userId,
-        validProductId,
-        10,
-        correlationId,
-      );
+      const cart = await cartService.updateItemQuantity(userId, validProductId, 10, correlationId);
 
       expect(cart.total.amount).toBe(295); // 10*25 + 1*45
     });
@@ -371,9 +328,9 @@ describe('CartService', () => {
     });
 
     it('should throw NoDraftOrderException when no cart exists', async () => {
-      await expect(
-        cartService.clearCart(userId, correlationId),
-      ).rejects.toThrow(NoDraftOrderException);
+      await expect(cartService.clearCart(userId, correlationId)).rejects.toThrow(
+        NoDraftOrderException,
+      );
     });
   });
 
@@ -389,9 +346,9 @@ describe('CartService', () => {
     });
 
     it('should throw NoDraftOrderException when no cart exists', async () => {
-      await expect(
-        cartService.abandonCart(userId, correlationId),
-      ).rejects.toThrow(NoDraftOrderException);
+      await expect(cartService.abandonCart(userId, correlationId)).rejects.toThrow(
+        NoDraftOrderException,
+      );
     });
 
     it('should allow creating new cart after abandoning', async () => {
@@ -420,12 +377,7 @@ describe('CartService', () => {
   describe('price snapshot behavior', () => {
     it('should capture price at add-time', async () => {
       // Add item - this captures the price
-      const cart = await cartService.addItemToCart(
-        userId,
-        validProductId,
-        1,
-        correlationId,
-      );
+      const cart = await cartService.addItemToCart(userId, validProductId, 1, correlationId);
 
       const capturedPrice = cart.items[0].unitPrice.amount;
 
@@ -438,12 +390,7 @@ describe('CartService', () => {
   describe('prescription products', () => {
     it('should allow adding prescription products to cart', async () => {
       // Cart doesn't enforce prescription rules - that's checkout's job
-      const cart = await cartService.addItemToCart(
-        userId,
-        prescriptionProductId,
-        1,
-        correlationId,
-      );
+      const cart = await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
 
       expect(cart.items.length).toBe(1);
       expect(cart.items[0].productName).toBe('Amoxicillin 500mg');
@@ -453,24 +400,14 @@ describe('CartService', () => {
   describe('itemCount calculation', () => {
     it('should sum quantities across all items', async () => {
       await cartService.addItemToCart(userId, validProductId, 3, correlationId);
-      const cart = await cartService.addItemToCart(
-        userId,
-        validProductId2,
-        2,
-        correlationId,
-      );
+      const cart = await cartService.addItemToCart(userId, validProductId2, 2, correlationId);
 
       expect(cart.itemCount).toBe(5);
     });
 
     it('should update itemCount when quantity changes', async () => {
       await cartService.addItemToCart(userId, validProductId, 3, correlationId);
-      const cart = await cartService.updateItemQuantity(
-        userId,
-        validProductId,
-        10,
-        correlationId,
-      );
+      const cart = await cartService.updateItemQuantity(userId, validProductId, 10, correlationId);
 
       expect(cart.itemCount).toBe(10);
     });
@@ -534,9 +471,9 @@ describe('CartService', () => {
       await cartService.abandonCart(userId, correlationId);
 
       // Try to clear - should fail since no DRAFT exists
-      await expect(
-        cartService.clearCart(userId, correlationId),
-      ).rejects.toThrow(NoDraftOrderException);
+      await expect(cartService.clearCart(userId, correlationId)).rejects.toThrow(
+        NoDraftOrderException,
+      );
     });
 
     it('should allow creating new draft after order is confirmed', async () => {
@@ -561,12 +498,7 @@ describe('CartService', () => {
       await orderRepository.updateStatus(cart!.id, OrderStatus.CONFIRMED);
 
       // Should be able to add items (creates new draft)
-      const newCart = await cartService.addItemToCart(
-        userId,
-        validProductId2,
-        2,
-        correlationId,
-      );
+      const newCart = await cartService.addItemToCart(userId, validProductId2, 2, correlationId);
 
       expect(newCart).toBeDefined();
       expect(newCart.id).not.toBe(cart!.id);
@@ -630,9 +562,9 @@ describe('CartService', () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId);
 
       // User 2 tries to clear cart (but they don't have one)
-      await expect(
-        cartService.clearCart(otherUserId, correlationId),
-      ).rejects.toThrow(NoDraftOrderException);
+      await expect(cartService.clearCart(otherUserId, correlationId)).rejects.toThrow(
+        NoDraftOrderException,
+      );
     });
 
     it('should not allow user to abandon other users cart', async () => {
@@ -640,9 +572,9 @@ describe('CartService', () => {
       await cartService.addItemToCart(userId, validProductId, 2, correlationId);
 
       // User 2 tries to abandon cart (but they don't have one)
-      await expect(
-        cartService.abandonCart(otherUserId, correlationId),
-      ).rejects.toThrow(NoDraftOrderException);
+      await expect(cartService.abandonCart(otherUserId, correlationId)).rejects.toThrow(
+        NoDraftOrderException,
+      );
     });
   });
 
@@ -818,9 +750,9 @@ describe('CartService', () => {
 
     describe('failure when not in DRAFT state', () => {
       it('should throw NoDraftOrderException when no cart exists', async () => {
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(NoDraftOrderException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          NoDraftOrderException,
+        );
       });
 
       it('should throw NoDraftOrderException when order is already confirmed', async () => {
@@ -829,9 +761,9 @@ describe('CartService', () => {
         await cartService.confirmDraftOrder(userId, correlationId);
 
         // Act & Assert: second confirmation fails (no draft exists)
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(NoDraftOrderException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          NoDraftOrderException,
+        );
       });
 
       it('should throw NoDraftOrderException when cart is cancelled', async () => {
@@ -840,9 +772,9 @@ describe('CartService', () => {
         await cartService.abandonCart(userId, correlationId);
 
         // Act & Assert
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(NoDraftOrderException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          NoDraftOrderException,
+        );
       });
     });
 
@@ -852,9 +784,9 @@ describe('CartService', () => {
         await cartService.createDraftOrder(userId, correlationId);
 
         // Act & Assert
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(EmptyCartException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          EmptyCartException,
+        );
       });
 
       it('should throw EmptyCartException after all items are removed', async () => {
@@ -863,9 +795,9 @@ describe('CartService', () => {
         await cartService.removeItemFromCart(userId, validProductId, correlationId);
 
         // Act & Assert
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(EmptyCartException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          EmptyCartException,
+        );
       });
 
       it('should throw EmptyCartException after cart is cleared', async () => {
@@ -874,36 +806,26 @@ describe('CartService', () => {
         await cartService.clearCart(userId, correlationId);
 
         // Act & Assert
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(EmptyCartException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          EmptyCartException,
+        );
       });
     });
 
     describe('failure when prescription-required items exist', () => {
       it('should throw PrescriptionRequiredException for prescription products', async () => {
         // Setup: add prescription product (Amoxicillin)
-        await cartService.addItemToCart(
-          userId,
-          prescriptionProductId,
-          1,
-          correlationId,
-        );
+        await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
 
         // Act & Assert
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(PrescriptionRequiredException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          PrescriptionRequiredException,
+        );
       });
 
       it('should include prescription product names in exception', async () => {
         // Setup
-        await cartService.addItemToCart(
-          userId,
-          prescriptionProductId,
-          1,
-          correlationId,
-        );
+        await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
 
         // Act & Assert
         try {
@@ -912,42 +834,26 @@ describe('CartService', () => {
         } catch (error) {
           expect(error).toBeInstanceOf(PrescriptionRequiredException);
           const prescriptionError = error as PrescriptionRequiredException;
-          expect(prescriptionError.prescriptionProducts).toContain(
-            'Amoxicillin 500mg',
-          );
+          expect(prescriptionError.prescriptionProducts).toContain('Amoxicillin 500mg');
         }
       });
 
       it('should block confirmation when mixed cart has prescription items', async () => {
         // Setup: mix of prescription and non-prescription
         await cartService.addItemToCart(userId, validProductId, 2, correlationId);
-        await cartService.addItemToCart(
-          userId,
-          prescriptionProductId,
-          1,
-          correlationId,
-        );
+        await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
 
         // Act & Assert
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(PrescriptionRequiredException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          PrescriptionRequiredException,
+        );
       });
 
       it('should allow confirmation after removing prescription items', async () => {
         // Setup: add prescription, then remove
         await cartService.addItemToCart(userId, validProductId, 2, correlationId);
-        await cartService.addItemToCart(
-          userId,
-          prescriptionProductId,
-          1,
-          correlationId,
-        );
-        await cartService.removeItemFromCart(
-          userId,
-          prescriptionProductId,
-          correlationId,
-        );
+        await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
+        await cartService.removeItemFromCart(userId, prescriptionProductId, correlationId);
 
         // Act
         const result = await cartService.confirmDraftOrder(userId, correlationId);
@@ -964,9 +870,9 @@ describe('CartService', () => {
         await cartService.addItemToCart(otherUserId, validProductId, 1, correlationId);
 
         // Act & Assert: this user cannot confirm other's cart
-        await expect(
-          cartService.confirmDraftOrder(userId, correlationId),
-        ).rejects.toThrow(NoDraftOrderException);
+        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
+          NoDraftOrderException,
+        );
       });
 
       it('should allow each user to confirm their own cart independently', async () => {
@@ -976,10 +882,7 @@ describe('CartService', () => {
 
         // Act: both confirm
         const result1 = await cartService.confirmDraftOrder(userId, correlationId);
-        const result2 = await cartService.confirmDraftOrder(
-          otherUserId,
-          correlationId,
-        );
+        const result2 = await cartService.confirmDraftOrder(otherUserId, correlationId);
 
         // Assert
         expect(result1.order.userId).toBe(userId);
@@ -1013,12 +916,7 @@ describe('CartService', () => {
         );
 
         // Act: add item creates new cart
-        const newCart = await cartService.addItemToCart(
-          userId,
-          validProductId2,
-          3,
-          correlationId,
-        );
+        const newCart = await cartService.addItemToCart(userId, validProductId2, 3, correlationId);
 
         // Assert: new cart is separate
         expect(newCart.id).not.toBe(confirmedOrder.id);
@@ -1069,14 +967,9 @@ describe('CartService', () => {
         const afterTime = new Date();
 
         // Assert
-        expect(result.events[0].occurredAt.getTime()).toBeGreaterThanOrEqual(
-          beforeTime.getTime(),
-        );
-        expect(result.events[0].occurredAt.getTime()).toBeLessThanOrEqual(
-          afterTime.getTime(),
-        );
+        expect(result.events[0].occurredAt.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
+        expect(result.events[0].occurredAt.getTime()).toBeLessThanOrEqual(afterTime.getTime());
       });
     });
   });
 });
-

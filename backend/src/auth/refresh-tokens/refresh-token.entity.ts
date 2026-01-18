@@ -53,4 +53,3 @@ export interface CreateRefreshTokenData {
   /** When the token expires */
   expiresAt: Date;
 }
-
