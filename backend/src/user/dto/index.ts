@@ -6,5 +6,7 @@ export {
   ListUsersQueryDto,
   toUserDto,
   toUserSelfDto,
+  UserProfileDto,
+  toUserProfileDto,
 } from './user.dto';
 

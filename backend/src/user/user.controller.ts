@@ -9,10 +9,13 @@ import {
   HttpCode,
   HttpStatus,
   Headers,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ApiResponse } from '../common/api/api-response';
-import { CreateUserDto, UpdateUserDto, UserDto, UserSelfDto } from './dto';
+import { CreateUserDto, UpdateUserDto, UserDto, UserProfileDto } from './dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 /**
  * User Controller
@@ -50,14 +53,14 @@ export class UserController {
    * GET /api/v1/users/me
    *
    * Returns unmasked phone number for authenticated user.
-   * TODO: Requires authentication guard
+   * Requires authentication guard.
    */
   @Get('me')
+  @UseGuards(JwtAuthGuard)
   async getCurrentUser(
-    @Headers('x-user-id') userId: string, // TODO: Replace with @CurrentUser decorator
+    @CurrentUser('id') userId: string,
     @Headers('x-correlation-id') correlationId: string,
-  ): Promise<ApiResponse<UserSelfDto>> {
-    // TODO: Get userId from JWT token via guard
+  ): Promise<ApiResponse<UserProfileDto>> {
     const profile = await this.userService.getSelfProfile(userId, correlationId);
     return ApiResponse.success(profile, 'Profile retrieved successfully');
   }

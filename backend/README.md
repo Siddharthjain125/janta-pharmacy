@@ -158,6 +158,12 @@ REPOSITORY_TYPE=memory  // Use in-memory (auto-detected if no DATABASE_URL)
 
 Tests always use in-memory repositories for isolation.
 
+Guarantees:
+- Runtime uses Prisma repositories when `REPOSITORY_TYPE=prisma` or `DATABASE_URL` is set.
+- Tests always force in-memory repositories.
+- Selection is environment-based and explicit.
+- No feature flags or complex DI logic are used.
+
 ---
 
 ## API Endpoints

@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { USER_REPOSITORY } from './repositories/user-repository.interface';
 import { UserRepositoryProvider } from '../database/repository.providers';
+import { AuthModule } from '../auth/auth.module';
 
 /**
  * User Module
@@ -30,6 +31,7 @@ import { UserRepositoryProvider } from '../database/repository.providers';
  * - User types: For type safety across modules
  */
 @Module({
+  imports: [forwardRef(() => AuthModule)],
   controllers: [UserController],
   providers: [
     UserService,
