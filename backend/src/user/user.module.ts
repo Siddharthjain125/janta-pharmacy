@@ -6,6 +6,8 @@ import { UserRepositoryProvider } from '../database/repository.providers';
 import { AuthModule } from '../auth/auth.module';
 import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-case';
 import { UpdateMyUserProfileUseCase } from './use-cases/update-my-user-profile.use-case';
+import { GetMyUserContextUseCase } from './use-cases/get-my-user-context.use-case';
+import { AddressRepositoryProvider } from '../database/repository.providers';
 
 /**
  * User Module
@@ -38,8 +40,10 @@ import { UpdateMyUserProfileUseCase } from './use-cases/update-my-user-profile.u
   providers: [
     UserService,
     UserRepositoryProvider,
+    AddressRepositoryProvider,
     GetMyUserProfileUseCase,
     UpdateMyUserProfileUseCase,
+    GetMyUserContextUseCase,
   ],
   exports: [
     UserService,

@@ -20,11 +20,13 @@ import {
   UpdateMyUserProfileDto,
   UserDto,
   UserProfileDto,
+  UserContextDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-case';
 import { UpdateMyUserProfileUseCase } from './use-cases/update-my-user-profile.use-case';
+import { GetMyUserContextUseCase } from './use-cases/get-my-user-context.use-case';
 
 /**
  * User Controller
@@ -42,6 +44,7 @@ export class UserController {
     private readonly userService: UserService,
     private readonly getMyUserProfileUseCase: GetMyUserProfileUseCase,
     private readonly updateMyUserProfileUseCase: UpdateMyUserProfileUseCase,
+    private readonly getMyUserContextUseCase: GetMyUserContextUseCase,
   ) {}
 
   /**
@@ -73,6 +76,19 @@ export class UserController {
   async getCurrentUser(@CurrentUser('id') userId: string): Promise<ApiResponse<UserProfileDto>> {
     const profile = await this.getMyUserProfileUseCase.execute(userId);
     return ApiResponse.success(profile, 'Profile retrieved successfully');
+  }
+
+  /**
+   * Get current user's context (demo composition)
+   * GET /api/v1/users/me/context
+   */
+  @Get('me/context')
+  @UseGuards(JwtAuthGuard)
+  async getCurrentUserContext(
+    @CurrentUser('id') userId: string,
+  ): Promise<ApiResponse<UserContextDto>> {
+    const context = await this.getMyUserContextUseCase.execute(userId);
+    return ApiResponse.success(context, 'Context retrieved successfully');
   }
 
   /**

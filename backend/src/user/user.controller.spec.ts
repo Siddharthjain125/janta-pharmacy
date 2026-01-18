@@ -8,11 +8,13 @@ import { UserRole } from './domain/user-role';
 import { UserStatus } from './domain/user-status';
 import { GetMyUserProfileUseCase } from './use-cases/get-my-user-profile.use-case';
 import { UpdateMyUserProfileUseCase } from './use-cases/update-my-user-profile.use-case';
+import { GetMyUserContextUseCase } from './use-cases/get-my-user-context.use-case';
 
 describe('UserController - GET /users/me', () => {
   let controller: UserController;
   let getMyUserProfileUseCase: jest.Mocked<GetMyUserProfileUseCase>;
   let updateMyUserProfileUseCase: jest.Mocked<UpdateMyUserProfileUseCase>;
+  let getMyUserContextUseCase: jest.Mocked<GetMyUserContextUseCase>;
 
   beforeEach(() => {
     getMyUserProfileUseCase = {
@@ -23,10 +25,15 @@ describe('UserController - GET /users/me', () => {
       execute: jest.fn(),
     } as unknown as jest.Mocked<UpdateMyUserProfileUseCase>;
 
+    getMyUserContextUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<GetMyUserContextUseCase>;
+
     controller = new UserController(
       {} as UserService,
       getMyUserProfileUseCase,
       updateMyUserProfileUseCase,
+      getMyUserContextUseCase,
     );
   });
 
@@ -76,6 +83,7 @@ describe('UserController - PATCH /users/me', () => {
       {} as UserService,
       {} as GetMyUserProfileUseCase,
       updateMyUserProfileUseCase,
+      {} as GetMyUserContextUseCase,
     );
   });
 

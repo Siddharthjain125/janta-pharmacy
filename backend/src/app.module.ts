@@ -17,6 +17,7 @@ import { AuthModule } from './auth/auth.module';
 
 // Domain Modules
 import { UserModule } from './user/user.module';
+import { AddressModule } from './address/address.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { OrderModule } from './order/order.module';
 import { PrescriptionModule } from './prescription/prescription.module';
@@ -43,6 +44,7 @@ import { AuditService } from './audit/audit.service';
 
     // Domain Modules
     UserModule,
+    AddressModule,
     CatalogModule,
     OrderModule,
     PrescriptionModule,

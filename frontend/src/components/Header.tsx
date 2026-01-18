@@ -71,6 +71,12 @@ export function Header() {
           </Link>
           {isAuthenticated && (
             <>
+              <Link
+                href={ROUTES.PROFILE}
+                className="text-muted-foreground hover:text-foreground text-sm font-medium no-underline transition-colors"
+              >
+                Profile
+              </Link>
               <Link href={ROUTES.CART} className="relative text-muted-foreground hover:text-foreground no-underline transition-colors">
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemCount > 0 && (
