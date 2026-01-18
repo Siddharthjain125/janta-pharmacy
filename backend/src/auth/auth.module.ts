@@ -8,10 +8,13 @@ import { PASSWORD_HASHER } from './interfaces/password-hasher.interface';
 import { BcryptPasswordHasher } from './infrastructure/bcrypt-password-hasher';
 import { CREDENTIAL_REPOSITORY } from './credentials/credential-repository.interface';
 import { InMemoryCredentialRepository } from './credentials/in-memory-credential.repository';
+import { PrismaCredentialRepository } from './credentials/prisma-credential.repository';
 import { REFRESH_TOKEN_REPOSITORY } from './refresh-tokens/refresh-token-repository.interface';
 import { InMemoryRefreshTokenRepository } from './refresh-tokens/in-memory-refresh-token.repository';
+import { PrismaRefreshTokenRepository } from './refresh-tokens/prisma-refresh-token.repository';
 import { UserModule } from '../user/user.module';
 import { getJwtConfig } from './config/jwt.config';
+import { PrismaService, isPrismaEnabled } from '../database';
 
 /**
  * Auth Module
@@ -75,17 +78,28 @@ import { getJwtConfig } from './config/jwt.config';
       useClass: BcryptPasswordHasher,
     },
 
-    // Credential storage - in-memory for now
+    // Credential storage - prisma when enabled, otherwise in-memory
     {
       provide: CREDENTIAL_REPOSITORY,
-      useClass: InMemoryCredentialRepository,
+      useFactory: (prismaService: PrismaService) => {
+        if (isPrismaEnabled()) {
+          return new PrismaCredentialRepository(prismaService);
+        }
+        return new InMemoryCredentialRepository();
+      },
+      inject: [PrismaService],
     },
 
     // Refresh token storage - in-memory for now
-    // Replace with Redis or database implementation in production
     {
       provide: REFRESH_TOKEN_REPOSITORY,
-      useClass: InMemoryRefreshTokenRepository,
+      useFactory: (prismaService: PrismaService) => {
+        if (isPrismaEnabled()) {
+          return new PrismaRefreshTokenRepository(prismaService);
+        }
+        return new InMemoryRefreshTokenRepository();
+      },
+      inject: [PrismaService],
     },
 
     // Register guards globally (optional - can also use @UseGuards per controller)
