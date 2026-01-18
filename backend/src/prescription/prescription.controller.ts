@@ -1,99 +1,109 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Put,
-  Param,
-  Body,
-  Query,
   HttpCode,
   HttpStatus,
+  Param,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
-import { PrescriptionService } from './prescription.service';
 import { ApiResponse } from '../common/api/api-response';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '../auth/interfaces/auth-user.interface';
+import { PrescriptionDto, RejectPrescriptionDto, SubmitPrescriptionDto } from './dto';
+import { SubmitPrescriptionUseCase } from './use-cases/submit-prescription.use-case';
+import { GetMyPrescriptionsUseCase } from './use-cases/get-my-prescriptions.use-case';
+import { GetPendingPrescriptionsUseCase } from './use-cases/get-pending-prescriptions.use-case';
+import { ReviewPrescriptionUseCase } from './use-cases/review-prescription.use-case';
 
 /**
- * Prescription Controller
- *
- * Exposes REST endpoints for prescription management.
- * All endpoints return placeholder responses.
+ * Prescription Controller (User)
  */
 @Controller('prescriptions')
+@UseGuards(JwtAuthGuard)
 export class PrescriptionController {
-  constructor(private readonly prescriptionService: PrescriptionService) {}
+  constructor(
+    private readonly submitPrescriptionUseCase: SubmitPrescriptionUseCase,
+    private readonly getMyPrescriptionsUseCase: GetMyPrescriptionsUseCase,
+  ) {}
 
   /**
-   * Get all prescriptions with pagination
-   */
-  @Get()
-  async findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
-    @Query('status') status?: string,
-  ): Promise<ApiResponse<unknown>> {
-    const prescriptions = await this.prescriptionService.findAll(page, limit, status);
-    return ApiResponse.success(prescriptions, 'Prescriptions retrieved successfully');
-  }
-
-  /**
-   * Get prescription by ID
-   */
-  @Get(':id')
-  async findOne(@Param('id') id: string): Promise<ApiResponse<unknown>> {
-    const prescription = await this.prescriptionService.findById(id);
-    return ApiResponse.success(prescription, 'Prescription retrieved successfully');
-  }
-
-  /**
-   * Get prescriptions by user ID
-   */
-  @Get('user/:userId')
-  async findByUser(
-    @Param('userId') userId: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
-  ): Promise<ApiResponse<unknown>> {
-    const prescriptions = await this.prescriptionService.findByUserId(userId, page, limit);
-    return ApiResponse.success(prescriptions, 'User prescriptions retrieved successfully');
-  }
-
-  /**
-   * Upload a new prescription
+   * Submit a prescription
+   * POST /api/v1/prescriptions
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createPrescriptionDto: unknown): Promise<ApiResponse<unknown>> {
-    const prescription = await this.prescriptionService.create(createPrescriptionDto);
-    return ApiResponse.success(prescription, 'Prescription uploaded successfully');
+  async submit(
+    @CurrentUser('id') userId: string,
+    @Body() dto: SubmitPrescriptionDto,
+  ): Promise<ApiResponse<PrescriptionDto>> {
+    const prescription = await this.submitPrescriptionUseCase.execute(userId, dto);
+    return ApiResponse.success(prescription, 'Prescription submitted successfully');
   }
 
   /**
-   * Verify prescription (admin only)
+   * List my prescriptions
+   * GET /api/v1/prescriptions
    */
-  @Put(':id/verify')
-  async verify(@Param('id') id: string, @Body() verifyDto: unknown): Promise<ApiResponse<unknown>> {
-    const prescription = await this.prescriptionService.verify(id, verifyDto);
-    return ApiResponse.success(prescription, 'Prescription verified successfully');
+  @Get()
+  async getMyPrescriptions(
+    @CurrentUser('id') userId: string,
+  ): Promise<ApiResponse<PrescriptionDto[]>> {
+    const prescriptions = await this.getMyPrescriptionsUseCase.execute(userId);
+    return ApiResponse.success(prescriptions, 'Prescriptions retrieved successfully');
+  }
+}
+
+/**
+ * Prescription Admin Controller
+ */
+@Controller('admin/prescriptions')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
+export class PrescriptionAdminController {
+  constructor(
+    private readonly getPendingPrescriptionsUseCase: GetPendingPrescriptionsUseCase,
+    private readonly reviewPrescriptionUseCase: ReviewPrescriptionUseCase,
+  ) {}
+
+  /**
+   * List pending prescriptions
+   * GET /api/v1/admin/prescriptions/pending
+   */
+  @Get('pending')
+  async getPending(): Promise<ApiResponse<PrescriptionDto[]>> {
+    const prescriptions = await this.getPendingPrescriptionsUseCase.execute();
+    return ApiResponse.success(prescriptions, 'Pending prescriptions retrieved successfully');
   }
 
   /**
-   * Reject prescription (admin only)
+   * Approve prescription
+   * POST /api/v1/admin/prescriptions/:id/approve
    */
-  @Put(':id/reject')
-  async reject(@Param('id') id: string, @Body() rejectDto: unknown): Promise<ApiResponse<unknown>> {
-    const prescription = await this.prescriptionService.reject(id, rejectDto);
-    return ApiResponse.success(prescription, 'Prescription rejected');
+  @Post(':id/approve')
+  async approve(@Param('id') id: string): Promise<ApiResponse<PrescriptionDto>> {
+    const prescription = await this.reviewPrescriptionUseCase.execute(id, 'APPROVE');
+    return ApiResponse.success(prescription, 'Prescription approved successfully');
   }
 
   /**
-   * Link prescription to order
+   * Reject prescription
+   * POST /api/v1/admin/prescriptions/:id/reject
    */
-  @Post(':id/link-order')
-  async linkToOrder(
+  @Post(':id/reject')
+  async reject(
     @Param('id') id: string,
-    @Body() linkDto: unknown,
-  ): Promise<ApiResponse<unknown>> {
-    const result = await this.prescriptionService.linkToOrder(id, linkDto);
-    return ApiResponse.success(result, 'Prescription linked to order successfully');
+    @Body() dto: RejectPrescriptionDto,
+  ): Promise<ApiResponse<PrescriptionDto>> {
+    const prescription = await this.reviewPrescriptionUseCase.execute(
+      id,
+      'REJECT',
+      dto.rejectionReason,
+    );
+    return ApiResponse.success(prescription, 'Prescription rejected');
   }
 }

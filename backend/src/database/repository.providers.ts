@@ -12,6 +12,11 @@ import { ADDRESS_REPOSITORY } from '../address/repositories/address-repository.i
 import { InMemoryAddressRepository } from '../address/repositories/in-memory-address.repository';
 import { PrismaAddressRepository } from '../address/repositories/prisma-address.repository';
 
+// Prescription repositories
+import { PRESCRIPTION_REPOSITORY } from '../prescription/repositories/prescription-repository.interface';
+import { InMemoryPrescriptionRepository } from '../prescription/repositories/in-memory-prescription.repository';
+import { PrismaPrescriptionRepository } from '../prescription/repositories/prisma-prescription.repository';
+
 // Order repositories
 import { ORDER_REPOSITORY } from '../order/repositories/order-repository.interface';
 import { InMemoryOrderRepository } from '../order/repositories/in-memory-order.repository';
@@ -82,6 +87,21 @@ export const AddressRepositoryProvider: Provider = {
       return new PrismaAddressRepository(prismaService);
     }
     return new InMemoryAddressRepository();
+  },
+  inject: [PrismaService],
+};
+
+// =============================================================================
+// Prescription Repository Provider
+// =============================================================================
+
+export const PrescriptionRepositoryProvider: Provider = {
+  provide: PRESCRIPTION_REPOSITORY,
+  useFactory: (prismaService: PrismaService) => {
+    if (isPrismaEnabled()) {
+      return new PrismaPrescriptionRepository(prismaService);
+    }
+    return new InMemoryPrescriptionRepository();
   },
   inject: [PrismaService],
 };

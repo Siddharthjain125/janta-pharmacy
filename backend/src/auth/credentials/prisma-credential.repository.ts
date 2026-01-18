@@ -90,7 +90,13 @@ export class PrismaCredentialRepository implements ICredentialRepository {
     return credential !== null;
   }
 
-  private toDomain(credential: { id: string; userId: string; passwordHash: string; createdAt: Date; updatedAt: Date }): Credential {
+  private toDomain(credential: {
+    id: string;
+    userId: string;
+    passwordHash: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }): Credential {
     return {
       id: credential.id,
       userId: credential.userId,

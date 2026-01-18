@@ -37,6 +37,7 @@ model User {
   orders      Order[]
   credentials Credential[]
   addresses   Address[]
+  prescriptions Prescription[]
 
   @@index([phoneNumber])
   @@index([email])
@@ -95,6 +96,35 @@ model RefreshToken {
   @@index([expiresAt])
   @@index([revokedAt])
   @@map("refresh_tokens")
+}
+
+// =============================================================================
+// PRESCRIPTION DOMAIN
+// =============================================================================
+
+/// Prescription submitted by a user and reviewed by admin
+model Prescription {
+  id              String             @id @default(uuid())
+  userId          String             @map("user_id")
+  fileReference   String             @map("file_reference")
+  status          PrescriptionStatus @default(PENDING)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  reviewedAt      DateTime?          @map("reviewed_at")
+  rejectionReason String?            @map("rejection_reason")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("prescriptions")
+}
+
+enum PrescriptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // =============================================================================
