@@ -20,6 +20,9 @@ export const ROUTES = {
   PROFILE: '/profile',
   PROFILE_ADDRESSES: '/profile/addresses',
   PROFILE_CONTEXT: '/profile/context',
+  PRESCRIPTIONS: '/prescriptions',
+  PRESCRIPTION_NEW: '/prescriptions/new',
+  ADMIN_PRESCRIPTIONS: '/admin/prescriptions',
 } as const;
 
 // Local storage keys

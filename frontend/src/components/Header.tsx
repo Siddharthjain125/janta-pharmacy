@@ -19,6 +19,7 @@ import { ShoppingCart } from 'lucide-react';
 export function Header() {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
   const [cartItemCount, setCartItemCount] = useState(0);
+  const isAdmin = Boolean(user?.roles?.includes('ADMIN'));
 
   // Fetch cart count when authenticated
   useEffect(() => {
@@ -77,6 +78,20 @@ export function Header() {
               >
                 Profile
               </Link>
+              <Link
+                href={ROUTES.PRESCRIPTIONS}
+                className="text-muted-foreground hover:text-foreground text-sm font-medium no-underline transition-colors"
+              >
+                Prescriptions
+              </Link>
+              {isAdmin && (
+                <Link
+                  href={ROUTES.ADMIN_PRESCRIPTIONS}
+                  className="text-muted-foreground hover:text-foreground text-sm font-medium no-underline transition-colors"
+                >
+                  Admin Review
+                </Link>
+              )}
               <Link href={ROUTES.CART} className="relative text-muted-foreground hover:text-foreground no-underline transition-colors">
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemCount > 0 && (
