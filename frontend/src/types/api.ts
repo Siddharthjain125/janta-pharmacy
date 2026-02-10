@@ -337,8 +337,47 @@ export interface OrderDetailItem {
 }
 
 /**
+ * Compliance status for order (ADR-0055).
+ * Only present when order has prescription-required items.
+ * Backend is the source of truth; UI only displays.
+ */
+export type ComplianceStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+/**
+ * Linked prescription summary (when backend includes it on order detail).
+ */
+export interface OrderLinkedPrescription {
+  id: string;
+  status: string;
+  rejectionReason?: string | null;
+}
+
+/**
+ * Linked consultation summary (when backend includes it on order detail).
+ */
+export interface OrderLinkedConsultation {
+  id: string;
+  status: string;
+}
+
+/**
+ * Compliance info on order detail (optional; from backend when available).
+ */
+export interface OrderComplianceInfo {
+  /** Whether this order contains prescription-required items */
+  requiresPrescription: boolean;
+  /** Derived compliance status — not an order state */
+  status: ComplianceStatus;
+  /** Linked prescriptions (if any) */
+  prescriptions?: OrderLinkedPrescription[];
+  /** Linked consultation requests (if any) */
+  consultations?: OrderLinkedConsultation[];
+}
+
+/**
  * Full order detail
- * Aligned with backend OrderDetailDto
+ * Aligned with backend OrderDetailDto.
+ * compliance is optional; when present, UI shows compliance awareness section.
  */
 export interface OrderDetail {
   orderId: string;
@@ -348,6 +387,8 @@ export interface OrderDetail {
   total: CartPrice;
   createdAt: string;
   updatedAt: string;
+  /** Set when backend includes compliance for this order (ADR-0055) */
+  compliance?: OrderComplianceInfo;
 }
 
 /**

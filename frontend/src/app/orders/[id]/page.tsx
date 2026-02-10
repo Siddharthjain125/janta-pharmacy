@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
 import { fetchOrderById, cancelOrder, canCancelOrder } from '@/lib/order-service';
-import type { OrderDetail } from '@/types/api';
+import type { OrderDetail, ComplianceStatus } from '@/types/api';
 
 /**
  * Order Detail Page
@@ -197,6 +197,19 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
+            {/* Compliance Status (only when order requires prescription and backend provides compliance) */}
+            {order.compliance?.requiresPrescription && (
+              <div style={styles.card}>
+                <h2 style={styles.sectionTitle}>Medical approval</h2>
+                <ComplianceStatusBlock
+                  status={order.compliance.status}
+                  state={order.state}
+                  prescriptions={order.compliance.prescriptions}
+                  consultations={order.compliance.consultations}
+                />
+              </div>
+            )}
+
             {/* Order Items */}
             <div style={styles.card}>
               <h2 style={styles.sectionTitle}>Items ({order.itemCount})</h2>
@@ -268,6 +281,104 @@ export default function OrderDetailPage() {
         )}
       </div>
     </ProtectedRoute>
+  );
+}
+
+/**
+ * Compliance Status Block
+ * Displays backend-provided compliance state. No logic — display only.
+ */
+interface ComplianceStatusBlockProps {
+  status: ComplianceStatus;
+  state: string;
+  prescriptions?: { id: string; status: string; rejectionReason?: string | null }[];
+  consultations?: { id: string; status: string }[];
+}
+
+function ComplianceStatusBlock({
+  status,
+  state,
+  prescriptions = [],
+  consultations = [],
+}: ComplianceStatusBlockProps) {
+  const isPaid = ['PAID', 'SHIPPED', 'DELIVERED'].includes(state);
+
+  const statusMessage: Record<ComplianceStatus, string> = {
+    PENDING: 'Waiting for prescription or doctor approval',
+    APPROVED: 'Approved for fulfilment',
+    REJECTED: 'Approval rejected — action required',
+  };
+
+  return (
+    <div style={styles.complianceBlock}>
+      <p style={styles.complianceMessage}>{statusMessage[status]}</p>
+
+      {status === 'PENDING' && (
+        <p style={styles.complianceSubtext}>
+          Your order is paid but waiting for medical approval. Fulfilment will start after approval.
+        </p>
+      )}
+
+      {status === 'REJECTED' && (
+        <div style={styles.complianceActions}>
+          <p style={styles.complianceActionsIntro}>You can:</p>
+          <ul style={styles.complianceActionsList}>
+            <li>
+              <Link href={ROUTES.PRESCRIPTION_NEW} style={styles.complianceActionLink}>
+                Upload prescription
+              </Link>
+            </li>
+            <li>
+              <Link href={ROUTES.PRESCRIPTIONS} style={styles.complianceActionLink}>
+                Request doctor consultation
+              </Link>
+            </li>
+            {isPaid && (
+              <li>
+                <span style={styles.complianceActionMuted}>
+                  Request refund (contact support if already paid)
+                </span>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      {prescriptions.length > 0 && (
+        <div style={styles.complianceSubsection}>
+          <h3 style={styles.complianceSubtitle}>Prescriptions</h3>
+          <ul style={styles.complianceList}>
+            {prescriptions.map((p) => (
+              <li key={p.id} style={styles.complianceListItem}>
+                <span>Status: {p.status}</span>
+                {p.rejectionReason && (
+                  <span style={styles.rejectionReason}> — {p.rejectionReason}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Link href={ROUTES.PRESCRIPTIONS} style={styles.complianceLink}>
+            View all prescriptions →
+          </Link>
+        </div>
+      )}
+
+      {consultations.length > 0 && (
+        <div style={styles.complianceSubsection}>
+          <h3 style={styles.complianceSubtitle}>Doctor consultation</h3>
+          <ul style={styles.complianceList}>
+            {consultations.map((c) => (
+              <li key={c.id} style={styles.complianceListItem}>
+                <span>Status: {c.status}</span>
+                {c.status === 'PENDING' && (
+                  <span style={styles.complianceSubtext}> — A doctor will contact you on your preferred number.</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -519,5 +630,72 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     color: '#6b7280',
     marginTop: '0.25rem',
+  },
+  // Compliance section (ADR-0055 — display only, no logic)
+  complianceBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+  },
+  complianceMessage: {
+    fontSize: '0.9375rem',
+    fontWeight: '600',
+    color: '#374151',
+    margin: 0,
+  },
+  complianceSubtext: {
+    fontSize: '0.875rem',
+    color: '#6b7280',
+    margin: 0,
+  },
+  complianceActions: {
+    marginTop: '0.5rem',
+  },
+  complianceActionsIntro: {
+    fontSize: '0.875rem',
+    color: '#374151',
+    margin: '0 0 0.5rem 0',
+  },
+  complianceActionsList: {
+    margin: 0,
+    paddingLeft: '1.25rem',
+    fontSize: '0.875rem',
+    color: '#374151',
+  },
+  complianceActionLink: {
+    color: '#2563eb',
+    textDecoration: 'none',
+  },
+  complianceActionMuted: {
+    color: '#6b7280',
+    fontStyle: 'italic',
+  },
+  complianceSubsection: {
+    marginTop: '1rem',
+    paddingTop: '1rem',
+    borderTop: '1px solid #e5e7eb',
+  },
+  complianceSubtitle: {
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    color: '#374151',
+    margin: '0 0 0.5rem 0',
+  },
+  complianceList: {
+    margin: '0 0 0.5rem 0',
+    paddingLeft: '1.25rem',
+    fontSize: '0.875rem',
+    color: '#374151',
+  },
+  complianceListItem: {
+    marginBottom: '0.25rem',
+  },
+  rejectionReason: {
+    color: '#dc2626',
+  },
+  complianceLink: {
+    fontSize: '0.875rem',
+    color: '#2563eb',
+    textDecoration: 'none',
   },
 };

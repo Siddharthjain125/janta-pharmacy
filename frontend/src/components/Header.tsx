@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
+import { UserRole } from '@/types/api';
 import { getCart } from '@/lib/cart-service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,7 @@ import { ShoppingCart } from 'lucide-react';
 export function Header() {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
   const [cartItemCount, setCartItemCount] = useState(0);
-  const isAdmin = Boolean(user?.roles?.includes('ADMIN'));
+  const isAdmin = Boolean(user?.roles?.includes(UserRole.ADMIN));
 
   // Fetch cart count when authenticated
   useEffect(() => {
