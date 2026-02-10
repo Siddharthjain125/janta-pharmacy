@@ -10,6 +10,7 @@ import {
   DomainEventCollector,
   type OrderCancelledEvent,
 } from './domain';
+import { OrderComplianceService } from '../compliance/order-compliance.service';
 import {
   OrderNotFoundException,
   UnauthorizedOrderAccessException,
@@ -18,6 +19,7 @@ import {
   OrderCannotBeCancelledException,
   OrderNotConfirmedException,
   OrderAlreadyConfirmedException,
+  OrderComplianceNotApprovedException,
 } from './exceptions/order.exceptions';
 import { logWithCorrelation } from '../common/logging/logger';
 
@@ -50,6 +52,7 @@ export class OrderService {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: IOrderRepository,
+    private readonly orderComplianceService: OrderComplianceService,
   ) {}
 
   // ============================================================
@@ -288,6 +291,52 @@ export class OrderService {
       previousState,
       events: eventCollector.getEventsOfType<OrderCancelledEvent>('ORDER_CANCELLED'),
     };
+  }
+
+  /**
+   * Ship an order (fulfilment path).
+   * Transition: PAID → SHIPPED.
+   * ADR-0055: Fulfilment is blocked until compliance approval (prescription or consultation).
+   * Payment is never blocked by compliance.
+   */
+  async shipOrder(orderId: string, userId: string, correlationId: string): Promise<OrderDto> {
+    const order = await this.getOrderById(orderId, userId, correlationId);
+    const previousState = order.status;
+    const targetState = OrderStatus.SHIPPED;
+
+    if (order.status !== OrderStatus.PAID) {
+      throw new InvalidOrderStateTransitionException(
+        previousState,
+        targetState,
+        [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+      );
+    }
+
+    const canFulfil = await this.orderComplianceService.canFulfil(orderId);
+    if (!canFulfil) {
+      throw new OrderComplianceNotApprovedException(orderId);
+    }
+
+    this.validateAndLogTransition(
+      correlationId,
+      orderId,
+      userId,
+      previousState,
+      targetState,
+      'SHIP',
+    );
+
+    const updatedOrder = await this.orderRepository.updateStatus(orderId, targetState);
+
+    this.logStateTransition(correlationId, {
+      orderId,
+      userId,
+      previousState,
+      nextState: targetState,
+      action: 'SHIP',
+    });
+
+    return updatedOrder;
   }
 
   // ============================================================

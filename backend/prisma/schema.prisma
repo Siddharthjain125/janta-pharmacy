@@ -114,6 +114,7 @@ model Prescription {
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderLinks OrderPrescriptionLink[]
 
   @@index([userId])
   @@index([status])
@@ -122,6 +123,33 @@ model Prescription {
 }
 
 enum PrescriptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// =============================================================================
+// CONSULTATION DOMAIN (compliance path B - ADR-0055)
+// =============================================================================
+
+/// Doctor consultation request - separate aggregate from Prescription
+/// Lifecycle: PENDING → APPROVED / REJECTED (equivalent gate for fulfilment)
+model ConsultationRequest {
+  id            String                  @id @default(uuid())
+  userId        String                  @map("user_id")
+  status        ConsultationStatus      @default(PENDING)
+  createdAt     DateTime                @default(now()) @map("created_at")
+  reviewedAt    DateTime?               @map("reviewed_at")
+  rejectionReason String?               @map("rejection_reason")
+
+  orderLinks OrderConsultationLink[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("consultation_requests")
+}
+
+enum ConsultationStatus {
   PENDING
   APPROVED
   REJECTED
@@ -158,6 +186,7 @@ model Address {
 /// Order representing a customer's purchase
 /// Status follows a state machine: DRAFT -> CREATED -> CONFIRMED -> PAID -> SHIPPED -> DELIVERED
 /// Can be CANCELLED from most non-terminal states
+/// Order references compliance artifacts (prescriptions, consultations); compliance does not reference order.
 model Order {
   id        String      @id @default(uuid())
   userId    String      @map("user_id")
@@ -169,11 +198,39 @@ model Order {
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items OrderItem[]
 
+  // Compliance links (order references artifacts; ADR-0055)
+  prescriptionLinks    OrderPrescriptionLink[]
+  consultationLinks   OrderConsultationLink[]
+
   @@index([userId])
   @@index([status])
   @@index([userId, status])
   @@index([createdAt])
   @@map("orders")
+}
+
+/// Links an order to a prescription (order references compliance artifact)
+model OrderPrescriptionLink {
+  orderId       String @map("order_id")
+  prescriptionId String @map("prescription_id")
+
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@id([orderId, prescriptionId])
+  @@map("order_prescription_links")
+}
+
+/// Links an order to a consultation request (order references compliance artifact)
+model OrderConsultationLink {
+  orderId              String @map("order_id")
+  consultationRequestId String @map("consultation_request_id")
+
+  order               Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  consultationRequest ConsultationRequest @relation(fields: [consultationRequestId], references: [id], onDelete: Cascade)
+
+  @@id([orderId, consultationRequestId])
+  @@map("order_consultation_links")
 }
 
 /// Order status representing the lifecycle state

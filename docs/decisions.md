@@ -13,6 +13,7 @@
 - [ADR-002: Git Branching Strategy](#adr-002-git-branching-strategy)
 - [ADR-003: Branch Protection Rules](#adr-003-branch-protection-rules)
 - [ADR-004: Monorepo Structure](#adr-004-monorepo-structure)
+- [ADR-0055: Prescription Enforcement and Payment Timing](#adr-0055-prescription-enforcement-and-payment-timing)
 - [Pending Decisions](#pending-decisions)
 
 ---
@@ -40,6 +41,7 @@ This document records significant architectural decisions made for the Janta Pha
 | ADR-006 | Order State Machine Pattern | Accepted | 2025-12 |
 | ADR-007 | Cart as Draft Order | Accepted | 2026-01 |
 | ADR-008 | Deferred Database Integration | Accepted | 2026-01 |
+| ADR-0055 | Prescription Enforcement and Payment Timing | Accepted | 2026-02 |
 
 ---
 
@@ -552,6 +554,160 @@ Swap via dependency injection when ready.
 - Clear interface contracts
 - Sample data seeding for development
 - Explicit plan for database phase
+
+---
+
+# ADR-0055: Prescription Enforcement and Payment Timing
+
+## Status
+Accepted
+
+## Date
+2026-02-10
+
+## Context
+
+Janta Pharmacy supports regulated medicines that require medical approval before fulfilment.
+
+By Phase 5:
+- `Prescription` exists as a separate aggregate with lifecycle:
+  - PENDING → APPROVED / REJECTED
+- An admin review process exists
+- Orders can be placed and confirmed
+- Payments are planned for Phase 6
+
+The open design question for Phase 5.5 is:
+
+> **At what point should prescriptions (or equivalent medical review) block the order flow — checkout, payment, or fulfilment?**
+
+Additionally, the business requires:
+- Minimal customer drop-off
+- Support for customers who do not already have a prescription
+- A clear, auditable compliance boundary
+
+---
+
+## Decision
+
+### 1. Payment is allowed **before** medical approval
+
+All customers may proceed to payment **after checkout**, regardless of:
+- prescription status
+- doctor consultation status
+
+Payment is treated as a signal of **intent**, not compliance.
+
+---
+
+### 2. Fulfilment is strictly blocked until compliance approval
+
+An order **must not proceed to fulfilment** unless **at least one** of the following is true:
+
+- A linked prescription is in `APPROVED` state  
+- A linked doctor consultation request is in `APPROVED` state  
+
+This rule is absolute and non-negotiable.
+
+---
+
+### 3. Two equivalent compliance paths are supported
+
+Compliance approval may come from either:
+
+#### Path A — User-provided prescription
+- User uploads prescription
+- Admin reviews and approves/rejects
+
+#### Path B — Doctor consultation
+- User requests doctor consultation
+- Admin/doctor contacts user
+- Order is approved or rejected after consultation
+
+Both paths are treated as **equivalent compliance gates** for fulfilment.
+
+---
+
+### 4. Rejection does not cancel the order automatically
+
+If compliance is rejected:
+- Order remains in `CONFIRMED` state
+- Fulfilment remains blocked
+- Customer is offered options:
+  - Upload a valid prescription
+  - Request doctor consultation
+  - Request a refund
+
+Refunds are considered a **normal outcome**, not an error condition.
+
+---
+
+## Consequences
+
+### Positive
+- No checkout or payment drop-off due to pending approval
+- Simple and consistent payment flow
+- Clear compliance boundary at fulfilment
+- Matches real-world pharmacy workflows
+- Avoids order state explosion
+- Keeps prescription and payment domains decoupled
+
+### Negative
+- Requires refund handling as a first-class concept
+- Orders may exist in PAID but unfulfilled state
+- Operational processes must handle pending approvals
+
+These trade-offs are acceptable and intentional.
+
+---
+
+## Alternatives Considered
+
+### A. Block checkout until prescription approval
+Rejected due to:
+- poor UX
+- high abandonment
+- premature medical gating
+
+### B. Block payment until prescription approval
+Rejected due to:
+- inconsistent customer experience
+- conditional payment logic
+- unnecessary coupling between compliance and payments
+
+### C. Allow fulfilment before approval
+Rejected due to:
+- regulatory risk
+- compliance violations
+- audit and legal exposure
+
+---
+
+## Implementation Notes (Non-Binding)
+
+- Order lifecycle remains unchanged:
+  - DRAFT → CONFIRMED → PAID
+- Compliance status is treated as **derived metadata**, not a core order state
+- Fulfilment services must enforce compliance checks
+- Payment services must support refunds as a normal flow
+
+---
+
+## Follow-Up Decisions
+
+This ADR enables Phase 6 design work on:
+- payment initiation
+- refunds
+- idempotent webhooks
+- fulfilment orchestration
+
+No further changes to prescription enforcement are expected before Phase 6.
+
+---
+
+## Related Decisions
+- ADR-0001: Modular Monolith Architecture
+- ADR-0012: Order State Machine Design
+- ADR-0048: Prescription Aggregate Introduction
 
 ---
 

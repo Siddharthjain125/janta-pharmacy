@@ -249,3 +249,27 @@ export class PrescriptionRequiredException extends BusinessException {
     this.prescriptionProducts = prescriptionProducts;
   }
 }
+
+// ============================================================
+// Fulfilment / Compliance Gate (ADR-0055)
+// ============================================================
+
+/**
+ * Order compliance not approved exception
+ *
+ * Thrown when fulfilment (e.g. ship) is attempted but the order has not passed
+ * the compliance gate (prescription or consultation approval). ADR-0055: fulfilment
+ * is blocked until at least one linked prescription or consultation is APPROVED.
+ */
+export class OrderComplianceNotApprovedException extends BusinessException {
+  public readonly orderId: string;
+
+  constructor(orderId: string) {
+    super(
+      'ORDER_COMPLIANCE_NOT_APPROVED',
+      `Order '${orderId}' cannot be fulfilled: compliance approval (prescription or consultation) is required.`,
+      HttpStatus.CONFLICT,
+    );
+    this.orderId = orderId;
+  }
+}

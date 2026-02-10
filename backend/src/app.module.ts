@@ -21,6 +21,8 @@ import { AddressModule } from './address/address.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { OrderModule } from './order/order.module';
 import { PrescriptionModule } from './prescription/prescription.module';
+import { ConsultationModule } from './consultation/consultation.module';
+import { ComplianceModule } from './compliance/compliance.module';
 
 // Support Services
 import { PaymentService } from './payment/payment.service';
@@ -48,6 +50,8 @@ import { AuditService } from './audit/audit.service';
     CatalogModule,
     OrderModule,
     PrescriptionModule,
+    ConsultationModule,
+    ComplianceModule,
   ],
   controllers: [HealthController],
   providers: [

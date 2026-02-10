@@ -7,6 +7,8 @@ import {
   OrderTerminalStateException,
   OrderCannotBeCancelledException,
 } from './exceptions/order.exceptions';
+import { OrderComplianceService } from '../compliance/order-compliance.service';
+import { ComplianceStatus } from '../compliance/compliance-status';
 
 /**
  * OrderService Tests - Cancel Order
@@ -31,9 +33,14 @@ describe('OrderService - cancelOrder', () => {
   const userId = 'user-123';
   const otherUserId = 'user-456';
 
+  const mockComplianceService = {
+    canFulfil: () => Promise.resolve(true),
+    getComplianceStatus: () => Promise.resolve(ComplianceStatus.APPROVED),
+  } as unknown as OrderComplianceService;
+
   beforeEach(() => {
     orderRepository = new InMemoryOrderRepository();
-    orderService = new OrderService(orderRepository);
+    orderService = new OrderService(orderRepository, mockComplianceService);
   });
 
   afterEach(() => {

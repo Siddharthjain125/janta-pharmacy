@@ -16,8 +16,9 @@ An **architecture-first, risk-driven** development approach. Complexity is valid
 | Phase 2 | Catalog Browsing | ✅ Complete |
 | Phase 3 | Order Completion | ✅ Complete |
 | Phase 3+ | UX & Auth Corrections | ✅ Complete |
-| Phase 4 | User Profile & Persistence | ⏳ Planned |
-| Phase 5 | Prescription Workflow | ⏳ Planned |
+| Phase 4 | User Profile & Persistence | ✅ Complete |
+| Phase 5 | Prescription Workflow | ✅ Complete |
+| Phase 5.5 | Compliance Enforcement | ✅ Complete |
 | Phase 6 | Payments & Notifications | ⏳ Planned |
 
 ---
@@ -32,8 +33,11 @@ An **architecture-first, risk-driven** development approach. Complexity is valid
 | **2** | Product catalog with search, filtering, pagination, category modeling |
 | **3** | Order lifecycle: cart → checkout → history → cancel |
 | **3+** | UX refinements, auth flow fixes, shadcn/ui components |
+| **4** | User profile read & mutation APIs, address aggregate, PostgreSQL + Prisma, Prisma and in-memory repositories, user context composition, frontend profile and addresses pages |
+| **5** | Prescription aggregate, admin review, order–prescription/consultation links, compliance gate at fulfilment |
+| **5.5** | Compliance enforcement: fulfilment gated by prescription/consultation approval; payment explicitly allowed before approval (ADR-0055) |
 
-**Current State:** Users can browse the catalog (public), add items to cart, place orders, view history, and cancel eligible orders. Login is required only for cart/checkout operations.
+**Current State:** Users can browse the catalog (public), add items to cart, place orders, view history, and cancel eligible orders. Profile and address management are available. Fulfilment (ship) is blocked until compliance approval; payment is allowed after confirmation regardless of prescription status. Login is required for cart/checkout and profile operations.
 
 ---
 
@@ -213,34 +217,48 @@ The cart is an Order in `DRAFT` state — not a separate entity.
 
 ---
 
-## Phase 4: User Profile & Persistence ⏳
+## Phase 4: User Profile & Persistence ✅
 
 **Goal:** Add profile features and transition to persistent storage.
 
-### Planned
-- [ ] User profile endpoints (`GET/PATCH /users/me`)
-- [ ] Address management (list, add, update, delete)
-- [ ] PostgreSQL + Prisma integration
-- [ ] Repository implementations for all entities
-- [ ] Data seeding strategy
-
-### Why Deferred
-Domain model must stabilize before persistence commitment. In-memory repositories are sufficient for domain validation.
+### Completed
+- [x] User profile read & mutation APIs (`GET/PATCH /users/me`)
+- [x] Address management as a separate aggregate (list, add, update, delete)
+- [x] PostgreSQL + Prisma persistence
+- [x] Repository implementations (Prisma + in-memory) for all entities
+- [x] Read-only user context composition
+- [x] Frontend demo pages for profile and addresses
 
 ---
 
-## Phase 5: Prescription Workflow ⏳
+## Phase 5: Prescription Workflow ✅
 
 **Goal:** Support regulated medicine workflows.
 
-### Planned
-- [ ] `Prescription` entity with lifecycle (PENDING → APPROVED/REJECTED)
-- [ ] Upload flow with file storage
-- [ ] Admin review interface
-- [ ] Prescription-order linkage
+### Completed
+- [x] `Prescription` entity with lifecycle (PENDING → APPROVED/REJECTED)
+- [x] Admin review APIs (approve/reject)
+- [x] Order–prescription and order–consultation link aggregates (order references compliance artifacts)
+- [x] Consultation request aggregate (lifecycle PENDING → APPROVED/REJECTED)
+- [x] File storage intentionally deferred; frontend UI planned next
 
-### Why Deferred
-Requires file storage infrastructure and compliance review. Core order flow must be complete first (✅ done).
+---
+
+## Phase 5.5: Compliance Enforcement ✅
+
+**Goal:** Turn ADR-0055 into enforceable behaviour without changing the order state machine or blocking payment.
+
+### Completed
+- [x] **Compliance gate:** `OrderComplianceService` evaluates whether an order may proceed to fulfilment (`canFulfil`, `getComplianceStatus`).
+- [x] **Rules:** Order with no prescription-required items → APPROVED. Order with prescription-required items → APPROVED if at least one linked prescription or consultation is APPROVED; REJECTED if explicitly rejected; otherwise PENDING.
+- [x] **Fulfilment guard:** Ship (PAID → SHIPPED) calls the compliance gate; fulfilment is blocked with a domain error if not approved.
+- [x] **Payment boundary:** Payment logic does not check prescription or consultation status. Payment is allowed after order confirmation regardless of compliance (documented in `PaymentService` and ADR-0055).
+- [x] **Rejection and recovery:** Order remains CONFIRMED after compliance rejection; compliance status can change (e.g. new prescription approved) and fulfilment then allowed.
+
+### Design Constraints (unchanged)
+- Order state machine unchanged.
+- Prescription and consultation remain separate aggregates.
+- Compliance is derived, not a new order state.
 
 ---
 

@@ -212,6 +212,24 @@ export class OrderController {
   }
 
   /**
+   * Ship an order (fulfilment)
+   * POST /api/v1/orders/:id/ship
+   *
+   * Transitions: PAID → SHIPPED.
+   * ADR-0055: Blocked until compliance approval (prescription or consultation).
+   */
+  @Post(':id/ship')
+  @HttpCode(HttpStatus.OK)
+  async shipOrder(
+    @Param('id') orderId: string,
+    @CurrentUser() user: AuthUser,
+    @Headers('x-correlation-id') correlationId: string,
+  ): Promise<ApiResponse<OrderDto>> {
+    const order = await this.orderService.shipOrder(orderId, user.id, correlationId);
+    return ApiResponse.success(order, 'Order shipped successfully');
+  }
+
+  /**
    * Cancel an order
    * POST /api/v1/orders/:id/cancel
    *

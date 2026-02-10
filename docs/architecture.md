@@ -76,8 +76,18 @@ Each module owns its domain, data, and interfaces.
 | User | User profiles, roles | ✅ Complete |
 | Catalog | Products, categories, search | ✅ Complete |
 | Order | Orders, cart, lifecycle | ✅ Complete |
-| Prescription | Upload, review (future) | ⏳ Planned |
+| Prescription | Upload, review, admin APIs | ✅ Complete |
+| Consultation | Consultation request aggregate (compliance path B) | ✅ Complete |
+| Compliance | Fulfilment gate (ADR-0055) | ✅ Complete |
 | Payment | Payment processing (future) | ⏳ Planned |
+
+### Compliance Gate and Payment Boundary (ADR-0055)
+
+Fulfilment (e.g. shipping) is **gated** by a dedicated compliance evaluation; payment is **not** gated by compliance.
+
+- **Compliance gate:** `OrderComplianceService` (Compliance module) determines whether an order may proceed to fulfilment. Orders with no prescription-required items are always approved. Orders with prescription-required items require at least one linked prescription or consultation request to be APPROVED before fulfilment is allowed.
+- **Fulfilment path:** The ship (PAID → SHIPPED) command calls the compliance gate; if not approved, a domain error is returned and the transition is blocked.
+- **Payment boundary:** Payment logic does not import or depend on compliance. Payment is allowed after order confirmation regardless of prescription or consultation status. See [ADR-0055](./decisions.md#adr-0055-prescription-enforcement-and-payment-timing).
 
 ### Module Structure Pattern
 

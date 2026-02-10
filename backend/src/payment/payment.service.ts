@@ -7,6 +7,10 @@ import { Injectable } from '@nestjs/common';
  * This is a cross-cutting service available to other modules.
  * Currently contains placeholder implementations.
  *
+ * ADR-0055 boundary: Payment is allowed after order confirmation regardless of
+ * prescription or consultation status. Do NOT import compliance logic here.
+ * Fulfilment (not payment) is gated by compliance.
+ *
  * Future integration points:
  * - Payment gateway (Stripe, Razorpay, etc.)
  * - Refund processing
