@@ -13,6 +13,7 @@ import {
   UnauthorizedOrderAccessException,
 } from './exceptions/order.exceptions';
 import { logWithCorrelation } from '../common/logging/logger';
+import { OrderComplianceService } from '../compliance/order-compliance.service';
 
 /**
  * Order Query Service
@@ -33,6 +34,7 @@ export class OrderQueryService {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: IOrderRepository,
+    private readonly orderComplianceService: OrderComplianceService,
   ) {}
 
   // ============================================================
@@ -78,6 +80,10 @@ export class OrderQueryService {
    *
    * Returns full order details including all items.
    * Enforces ownership - users can only view their own orders.
+   *
+   * When the order contains prescription-required items, the response includes
+   * a read-only compliance field (ADR-0055). Compliance is derived, not persisted
+   * on the order; it is for UI display only.
    *
    * @param orderId - The order to fetch
    * @param userId - The requesting user (for ownership check)
@@ -127,6 +133,19 @@ export class OrderQueryService {
       });
     }
 
-    return toOrderDetailDto(order);
+    const detail = toOrderDetailDto(order);
+
+    // Read-only compliance info for UI (ADR-0055). Omit when order does not require prescription.
+    const complianceInfo = await this.orderComplianceService.getComplianceInfo(orderId);
+    if (complianceInfo) {
+      detail.compliance = {
+        requiresPrescription: true,
+        status: complianceInfo.status,
+        prescriptions: complianceInfo.prescriptions,
+        consultations: complianceInfo.consultations,
+      };
+    }
+
+    return detail;
   }
 }

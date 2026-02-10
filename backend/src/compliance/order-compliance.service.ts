@@ -18,6 +18,17 @@ import { ConsultationStatus } from '../consultation/domain';
 import { ComplianceStatus } from './compliance-status';
 
 /**
+ * Read-only compliance info for order detail API.
+ * Returned by getComplianceInfo when order requires prescription.
+ */
+export interface ComplianceInfoResult {
+  requiresPrescription: true;
+  status: ComplianceStatus;
+  prescriptions?: { id: string; status: string; rejectionReason: string | null }[];
+  consultations?: { id: string; status: string }[];
+}
+
+/**
  * Order Compliance Service (Compliance Gate)
  *
  * Centralized evaluation of whether an order may proceed to fulfilment.
@@ -55,6 +66,71 @@ export class OrderComplianceService {
   async canFulfil(orderId: string): Promise<boolean> {
     const status = await this.getComplianceStatus(orderId);
     return status === ComplianceStatus.APPROVED;
+  }
+
+  /**
+   * Read-only compliance info for order detail API (ADR-0055).
+   * Returns null when order does not require prescription; otherwise full info.
+   * Used by GET /orders/:id to expose compliance for UI display only.
+   */
+  async getComplianceInfo(orderId: string): Promise<ComplianceInfoResult | null> {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order || !order.items.length) {
+      return null;
+    }
+
+    const productIds = order.items.map((item) => item.productId);
+    const requiresPrescription = await this.orderHasPrescriptionRequiredItems(productIds);
+    if (!requiresPrescription) {
+      return null;
+    }
+
+    const [prescriptionIds, consultationIds] = await Promise.all([
+      this.prescriptionLinkRepository.findPrescriptionIdsByOrderId(orderId),
+      this.consultationLinkRepository.findConsultationRequestIdsByOrderId(orderId),
+    ]);
+
+    const prescriptions: { id: string; status: string; rejectionReason: string | null }[] = [];
+    const consultations: { id: string; status: string }[] = [];
+
+    let hasApprovedPrescription = false;
+    let hasApprovedConsultation = false;
+    let hasRejected = false;
+
+    for (const id of prescriptionIds) {
+      const p = await this.prescriptionRepository.findById(id);
+      if (!p) continue;
+      prescriptions.push({
+        id: p.id,
+        status: p.status,
+        rejectionReason: p.rejectionReason ?? null,
+      });
+      if (p.status === PrescriptionStatus.APPROVED) hasApprovedPrescription = true;
+      if (p.status === PrescriptionStatus.REJECTED) hasRejected = true;
+    }
+    for (const id of consultationIds) {
+      const c = await this.consultationRepository.findById(id);
+      if (!c) continue;
+      consultations.push({ id: c.id, status: c.status });
+      if (c.status === ConsultationStatus.APPROVED) hasApprovedConsultation = true;
+      if (c.status === ConsultationStatus.REJECTED) hasRejected = true;
+    }
+
+    let status: ComplianceStatus;
+    if (hasApprovedPrescription || hasApprovedConsultation) {
+      status = ComplianceStatus.APPROVED;
+    } else if (hasRejected && prescriptionIds.length + consultationIds.length > 0) {
+      status = ComplianceStatus.REJECTED;
+    } else {
+      status = ComplianceStatus.PENDING;
+    }
+
+    return {
+      requiresPrescription: true,
+      status,
+      prescriptions: prescriptions.length > 0 ? prescriptions : undefined,
+      consultations: consultations.length > 0 ? consultations : undefined,
+    };
   }
 
   /**

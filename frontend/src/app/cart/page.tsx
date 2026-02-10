@@ -115,7 +115,7 @@ export default function CartPage() {
     }
   };
 
-  // Checkout handler
+  // Checkout handler — ADR-0055: never block; redirect to compliance when requiresPrescription
   const handleCheckout = async () => {
     if (isCheckingOut || !cart || cart.items.length === 0) return;
 
@@ -124,11 +124,33 @@ export default function CartPage() {
 
     try {
       const confirmedOrder = await confirmOrder();
-      // Navigate to order confirmation page
-      router.push(ROUTES.ORDER_CONFIRMED(confirmedOrder.orderId));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Checkout failed';
-      setCheckoutError(message);
+      const orderId = confirmedOrder?.orderId;
+      if (!orderId) {
+        setCheckoutError('Order was placed but we could not redirect. Please check your orders.');
+        return;
+      }
+      // ADR-0055: prescription-required → compliance (upload prescription / request callback)
+      if (confirmedOrder.requiresPrescription === true) {
+        router.push(ROUTES.ORDER_COMPLIANCE(orderId));
+      } else {
+        router.push(ROUTES.ORDER_CONFIRMED(orderId));
+      }
+    } catch (err: unknown) {
+      const apiError = err as { error?: { code?: string; message?: string }; message?: string };
+      const code = apiError?.error?.code ?? '';
+      const message =
+        apiError?.error?.message || (err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      // Friendly fallback when error suggests prescription (e.g. legacy PRESCRIPTION_REQUIRED)
+      const isPrescriptionRelated =
+        code === 'PRESCRIPTION_REQUIRED' ||
+        /prescription|medical approval|compliance/i.test(message);
+      if (isPrescriptionRelated) {
+        setCheckoutError(
+          'Some items require medical approval. Please place your order again — you will then be able to upload a prescription or request a free doctor callback.',
+        );
+      } else {
+        setCheckoutError(message);
+      }
     } finally {
       setIsCheckingOut(false);
     }
@@ -284,7 +306,14 @@ export default function CartPage() {
               {/* Checkout Error */}
               {checkoutError && (
                 <div style={styles.checkoutError}>
-                  {checkoutError}
+                  <p style={{ margin: 0 }}>{checkoutError}</p>
+                  {checkoutError.includes('upload a prescription') && (
+                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem' }}>
+                      <Link href={ROUTES.PRESCRIPTIONS} style={styles.errorLink}>
+                        Go to prescriptions →
+                      </Link>
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -506,6 +535,10 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '6px',
     color: '#dc2626',
     fontSize: '0.875rem',
+  },
+  errorLink: {
+    color: '#2563eb',
+    textDecoration: 'none',
   },
   checkoutButton: {
     marginTop: '1rem',

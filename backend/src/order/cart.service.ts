@@ -18,7 +18,6 @@ import {
   InvalidQuantityException,
   UnauthorizedOrderAccessException,
   EmptyCartException,
-  PrescriptionRequiredException,
   InvalidOrderStateTransitionException,
 } from './exceptions/order.exceptions';
 import { CatalogQueryService } from '../catalog/catalog-query.service';
@@ -34,6 +33,8 @@ export interface ConfirmOrderResult {
   order: OrderDto;
   /** Domain events emitted during confirmation */
   events: ReadonlyArray<OrderConfirmedEvent>;
+  /** True if order contains prescription-required items (ADR-0055). Used for UI redirect. */
+  requiresPrescription: boolean;
 }
 
 /**
@@ -323,18 +324,19 @@ export class CartService {
    * Converts a DRAFT order into a CONFIRMED order.
    * This is an irreversible business commitment.
    *
+   * ADR-0055: Checkout is never blocked by prescription. Orders with prescription-required
+   * items are confirmed; requiresPrescription is set so the UI can redirect to compliance flow.
+   *
    * Business rules:
    * - Order must exist and be in DRAFT state
    * - Only owner can confirm their order
    * - Cart must have at least one item
-   * - Items requiring prescription block confirmation (for now)
    * - State transition must be valid per state machine
    * - Total is finalized at confirmation time
    *
    * @throws NoDraftOrderException - No active cart found
    * @throws UnauthorizedOrderAccessException - User doesn't own the cart
    * @throws EmptyCartException - Cart has no items
-   * @throws PrescriptionRequiredException - Items require prescription
    * @throws InvalidOrderStateTransitionException - State transition not allowed
    */
   async confirmDraftOrder(userId: string, correlationId: string): Promise<ConfirmOrderResult> {
@@ -350,8 +352,8 @@ export class CartService {
       throw new EmptyCartException();
     }
 
-    // 3. Check for prescription-required items
-    await this.validateNoPrescriptionItems(draft, correlationId);
+    // 3. Detect prescription requirement (ADR-0055 — do not block checkout)
+    const requiresPrescription = await this.orderHasPrescriptionRequiredItems(draft);
 
     // 4. Validate state transition
     const validation = validateTransition(draft.status, OrderStatus.CONFIRMED);
@@ -415,50 +417,27 @@ export class CartService {
     return {
       order: confirmedOrder,
       events: eventCollector.getEventsOfType<OrderConfirmedEvent>('ORDER_CONFIRMED'),
+      requiresPrescription,
     };
   }
 
   /**
-   * Validate that cart contains no prescription-required items
-   *
-   * Looks up each item's product to check prescription requirement.
-   * This is intentionally blocking until prescription workflow is implemented.
+   * Detect if order contains prescription-required items (ADR-0055).
+   * Used to set requiresPrescription on checkout response; does not block checkout.
    */
-  private async validateNoPrescriptionItems(cart: OrderDto, correlationId: string): Promise<void> {
-    const prescriptionProducts: string[] = [];
-
-    for (const item of cart.items) {
+  private async orderHasPrescriptionRequiredItems(order: OrderDto): Promise<boolean> {
+    for (const item of order.items) {
       try {
         const product = await this.catalogQueryService.getProductById(
           item.productId,
-          correlationId,
+          undefined,
         );
-        if (product.requiresPrescription) {
-          prescriptionProducts.push(item.productName);
-        }
+        if (product.requiresPrescription) return true;
       } catch (error) {
-        // If product is not found (deleted/deactivated), skip prescription check
-        // This scenario could be handled differently based on business rules
-        if (!(error instanceof ProductNotFoundException)) {
-          throw error;
-        }
+        if (!(error instanceof ProductNotFoundException)) throw error;
       }
     }
-
-    if (prescriptionProducts.length > 0) {
-      logWithCorrelation(
-        'WARN',
-        correlationId,
-        `Checkout blocked: prescription required`,
-        'CartService',
-        {
-          orderId: cart.id,
-          userId: cart.userId,
-          prescriptionProducts,
-        },
-      );
-      throw new PrescriptionRequiredException(prescriptionProducts);
-    }
+    return false;
   }
 
   // ============================================================

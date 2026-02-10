@@ -153,15 +153,11 @@ export async function removeCartItem(productId: string): Promise<Cart> {
  * Confirm the current draft order (checkout)
  *
  * Converts the user's cart (DRAFT order) into a CONFIRMED order.
- * This is an irreversible action.
+ * ADR-0055: Checkout is never blocked by prescription; response includes
+ * requiresPrescription so the UI can redirect to compliance (upload prescription / request callback).
  *
- * Business rules enforced by backend:
- * - Cart must exist and be in DRAFT state
- * - Cart must have at least one item
- * - No prescription-required items (until workflow exists)
- *
- * @returns The confirmed order details
- * @throws Error if checkout fails (empty cart, invalid state, prescription required, etc.)
+ * @returns The confirmed order details (orderId, requiresPrescription, etc.)
+ * @throws Error if checkout fails (empty cart, invalid state, or API error)
  */
 export async function confirmOrder(): Promise<ConfirmedOrder> {
   const response = await apiClient.post<ConfirmedOrder>(
@@ -170,12 +166,22 @@ export async function confirmOrder(): Promise<ConfirmedOrder> {
     { requiresAuth: true },
   );
 
-  if (!response.data) {
+  const payload = response?.data;
+  if (!payload || typeof payload !== 'object') {
     throw new Error('Failed to confirm order');
   }
+  if (!payload.orderId) {
+    throw new Error('Invalid checkout response: missing order ID');
+  }
+
+  // Normalize: ensure requiresPrescription is boolean (backend sends it; default false if missing)
+  const confirmed: ConfirmedOrder = {
+    ...payload,
+    requiresPrescription: payload.requiresPrescription === true,
+  };
 
   // Cart is now empty after checkout
   dispatchCartUpdate(null);
-  return response.data;
+  return confirmed;
 }
 

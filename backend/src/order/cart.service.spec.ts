@@ -10,7 +10,6 @@ import {
   InvalidQuantityException,
   OrderNotDraftException,
   EmptyCartException,
-  PrescriptionRequiredException,
   InvalidOrderStateTransitionException,
 } from './exceptions/order.exceptions';
 import { ProductNotFoundException } from '../catalog/exceptions';
@@ -672,6 +671,7 @@ describe('CartService', () => {
         expect(result.order.status).toBe(OrderStatus.CONFIRMED);
         expect(result.order.userId).toBe(userId);
         expect(result.order.items.length).toBe(2);
+        expect(result.requiresPrescription).toBe(false);
       });
 
       it('should finalize total at confirmation time', async () => {
@@ -812,44 +812,33 @@ describe('CartService', () => {
       });
     });
 
-    describe('failure when prescription-required items exist', () => {
-      it('should throw PrescriptionRequiredException for prescription products', async () => {
+    describe('checkout with prescription-required items (ADR-0055)', () => {
+      it('should confirm and set requiresPrescription true for prescription products', async () => {
         // Setup: add prescription product (Amoxicillin)
         await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
 
-        // Act & Assert
-        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
-          PrescriptionRequiredException,
-        );
+        // Act
+        const result = await cartService.confirmDraftOrder(userId, correlationId);
+
+        // Assert: checkout succeeds, order CONFIRMED, requiresPrescription true
+        expect(result.order.status).toBe(OrderStatus.CONFIRMED);
+        expect(result.requiresPrescription).toBe(true);
       });
 
-      it('should include prescription product names in exception', async () => {
-        // Setup
-        await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
-
-        // Act & Assert
-        try {
-          await cartService.confirmDraftOrder(userId, correlationId);
-          fail('Expected PrescriptionRequiredException');
-        } catch (error) {
-          expect(error).toBeInstanceOf(PrescriptionRequiredException);
-          const prescriptionError = error as PrescriptionRequiredException;
-          expect(prescriptionError.prescriptionProducts).toContain('Amoxicillin 500mg');
-        }
-      });
-
-      it('should block confirmation when mixed cart has prescription items', async () => {
+      it('should confirm and set requiresPrescription true when mixed cart has prescription items', async () => {
         // Setup: mix of prescription and non-prescription
         await cartService.addItemToCart(userId, validProductId, 2, correlationId);
         await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
 
-        // Act & Assert
-        await expect(cartService.confirmDraftOrder(userId, correlationId)).rejects.toThrow(
-          PrescriptionRequiredException,
-        );
+        // Act
+        const result = await cartService.confirmDraftOrder(userId, correlationId);
+
+        // Assert
+        expect(result.order.status).toBe(OrderStatus.CONFIRMED);
+        expect(result.requiresPrescription).toBe(true);
       });
 
-      it('should allow confirmation after removing prescription items', async () => {
+      it('should set requiresPrescription false after removing prescription items', async () => {
         // Setup: add prescription, then remove
         await cartService.addItemToCart(userId, validProductId, 2, correlationId);
         await cartService.addItemToCart(userId, prescriptionProductId, 1, correlationId);
@@ -861,6 +850,7 @@ describe('CartService', () => {
         // Assert
         expect(result.order.status).toBe(OrderStatus.CONFIRMED);
         expect(result.order.items.length).toBe(1);
+        expect(result.requiresPrescription).toBe(false);
       });
     });
 

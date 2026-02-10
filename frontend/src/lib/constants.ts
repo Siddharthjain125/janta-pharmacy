@@ -17,6 +17,7 @@ export const ROUTES = {
   ORDERS: '/orders',
   ORDER_DETAIL: (id: string) => `/orders/${id}`,
   ORDER_CONFIRMED: (id: string) => `/orders/${id}/confirmed`,
+  ORDER_COMPLIANCE: (orderId: string) => `/order-compliance/${orderId}`,
   PROFILE: '/profile',
   PROFILE_ADDRESSES: '/profile/addresses',
   PROFILE_CONTEXT: '/profile/context',

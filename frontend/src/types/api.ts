@@ -295,7 +295,7 @@ export interface ConfirmedOrderItem {
 
 /**
  * Confirmed order response from checkout
- * Aligned with backend CheckoutResponseDto
+ * Aligned with backend CheckoutResponseDto (ADR-0055: requiresPrescription for redirect)
  */
 export interface ConfirmedOrder {
   orderId: string;
@@ -305,6 +305,8 @@ export interface ConfirmedOrder {
   total: CartPrice;
   createdAt: string;
   confirmedAt: string;
+  /** True when order has prescription-required items; redirect to compliance flow */
+  requiresPrescription?: boolean;
 }
 
 // ============================================================================

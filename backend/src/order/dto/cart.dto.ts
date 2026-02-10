@@ -116,6 +116,7 @@ export interface ConfirmedOrderItemDto {
  *
  * Returned after successfully confirming an order (checkout).
  * Contains all relevant order details for the client.
+ * requiresPrescription (ADR-0055) tells frontend to redirect to compliance flow when true.
  */
 export interface CheckoutResponseDto {
   /** The confirmed order ID */
@@ -138,12 +139,18 @@ export interface CheckoutResponseDto {
 
   /** When the order was confirmed (checkout time) */
   confirmedAt: string;
+
+  /** True if order contains prescription-required items; frontend may redirect to compliance flow (ADR-0055) */
+  requiresPrescription: boolean;
 }
 
 /**
- * Convert OrderDto to checkout response DTO
+ * Convert checkout result to response DTO
  */
-export function toCheckoutResponseDto(order: OrderDto): CheckoutResponseDto {
+export function toCheckoutResponseDto(
+  order: OrderDto,
+  requiresPrescription: boolean,
+): CheckoutResponseDto {
   return {
     orderId: order.id,
     state: order.status,
@@ -158,6 +165,7 @@ export function toCheckoutResponseDto(order: OrderDto): CheckoutResponseDto {
     total: order.total,
     createdAt: order.createdAt.toISOString(),
     confirmedAt: order.updatedAt.toISOString(), // updatedAt reflects confirmation time
+    requiresPrescription,
   };
 }
 

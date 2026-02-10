@@ -201,7 +201,7 @@ Guarantees:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/orders` | List user's orders |
-| GET | `/orders/:id` | Get order details |
+| GET | `/orders/:id` | Get order details (may include read-only `compliance` when order has prescription-required items; ADR-0055) |
 | POST | `/orders` | Create order |
 | POST | `/orders/:id/confirm` | Confirm order |
 | POST | `/orders/:id/pay` | Record payment |

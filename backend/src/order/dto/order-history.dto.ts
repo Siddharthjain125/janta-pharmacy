@@ -75,9 +75,43 @@ export interface OrderDetailItemDto {
 }
 
 /**
+ * Compliance status (ADR-0055) — derived, read-only. Not an order state.
+ */
+export type OrderDetailComplianceStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+/**
+ * Linked prescription in order detail compliance (read-only view).
+ */
+export interface OrderDetailPrescriptionDto {
+  id: string;
+  status: string;
+  rejectionReason?: string | null;
+}
+
+/**
+ * Linked consultation in order detail compliance (read-only view).
+ */
+export interface OrderDetailConsultationDto {
+  id: string;
+  status: string;
+}
+
+/**
+ * Compliance block on order detail (ADR-0055).
+ * Present only when order requires prescription; backend is source of truth.
+ */
+export interface OrderDetailComplianceDto {
+  requiresPrescription: true;
+  status: OrderDetailComplianceStatus;
+  prescriptions?: OrderDetailPrescriptionDto[];
+  consultations?: OrderDetailConsultationDto[];
+}
+
+/**
  * Full order detail response
  *
  * Complete order information including all items.
+ * compliance is optional; included only when order has prescription-required items (ADR-0055).
  */
 export interface OrderDetailDto {
   /** Order ID */
@@ -100,6 +134,9 @@ export interface OrderDetailDto {
 
   /** When order was last updated */
   updatedAt: string;
+
+  /** Read-only compliance info; present only when requiresPrescription (ADR-0055) */
+  compliance?: OrderDetailComplianceDto;
 }
 
 /**

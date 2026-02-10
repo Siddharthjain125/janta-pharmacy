@@ -5,6 +5,7 @@ import {
   OrderNotFoundException,
   UnauthorizedOrderAccessException,
 } from './exceptions/order.exceptions';
+import { OrderComplianceService } from '../compliance/order-compliance.service';
 
 /**
  * OrderQueryService Tests
@@ -28,9 +29,13 @@ describe('OrderQueryService', () => {
   const userId = 'user-123';
   const otherUserId = 'user-456';
 
+  const mockComplianceService = {
+    getComplianceInfo: () => Promise.resolve(null),
+  } as unknown as OrderComplianceService;
+
   beforeEach(() => {
     orderRepository = new InMemoryOrderRepository();
-    queryService = new OrderQueryService(orderRepository);
+    queryService = new OrderQueryService(orderRepository, mockComplianceService);
   });
 
   afterEach(() => {

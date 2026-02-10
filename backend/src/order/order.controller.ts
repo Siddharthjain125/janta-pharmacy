@@ -131,8 +131,8 @@ export class OrderController {
    * Business rules enforced (in domain layer):
    * - User must have an active cart (DRAFT order)
    * - Cart must have at least one item
-   * - No prescription-required items (until prescription workflow exists)
    * - User must own the cart
+   * - ADR-0055: Checkout is never blocked by prescription; response includes requiresPrescription for redirect
    *
    * Transitions: DRAFT → CONFIRMED
    */
@@ -154,7 +154,10 @@ export class OrderController {
       total: result.order.total.amount,
     });
 
-    return ApiResponse.success(toCheckoutResponseDto(result.order), 'Order confirmed successfully');
+    return ApiResponse.success(
+      toCheckoutResponseDto(result.order, result.requiresPrescription),
+      'Order confirmed successfully',
+    );
   }
 
   /**
