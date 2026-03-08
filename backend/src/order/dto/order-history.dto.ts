@@ -108,10 +108,19 @@ export interface OrderDetailComplianceDto {
 }
 
 /**
+ * Payment info on order detail (Phase 6 — manual payment v1)
+ */
+export interface OrderDetailPaymentDto {
+  method: 'COD' | 'UPI';
+  status: 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
+}
+
+/**
  * Full order detail response
  *
  * Complete order information including all items.
  * compliance is optional; included only when order has prescription-required items (ADR-0055).
+ * payment is optional; included when order has a payment intent (Phase 6).
  */
 export interface OrderDetailDto {
   /** Order ID */
@@ -137,6 +146,9 @@ export interface OrderDetailDto {
 
   /** Read-only compliance info; present only when requiresPrescription (ADR-0055) */
   compliance?: OrderDetailComplianceDto;
+
+  /** Payment method and status (Phase 6); present when payment intent exists */
+  payment?: OrderDetailPaymentDto;
 }
 
 /**

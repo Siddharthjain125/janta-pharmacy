@@ -14,6 +14,30 @@ import type {
   CancelledOrder,
 } from '@/types/api';
 
+/** Phase 6 — Payment intent response (user-facing) */
+export interface PaymentIntentResponse {
+  id: string;
+  orderId: string;
+  method: 'COD' | 'UPI';
+  status: string;
+  referenceId?: string | null;
+  proofReference?: string | null;
+  createdAt: string;
+  verifiedAt?: string | null;
+}
+
+/** Phase 6 — UPI instructions returned when method is UPI */
+export interface UpiInstructions {
+  vpa: string;
+  steps: string[];
+}
+
+/** Phase 6 — Response when creating UPI payment */
+export interface CreatePaymentUpiResponse {
+  paymentIntent: PaymentIntentResponse;
+  upiInstructions: UpiInstructions;
+}
+
 /**
  * Pagination parameters for order history
  */
@@ -119,3 +143,45 @@ export function canCancelOrder(state: string): boolean {
   return cancellableStates.includes(state);
 }
 
+/**
+ * Create payment intent (Phase 6 — manual payment v1).
+ * COD: creates VERIFIED intent and transitions order to PAID; returns order.
+ * UPI: creates PENDING intent and returns UPI instructions.
+ */
+export async function createPayment(
+  orderId: string,
+  method: 'COD' | 'UPI',
+): Promise<OrderDetail | CreatePaymentUpiResponse> {
+  const response = await apiClient.post<OrderDetail | CreatePaymentUpiResponse>(
+    `/orders/${orderId}/payment`,
+    { method },
+    { requiresAuth: true },
+  );
+
+  if (!response.data) {
+    throw new Error('Failed to create payment');
+  }
+
+  return response.data;
+}
+
+/**
+ * Submit UPI payment proof (Phase 6).
+ * Updates PaymentIntent to SUBMITTED; admin verifies later.
+ */
+export async function submitUpiProof(
+  orderId: string,
+  payload: { referenceId: string; proofReference?: string },
+): Promise<PaymentIntentResponse> {
+  const response = await apiClient.post<PaymentIntentResponse>(
+    `/orders/${orderId}/payment/upi-proof`,
+    payload,
+    { requiresAuth: true },
+  );
+
+  if (!response.data) {
+    throw new Error('Failed to submit payment proof');
+  }
+
+  return response.data;
+}

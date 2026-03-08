@@ -201,6 +201,7 @@ model Order {
   // Compliance links (order references artifacts; ADR-0055)
   prescriptionLinks    OrderPrescriptionLink[]
   consultationLinks   OrderConsultationLink[]
+  paymentIntent        PaymentIntent?
 
   @@index([userId])
   @@index([status])
@@ -242,6 +243,41 @@ enum OrderStatus {
   SHIPPED    // Order shipped
   DELIVERED  // Order delivered (terminal)
   CANCELLED  // Order cancelled (terminal)
+}
+
+// =============================================================================
+// PAYMENT DOMAIN (Phase 6 — manual payment v1)
+// =============================================================================
+
+/// Payment intent for an order — one active per order
+/// COD: created as VERIFIED; UPI: PENDING → SUBMITTED → VERIFIED (admin)
+model PaymentIntent {
+  id              String              @id @default(uuid())
+  orderId         String              @unique @map("order_id")
+  method          PaymentMethod       @default(COD)
+  status          PaymentIntentStatus @default(PENDING)
+  referenceId     String?             @map("reference_id")
+  proofReference  String?             @map("proof_reference")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  verifiedAt      DateTime?          @map("verified_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+  @@map("payment_intents")
+}
+
+enum PaymentMethod {
+  COD
+  UPI
+}
+
+enum PaymentIntentStatus {
+  PENDING    // UPI: awaiting user to submit proof
+  SUBMITTED  // UPI: proof submitted, awaiting admin verification
+  VERIFIED   // COD implicit or UPI admin-verified
+  REJECTED   // UPI: admin rejected
 }
 
 /// Line item within an order

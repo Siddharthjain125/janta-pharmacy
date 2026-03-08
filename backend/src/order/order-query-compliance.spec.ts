@@ -1,6 +1,7 @@
 import { OrderQueryService } from './order-query.service';
 import { InMemoryOrderRepository } from './repositories/in-memory-order.repository';
 import { OrderComplianceService } from '../compliance/order-compliance.service';
+import { PaymentIntentService } from '../payment/payment-intent.service';
 import { InMemoryProductRepository } from '../catalog/repositories/in-memory-product.repository';
 import { InMemoryPrescriptionRepository } from '../prescription/repositories/in-memory-prescription.repository';
 import { InMemoryConsultationRequestRepository } from '../consultation/repositories/in-memory-consultation-request.repository';
@@ -32,6 +33,10 @@ describe('OrderQueryService - order detail compliance', () => {
   const generalProductId = 'prod-001';
   const prescriptionProductId = 'prod-003';
 
+  const mockPaymentIntentService = {
+    getByOrderId: () => Promise.resolve(null),
+  } as unknown as PaymentIntentService;
+
   beforeEach(() => {
     orderRepository = new InMemoryOrderRepository();
     productRepository = new InMemoryProductRepository();
@@ -47,7 +52,11 @@ describe('OrderQueryService - order detail compliance', () => {
       prescriptionLinkRepository,
       consultationLinkRepository,
     );
-    queryService = new OrderQueryService(orderRepository, complianceService);
+    queryService = new OrderQueryService(
+      orderRepository,
+      complianceService,
+      mockPaymentIntentService,
+    );
   });
 
   async function createOrderWithItems(

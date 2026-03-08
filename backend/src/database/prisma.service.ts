@@ -106,4 +106,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get orderConsultationLink() {
     return this.getClient().orderConsultationLink;
   }
+
+  get paymentIntent() {
+    return this.getClient().paymentIntent;
+  }
 }

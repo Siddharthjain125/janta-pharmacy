@@ -9,6 +9,7 @@ import { OrderRepositoryProvider } from '../database/repository.providers';
 import { AuthModule } from '../auth/auth.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { ComplianceModule } from '../compliance/compliance.module';
+import { PaymentModule } from '../payment/payment.module';
 
 /**
  * Order Module
@@ -30,6 +31,7 @@ import { ComplianceModule } from '../compliance/compliance.module';
     AuthModule, // For JwtAuthGuard
     CatalogModule, // For product validation in CartService
     forwardRef(() => ComplianceModule), // Fulfilment gate (ADR-0055)
+    forwardRef(() => PaymentModule), // Phase 6 — payment intent
   ],
   controllers: [OrderController, CartController],
   providers: [OrderService, OrderQueryService, CartService, OrderRepositoryProvider],

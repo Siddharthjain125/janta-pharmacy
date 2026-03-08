@@ -200,6 +200,33 @@ export class OrderService {
   }
 
   /**
+   * Record payment as verified (Phase 6 — admin only, after PaymentIntent VERIFIED).
+   * Transition: CONFIRMED → PAID. No ownership check; used when admin verifies UPI payment.
+   */
+  async recordPaymentVerified(orderId: string, correlationId: string): Promise<OrderDto> {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) {
+      logWithCorrelation('WARN', correlationId, `Order not found`, 'OrderService', { orderId });
+      throw new OrderNotFoundException(orderId);
+    }
+    if (order.status !== OrderStatus.CONFIRMED) {
+      throw new OrderNotConfirmedException(orderId, order.status);
+    }
+    const previousState = order.status;
+    const targetState = OrderStatus.PAID;
+    this.validateAndLogTransition(correlationId, orderId, order.userId, previousState, targetState, 'PAY');
+    const updatedOrder = await this.orderRepository.updateStatus(orderId, targetState);
+    this.logStateTransition(correlationId, {
+      orderId,
+      userId: order.userId,
+      previousState,
+      nextState: targetState,
+      action: 'PAY_VERIFIED',
+    });
+    return updatedOrder;
+  }
+
+  /**
    * Cancel an order
    *
    * Transitions (via state machine):

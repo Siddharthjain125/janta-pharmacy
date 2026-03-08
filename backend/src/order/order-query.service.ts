@@ -14,6 +14,7 @@ import {
 } from './exceptions/order.exceptions';
 import { logWithCorrelation } from '../common/logging/logger';
 import { OrderComplianceService } from '../compliance/order-compliance.service';
+import { PaymentIntentService } from '../payment/payment-intent.service';
 
 /**
  * Order Query Service
@@ -35,6 +36,7 @@ export class OrderQueryService {
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: IOrderRepository,
     private readonly orderComplianceService: OrderComplianceService,
+    private readonly paymentIntentService: PaymentIntentService,
   ) {}
 
   // ============================================================
@@ -143,6 +145,15 @@ export class OrderQueryService {
         status: complianceInfo.status,
         prescriptions: complianceInfo.prescriptions,
         consultations: complianceInfo.consultations,
+      };
+    }
+
+    // Payment method and status (Phase 6). Omit when no payment intent.
+    const paymentIntent = await this.paymentIntentService.getByOrderId(orderId);
+    if (paymentIntent) {
+      detail.payment = {
+        method: paymentIntent.method,
+        status: paymentIntent.status,
       };
     }
 

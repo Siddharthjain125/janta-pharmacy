@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Body,
   Param,
   Query,
   HttpCode,
@@ -12,6 +13,7 @@ import {
 import { OrderService } from './order.service';
 import { OrderQueryService } from './order-query.service';
 import { CartService } from './cart.service';
+import { PaymentIntentService } from '../payment/payment-intent.service';
 import { ApiResponse } from '../common/api/api-response';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -28,6 +30,13 @@ import {
   OrderHistoryResponseDto,
   OrderDetailDto,
 } from './dto/order-history.dto';
+import { CreatePaymentDto } from '../payment/dto/create-payment.dto';
+import { UpiProofDto } from '../payment/dto/upi-proof.dto';
+import {
+  toPaymentIntentResponseDto,
+  CreatePaymentUpiResponseDto,
+} from '../payment/dto/payment-response.dto';
+import { PaymentMethod } from '../payment/domain/payment-method';
 import { logWithCorrelation } from '../common/logging/logger';
 
 /**
@@ -47,6 +56,7 @@ export class OrderController {
     private readonly orderService: OrderService,
     private readonly orderQueryService: OrderQueryService,
     private readonly cartService: CartService,
+    private readonly paymentIntentService: PaymentIntentService,
   ) {}
 
   // ============================================================
@@ -195,23 +205,56 @@ export class OrderController {
   }
 
   /**
-   * Pay for an order
-   * POST /api/v1/orders/:id/pay
+   * Submit UPI payment proof (Phase 6)
+   * POST /api/v1/orders/:id/payment/upi-proof
    *
-   * Transitions: CONFIRMED → PAID
-   *
-   * Note: In a real system, this would integrate with PaymentService.
-   * For now, it simply records that payment was received.
+   * Updates PaymentIntent to SUBMITTED; admin verifies later.
    */
-  @Post(':id/pay')
+  @Post(':id/payment/upi-proof')
   @HttpCode(HttpStatus.OK)
-  async payForOrder(
+  async submitUpiProof(
     @Param('id') orderId: string,
+    @Body() dto: UpiProofDto,
     @CurrentUser() user: AuthUser,
     @Headers('x-correlation-id') correlationId: string,
-  ): Promise<ApiResponse<OrderDto>> {
-    const order = await this.orderService.payForOrder(orderId, user.id, correlationId);
-    return ApiResponse.success(order, 'Order payment recorded successfully');
+  ): Promise<ApiResponse<ReturnType<typeof toPaymentIntentResponseDto>>> {
+    const intent = await this.paymentIntentService.submitUpiProof(orderId, dto, user.id, correlationId);
+    return ApiResponse.success(
+      toPaymentIntentResponseDto(intent),
+      'Payment received and pending verification',
+    );
+  }
+
+  /**
+   * Create payment intent (Phase 6 — manual payment v1)
+   * POST /api/v1/orders/:id/payment
+   *
+   * COD: creates PaymentIntent VERIFIED, transitions order CONFIRMED → PAID.
+   * UPI: creates PaymentIntent PENDING, returns UPI instructions (VPA, steps).
+   */
+  @Post(':id/payment')
+  @HttpCode(HttpStatus.OK)
+  async createPayment(
+    @Param('id') orderId: string,
+    @Body() dto: CreatePaymentDto,
+    @CurrentUser() user: AuthUser,
+    @Headers('x-correlation-id') correlationId: string,
+  ): Promise<ApiResponse<OrderDto | CreatePaymentUpiResponseDto>> {
+    const result = await this.paymentIntentService.createForOrder(
+      orderId,
+      dto.method,
+      user.id,
+      correlationId,
+    );
+    if (dto.method === PaymentMethod.COD) {
+      const order = await this.orderService.payForOrder(orderId, user.id, correlationId);
+      return ApiResponse.success(order, 'Cash on delivery selected');
+    }
+    const response: CreatePaymentUpiResponseDto = {
+      paymentIntent: toPaymentIntentResponseDto(result.paymentIntent),
+      upiInstructions: result.upiInstructions!,
+    };
+    return ApiResponse.success(response, 'Payment received and pending verification');
   }
 
   /**

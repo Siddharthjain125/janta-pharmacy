@@ -377,9 +377,19 @@ export interface OrderComplianceInfo {
 }
 
 /**
+ * Payment method and status on order detail (Phase 6 — manual payment v1).
+ * Present when order has a payment intent.
+ */
+export interface OrderPaymentInfo {
+  method: 'COD' | 'UPI';
+  status: 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
+}
+
+/**
  * Full order detail
  * Aligned with backend OrderDetailDto.
  * compliance is optional; when present, UI shows compliance awareness section.
+ * payment is optional; when present, UI shows payment method and status (Phase 6).
  */
 export interface OrderDetail {
   orderId: string;
@@ -391,6 +401,8 @@ export interface OrderDetail {
   updatedAt: string;
   /** Set when backend includes compliance for this order (ADR-0055) */
   compliance?: OrderComplianceInfo;
+  /** Payment method and status (Phase 6); present when payment intent exists */
+  payment?: OrderPaymentInfo;
 }
 
 /**

@@ -210,6 +210,43 @@ export default function OrderDetailPage() {
               </div>
             )}
 
+            {/* Payment (Phase 6 — method and status) */}
+            {order.payment && (
+              <div style={styles.card}>
+                <h2 style={styles.sectionTitle}>Payment</h2>
+                <p style={styles.paymentMethod}>
+                  Method: {order.payment.method === 'COD' ? 'Cash on delivery' : 'UPI'}
+                </p>
+                <p style={styles.paymentStatus}>
+                  Status:{' '}
+                  {order.payment.status === 'VERIFIED'
+                    ? 'Payment received and verified'
+                    : order.payment.status === 'SUBMITTED'
+                      ? 'Payment received and pending verification'
+                      : order.payment.status === 'PENDING'
+                        ? 'Waiting for verification (upload proof on payment page)'
+                        : order.payment.status}
+                </p>
+                {order.payment.status === 'PENDING' && order.payment.method === 'UPI' && (
+                  <Link href={ROUTES.ORDER_PAYMENT(orderId)} style={styles.paymentLink}>
+                    Upload UPI proof →
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Pay for this order (when CONFIRMED and no verified payment) */}
+            {order.state === 'CONFIRMED' && (!order.payment || order.payment.status !== 'VERIFIED') && (
+              <div style={styles.card}>
+                <p style={styles.payPrompt}>
+                  Order will be fulfilled after medical approval (if required) and payment verification.
+                </p>
+                <Link href={ROUTES.ORDER_PAYMENT(orderId)} style={styles.primaryButton}>
+                  Pay for this order
+                </Link>
+              </div>
+            )}
+
             {/* Order Items */}
             <div style={styles.card}>
               <h2 style={styles.sectionTitle}>Items ({order.itemCount})</h2>
@@ -484,6 +521,37 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: '600',
     marginBottom: '1rem',
     color: '#374151',
+  },
+  paymentMethod: {
+    fontSize: '0.9375rem',
+    color: '#374151',
+    margin: '0 0 0.25rem 0',
+  },
+  paymentStatus: {
+    fontSize: '0.9375rem',
+    color: '#6b7280',
+    margin: '0 0 0.5rem 0',
+  },
+  paymentLink: {
+    fontSize: '0.875rem',
+    color: '#2563eb',
+    textDecoration: 'none',
+  },
+  payPrompt: {
+    fontSize: '0.9375rem',
+    color: '#4b5563',
+    margin: '0 0 1rem 0',
+    lineHeight: 1.5,
+  },
+  primaryButton: {
+    display: 'inline-block',
+    padding: '0.75rem 1.5rem',
+    background: '#059669',
+    color: 'white',
+    borderRadius: '6px',
+    fontSize: '0.9375rem',
+    fontWeight: '600',
+    textDecoration: 'none',
   },
   statusTimeline: {
     display: 'flex',

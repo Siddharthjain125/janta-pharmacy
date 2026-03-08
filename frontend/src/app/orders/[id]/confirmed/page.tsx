@@ -161,6 +161,18 @@ export default function OrderConfirmedPage() {
               </div>
             </div>
 
+            {/* Pay for order (Phase 6 — when CONFIRMED) */}
+            {order.state === 'CONFIRMED' && (
+              <div style={styles.paymentPrompt}>
+                <p style={styles.paymentPromptText}>
+                  Order will be fulfilled after medical approval (if required) and payment verification.
+                </p>
+                <Link href={ROUTES.ORDER_PAYMENT(orderId)} style={styles.payButton}>
+                  Pay for this order
+                </Link>
+              </div>
+            )}
+
             {/* Actions */}
             <div style={styles.actions}>
               <Link href={ROUTES.CATALOG} style={styles.primaryButton}>
@@ -302,6 +314,29 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '1.25rem',
     fontWeight: '700',
     color: '#059669',
+  },
+  paymentPrompt: {
+    marginTop: '1.5rem',
+    padding: '1rem',
+    background: '#f0fdf4',
+    borderRadius: '8px',
+    border: '1px solid #bbf7d0',
+  },
+  paymentPromptText: {
+    margin: '0 0 0.75rem 0',
+    fontSize: '0.9375rem',
+    color: '#166534',
+    lineHeight: 1.5,
+  },
+  payButton: {
+    display: 'inline-block',
+    padding: '0.75rem 1.5rem',
+    background: '#059669',
+    color: 'white',
+    borderRadius: '6px',
+    fontSize: '0.9375rem',
+    fontWeight: '600',
+    textDecoration: 'none',
   },
   actions: {
     display: 'flex',

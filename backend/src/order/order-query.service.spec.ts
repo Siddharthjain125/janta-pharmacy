@@ -6,6 +6,7 @@ import {
   UnauthorizedOrderAccessException,
 } from './exceptions/order.exceptions';
 import { OrderComplianceService } from '../compliance/order-compliance.service';
+import { PaymentIntentService } from '../payment/payment-intent.service';
 
 /**
  * OrderQueryService Tests
@@ -33,9 +34,17 @@ describe('OrderQueryService', () => {
     getComplianceInfo: () => Promise.resolve(null),
   } as unknown as OrderComplianceService;
 
+  const mockPaymentIntentService = {
+    getByOrderId: () => Promise.resolve(null),
+  } as unknown as PaymentIntentService;
+
   beforeEach(() => {
     orderRepository = new InMemoryOrderRepository();
-    queryService = new OrderQueryService(orderRepository, mockComplianceService);
+    queryService = new OrderQueryService(
+      orderRepository,
+      mockComplianceService,
+      mockPaymentIntentService,
+    );
   });
 
   afterEach(() => {

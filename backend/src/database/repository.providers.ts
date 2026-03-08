@@ -27,6 +27,11 @@ import { PRODUCT_REPOSITORY } from '../catalog/repositories/product-repository.i
 import { InMemoryProductRepository } from '../catalog/repositories/in-memory-product.repository';
 import { PrismaProductRepository } from '../catalog/repositories/prisma-product.repository';
 
+// Payment intent repositories (Phase 6)
+import { PAYMENT_INTENT_REPOSITORY } from '../payment/repositories/payment-intent-repository.interface';
+import { InMemoryPaymentIntentRepository } from '../payment/repositories/in-memory-payment-intent.repository';
+import { PrismaPaymentIntentRepository } from '../payment/repositories/prisma-payment-intent.repository';
+
 /**
  * Repository Type Configuration
  *
@@ -132,6 +137,21 @@ export const ProductRepositoryProvider: Provider = {
       return new PrismaProductRepository(prismaService);
     }
     return new InMemoryProductRepository();
+  },
+  inject: [PrismaService],
+};
+
+// =============================================================================
+// Payment Intent Repository Provider (Phase 6)
+// =============================================================================
+
+export const PaymentIntentRepositoryProvider: Provider = {
+  provide: PAYMENT_INTENT_REPOSITORY,
+  useFactory: (prismaService: PrismaService) => {
+    if (isPrismaEnabled()) {
+      return new PrismaPaymentIntentRepository(prismaService);
+    }
+    return new InMemoryPaymentIntentRepository();
   },
   inject: [PrismaService],
 };
