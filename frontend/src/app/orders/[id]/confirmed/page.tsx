@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth-context';
 import { ROUTES } from '@/lib/constants';
-import { apiClient } from '@/lib/api-client';
-import type { ConfirmedOrder, ConfirmedOrderItem } from '@/types/api';
+import { fetchOrderById } from '@/lib/order-service';
+import type { OrderDetail } from '@/types/api';
 
 /**
  * Order Confirmed Page
@@ -28,7 +28,7 @@ export default function OrderConfirmedPage() {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const orderId = params.id as string;
 
-  const [order, setOrder] = useState<ConfirmedOrder | null>(null);
+  const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,23 +44,8 @@ export default function OrderConfirmedPage() {
       setError(null);
 
       try {
-        const response = await apiClient.get<ConfirmedOrder>(`/orders/${orderId}`, {
-          requiresAuth: true,
-        });
-
-        if (response.data) {
-          setOrder({
-            orderId: response.data.orderId || (response.data as any).id,
-            state: response.data.state || (response.data as any).status,
-            items: response.data.items || [],
-            itemCount: response.data.itemCount,
-            total: response.data.total,
-            createdAt: response.data.createdAt,
-            confirmedAt: response.data.confirmedAt || response.data.createdAt,
-          });
-        } else {
-          setError('Order not found');
-        }
+        const data = await fetchOrderById(orderId);
+        setOrder(data);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load order';
         setError(message);
@@ -127,7 +112,7 @@ export default function OrderConfirmedPage() {
                 <div style={styles.infoRow}>
                   <span style={styles.label}>Confirmed At</span>
                   <span style={styles.value}>
-                    {new Date(order.confirmedAt).toLocaleString()}
+                    {new Date(order.updatedAt).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -137,7 +122,7 @@ export default function OrderConfirmedPage() {
             <div style={styles.card}>
               <h2 style={styles.sectionTitle}>Order Items</h2>
               <div style={styles.itemsList}>
-                {order.items.map((item: ConfirmedOrderItem) => (
+                {order.items.map((item) => (
                   <div key={item.productId} style={styles.itemRow}>
                     <div style={styles.itemDetails}>
                       <span style={styles.itemName}>{item.productName}</span>
@@ -162,7 +147,7 @@ export default function OrderConfirmedPage() {
             </div>
 
             {/* Pay for order (Phase 6 — when CONFIRMED) */}
-            {order.state === 'CONFIRMED' && (
+            {order.state === 'CONFIRMED' && !order.payment && (
               <div style={styles.paymentPrompt}>
                 <p style={styles.paymentPromptText}>
                   Order will be fulfilled after medical approval (if required) and payment verification.

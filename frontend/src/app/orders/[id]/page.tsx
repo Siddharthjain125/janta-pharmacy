@@ -219,13 +219,17 @@ export default function OrderDetailPage() {
                 </p>
                 <p style={styles.paymentStatus}>
                   Status:{' '}
-                  {order.payment.status === 'VERIFIED'
-                    ? 'Payment received and verified'
-                    : order.payment.status === 'SUBMITTED'
-                      ? 'Payment received and pending verification'
-                      : order.payment.status === 'PENDING'
-                        ? 'Waiting for verification (upload proof on payment page)'
-                        : order.payment.status}
+                  {order.payment.method === 'COD'
+                    ? 'Pay at delivery'
+                    : order.payment.status === 'VERIFIED'
+                      ? 'Paid'
+                      : order.payment.status === 'SUBMITTED'
+                        ? 'Waiting for verification'
+                        : order.payment.status === 'PENDING'
+                          ? 'Waiting for verification'
+                          : order.payment.status === 'REJECTED'
+                            ? 'Payment rejected'
+                            : order.payment.status}
                 </p>
                 {order.payment.status === 'PENDING' && order.payment.method === 'UPI' && (
                   <Link href={ROUTES.ORDER_PAYMENT(orderId)} style={styles.paymentLink}>
@@ -235,8 +239,8 @@ export default function OrderDetailPage() {
               </div>
             )}
 
-            {/* Pay for this order (when CONFIRMED and no verified payment) */}
-            {order.state === 'CONFIRMED' && (!order.payment || order.payment.status !== 'VERIFIED') && (
+            {/* Pay for this order (when CONFIRMED and no payment intent exists yet) */}
+            {order.state === 'CONFIRMED' && !order.payment && (
               <div style={styles.card}>
                 <p style={styles.payPrompt}>
                   Order will be fulfilled after medical approval (if required) and payment verification.

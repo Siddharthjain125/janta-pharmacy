@@ -52,7 +52,7 @@ export class InMemoryPaymentIntentRepository implements IPaymentIntentRepository
 
   async findPending(): Promise<PaymentIntent[]> {
     return Array.from(this.intents.values())
-      .filter((i) => i.status === PaymentIntentStatus.SUBMITTED)
+      .filter((i) => i.status === PaymentIntentStatus.SUBMITTED && i.method === 'UPI')
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 }

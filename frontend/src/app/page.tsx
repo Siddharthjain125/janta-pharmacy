@@ -1,31 +1,36 @@
-/**
- * Home Page
- * 
- * Landing page for Janta Pharmacy.
- * TODO: Add hero section
- * TODO: Add featured products
- * TODO: Add promotional content
- */
+import { BlogPreview } from "@/components/home/BlogPreview"
+import { CategoryGrid } from "@/components/home/CategoryGrid"
+import { FeaturedProducts } from "@/components/home/FeaturedProducts"
+import { Footer } from "@/components/home/Footer"
+import { HealthCategories } from "@/components/home/HealthCategories"
+import { Hero } from "@/components/home/Hero"
+import { MobileAppSection } from "@/components/home/MobileAppSection"
+import { Newsletter } from "@/components/home/Newsletter"
+import { OffersCarousel } from "@/components/home/OffersCarousel"
+import { PrescriptionBanner } from "@/components/home/PrescriptionBanner"
+import { SmartSearch } from "@/components/home/SmartSearch"
+import { Testimonials } from "@/components/home/Testimonials"
+import { TrustIndicators } from "@/components/home/TrustIndicators"
+import { WhyChooseUs } from "@/components/home/WhyChooseUs"
+
 export default function HomePage() {
   return (
-    <div>
-      <h1>Welcome to Janta Pharmacy</h1>
-      <p>Your trusted partner for pharmaceutical needs.</p>
-
-      <section style={{ marginTop: '2rem' }}>
-        <h2>Quick Links</h2>
-        <ul>
-          <li>Browse Products (coming soon)</li>
-          <li>View Orders</li>
-          <li>Upload Prescription (coming soon)</li>
-        </ul>
-      </section>
-
-      <section style={{ marginTop: '2rem', padding: '1rem', background: '#f5f5f5', borderRadius: '8px' }}>
-        <h3>🏗️ Development Mode</h3>
-        <p>This is the frontend scaffolding. Features are being implemented progressively.</p>
-      </section>
+    <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 bg-white">
+      <Hero />
+      <SmartSearch />
+      <CategoryGrid />
+      <OffersCarousel />
+      <FeaturedProducts />
+      <PrescriptionBanner />
+      <HealthCategories />
+      <WhyChooseUs />
+      <TrustIndicators />
+      <Testimonials />
+      <MobileAppSection />
+      <BlogPreview />
+      <Newsletter />
+      <Footer />
     </div>
-  );
+  )
 }
 

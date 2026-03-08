@@ -145,14 +145,14 @@ export function canCancelOrder(state: string): boolean {
 
 /**
  * Create payment intent (Phase 6 — manual payment v1).
- * COD: creates VERIFIED intent and transitions order to PAID; returns order.
+ * COD: creates VERIFIED intent (pay at delivery); order remains CONFIRMED.
  * UPI: creates PENDING intent and returns UPI instructions.
  */
 export async function createPayment(
   orderId: string,
   method: 'COD' | 'UPI',
-): Promise<OrderDetail | CreatePaymentUpiResponse> {
-  const response = await apiClient.post<OrderDetail | CreatePaymentUpiResponse>(
+): Promise<PaymentIntentResponse | CreatePaymentUpiResponse> {
+  const response = await apiClient.post<PaymentIntentResponse | CreatePaymentUpiResponse>(
     `/orders/${orderId}/payment`,
     { method },
     { requiresAuth: true },

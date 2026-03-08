@@ -314,11 +314,13 @@ model Product {
   priceAmount          Int             @map("price_amount") // In minor units (paise)
   priceCurrency        String          @default("INR") @map("price_currency")
   requiresPrescription Boolean         @default(false) @map("requires_prescription")
+  isFeatured           Boolean         @default(false) @map("is_featured")
   isActive             Boolean         @default(true) @map("is_active")
   createdAt            DateTime        @default(now()) @map("created_at")
   updatedAt            DateTime        @updatedAt @map("updated_at")
 
   @@index([category])
+  @@index([isFeatured])
   @@index([isActive])
   @@index([requiresPrescription])
   @@index([name])
@@ -335,4 +337,64 @@ enum ProductCategory {
   HEALTH_DEVICES
   SUPPLEMENTS
   FIRST_AID
+}
+
+// =============================================================================
+// NEWSLETTER DOMAIN
+// =============================================================================
+
+model NewsletterSubscriber {
+  id           String           @id @default(uuid())
+  email        String           @unique
+  subscribedAt DateTime         @default(now()) @map("subscribed_at")
+  status       NewsletterStatus @default(ACTIVE)
+
+  @@index([email])
+  @@index([status])
+  @@map("newsletter_subscribers")
+}
+
+enum NewsletterStatus {
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+// =============================================================================
+// PROMOTION DOMAIN
+// =============================================================================
+
+model Promotion {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  imageUrl        String   @map("image_url")
+  discountPercent Int      @map("discount_percent")
+  active          Boolean  @default(true)
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([active])
+  @@index([expiresAt])
+  @@map("promotions")
+}
+
+// =============================================================================
+// HEALTH ARTICLE DOMAIN
+// =============================================================================
+
+model HealthArticle {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  summary     String
+  coverImage  String   @map("cover_image")
+  content     String
+  publishedAt DateTime @map("published_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([publishedAt])
+  @@map("health_articles")
 }

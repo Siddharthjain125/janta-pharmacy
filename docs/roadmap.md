@@ -19,7 +19,18 @@ An **architecture-first, risk-driven** development approach. Complexity is valid
 | Phase 4 | User Profile & Persistence | ✅ Complete |
 | Phase 5 | Prescription Workflow | ✅ Complete |
 | Phase 5.5 | Compliance Enforcement | ✅ Complete |
-| Phase 6 | Payments & Notifications | ⏳ Planned |
+| Phase 6 | Payments & Notifications | 🚧 In Progress |
+| Phase 7 | Fulfilment & Shipping | ⏳ Planned |
+| Phase 8 | Admin Operations Panel | ⏳ Planned |
+| Phase 9 | File Storage System | ⏳ Planned |
+| Phase 10 | Observability & Monitoring | ⏳ Planned |
+| Phase 11 | Background Jobs | ⏳ Planned |
+| Phase 12 | Notification Infrastructure | ⏳ Planned |
+| Phase 13 | Deployment & Infrastructure | ⏳ Planned |
+| Phase 14 | Real Payment Gateway | ⏳ Planned |
+| Phase 15 | Security Hardening | ⏳ Planned |
+| Phase 16 | Performance & Caching | ⏳ Planned |
+| Phase 17 | Documentation & Showcase | ⏳ Planned |
 
 ---
 
@@ -36,8 +47,9 @@ An **architecture-first, risk-driven** development approach. Complexity is valid
 | **4** | User profile read & mutation APIs, address aggregate, PostgreSQL + Prisma, Prisma and in-memory repositories, user context composition, frontend profile and addresses pages |
 | **5** | Prescription aggregate, admin review, order–prescription/consultation links, compliance gate at fulfilment |
 | **5.5** | Compliance enforcement: fulfilment gated by prescription/consultation approval; payment explicitly allowed before approval (ADR-0055) |
+| **6** | Manual payments v1: `PaymentIntent` model, COD immediate verification, UPI proof submission and admin verify/reject flow, order detail/payment UI, order transition to `PAID` after verified payment |
 
-**Current State:** Users can browse the catalog (public), add items to cart, place orders, view history, and cancel eligible orders. Profile and address management are available. Fulfilment (ship) is blocked until compliance approval; payment is allowed after confirmation regardless of prescription status. Login is required for cart/checkout and profile operations.
+**Current State:** Users can browse the catalog (public), add items to cart, place orders, view history, and cancel eligible orders. Profile and address management are available. Fulfilment (ship) is blocked until compliance approval; payment is allowed after confirmation regardless of prescription status. Users can pay via COD or UPI proof submission, and admins verify/reject submitted UPI payments. Login is required for cart/checkout and profile operations.
 
 ---
 
@@ -262,18 +274,205 @@ The cart is an Order in `DRAFT` state — not a separate entity.
 
 ---
 
-## Phase 6: Payments & Notifications ⏳
+## Phase 6: Payments & Notifications 🚧
 
 **Goal:** Make orders commercially complete.
 
-### Planned
-- [ ] Payment gateway integration (Razorpay/Stripe)
-- [ ] CONFIRMED → PAID state transition
-- [ ] Webhook handling with idempotency
-- [ ] Email notifications (order confirmation, shipping, delivery)
+### Completed (Manual Payments v1)
+- [x] `PaymentIntent` domain added (`method`, `status`, `referenceId`, `proofReference`, `verifiedAt`) with Prisma and in-memory repositories.
+- [x] User payment APIs on orders:
+  - `POST /orders/:id/payment` (COD or UPI intent creation)
+  - `POST /orders/:id/payment/upi-proof` (submit UPI proof)
+- [x] Payment lifecycle implemented:
+  - COD: intent created as `VERIFIED`, order transitions `CONFIRMED` → `PAID`
+  - UPI: `PENDING` → `SUBMITTED` (user proof) → `VERIFIED`/`REJECTED` (admin decision)
+- [x] Admin verification APIs:
+  - `GET /admin/payments/pending`
+  - `POST /admin/payments/:id/verify` (marks order as `PAID`)
+  - `POST /admin/payments/:id/reject`
+- [x] Frontend payment UX:
+  - `/orders/[id]/payment` for method selection, UPI instructions, and proof submission
+  - Payment status surfaced in order detail/confirmed experiences
+
+### Remaining
+- [ ] Real payment gateway integration (Razorpay/Stripe)
+- [ ] Webhook-based reconciliation with idempotency guarantees
+- [ ] Automated notifications (order confirmation, payment updates, shipping, delivery)
 
 ### Why Deferred
-Requires external service integration and PCI compliance considerations.
+Gateway integration, webhook hardening, and notification infra require external services plus operational controls.
+
+---
+
+## Phase 7: Fulfilment & Shipping ⏳
+
+**Goal:** Complete the commercial lifecycle of an order.
+
+### Planned
+- [ ] Extend lifecycle: `CONFIRMED -> PAID -> PACKED -> SHIPPED -> DELIVERED` (with optional `RETURNED` and `FAILED_DELIVERY`)
+- [ ] Add fulfilment domain (`Shipment` entity with `carrier`, `trackingId`, `shippedAt`, `deliveredAt`)
+- [ ] Add `FulfilmentService` and shipment repository contract/implementation
+- [ ] Admin APIs for pack/ship/deliver transitions
+- [ ] Frontend order timeline reflecting fulfilment states
+
+**Outcome:** Order lifecycle becomes commercially complete end-to-end.
+
+---
+
+## Phase 8: Admin Operations Panel ⏳
+
+**Goal:** Provide an operational interface for pharmacy staff.
+
+### Planned
+- [ ] Introduce admin routes and authenticated admin shell (`/admin`)
+- [ ] Order dashboard with filters (status, payment status, date range, user)
+- [ ] Admin order actions (pack, ship, cancel where allowed)
+- [ ] Prescription moderation queue (approve/reject)
+- [ ] Payments dashboard for manual verification decisions
+
+**Outcome:** The system becomes operationally usable by internal staff.
+
+---
+
+## Phase 9: File Storage System ⏳
+
+**Goal:** Support real uploads for prescriptions and payment proofs.
+
+### Planned
+- [ ] Add storage abstraction (`IFileStorage`)
+- [ ] Implement `LocalDiskStorage` first, keep `S3Storage` pluggable
+- [ ] Add upload/retrieval APIs (including pre-signed URL strategy where relevant)
+- [ ] Store file metadata in DB, keep binary files external
+
+**Outcome:** Enables production-grade document workflows.
+
+---
+
+## Phase 10: Observability & Monitoring ⏳
+
+**Goal:** Understand system behavior in production.
+
+### Planned
+- [ ] Structured logging with consistent correlation fields (`requestId`, `userId`, `orderId`, `eventType`)
+- [ ] Metrics endpoint (`/metrics`) with key counters and latency metrics
+- [ ] Optional tracing integration (OpenTelemetry-compatible)
+
+**Outcome:** System health and behavior become measurable and diagnosable.
+
+---
+
+## Phase 11: Background Jobs ⏳
+
+**Goal:** Move non-critical work off the request thread.
+
+### Planned
+- [ ] Introduce queue abstraction for asynchronous processing
+- [ ] Add Redis-backed worker setup (e.g., BullMQ)
+- [ ] Move notifications, reminders, and reconciliation tasks to jobs
+- [ ] Define retry, idempotency, and dead-letter handling patterns
+
+**Outcome:** Improved responsiveness and reliability under load.
+
+---
+
+## Phase 12: Notification Infrastructure ⏳
+
+**Goal:** Notify users on important lifecycle events.
+
+### Planned
+- [ ] Build `NotificationService` with template-driven messages
+- [ ] Support initial channels (email, SMS), keep WhatsApp/future channels extensible
+- [ ] Emit notifications for `OrderConfirmed`, `PaymentVerified`, `OrderShipped`, and compliance outcomes
+- [ ] Add delivery status tracking and retry semantics
+
+**Outcome:** Stronger customer communication and lifecycle transparency.
+
+---
+
+## Phase 13: Deployment & Infrastructure ⏳
+
+**Goal:** Run the platform in reproducible real environments.
+
+### Planned
+- [ ] Dockerize API, frontend, database, and queue/cache dependencies
+- [ ] Standardize local orchestration via `docker-compose`
+- [ ] Define first cloud target and deployment workflow (preview + production)
+- [ ] Add environment configuration and secret management baseline
+
+**Outcome:** Public demo and repeatable deployments become practical.
+
+---
+
+## Phase 14: Real Payment Gateway ⏳
+
+**Goal:** Replace manual verification with gateway-native flows.
+
+### Planned
+- [ ] Integrate a real gateway (Razorpay or Stripe)
+- [ ] Implement payment order creation, redirect/intent flow, webhook verification
+- [ ] Enforce idempotency keys and webhook signature validation
+- [ ] Add replay protection and reconciliation tooling
+
+**Outcome:** Real commercial payment support with safer automation.
+
+---
+
+## Phase 15: Security Hardening ⏳
+
+**Goal:** Establish a production security baseline.
+
+### Planned
+- [ ] Rate limiting and abuse controls
+- [ ] Stronger login protection and brute-force mitigation
+- [ ] Security headers (`helmet`), tightened CORS, and CSRF strategy
+- [ ] Expanded input validation and threat-focused audits
+
+**Outcome:** Better protection against common web and auth attack vectors.
+
+---
+
+## Phase 16: Performance & Caching ⏳
+
+**Goal:** Improve scalability and latency.
+
+### Planned
+- [ ] Introduce Redis caching for catalog-heavy read paths
+- [ ] Add HTTP cache semantics (`ETag`, `Cache-Control`) for suitable endpoints
+- [ ] Define cache invalidation strategy for product/catalog updates
+
+**Outcome:** Better throughput and faster user-facing responses.
+
+---
+
+## Phase 17: Documentation & Showcase ⏳
+
+**Goal:** Turn the project into a portfolio-grade architecture reference.
+
+### Planned
+- [ ] Consolidate architecture, domain model, and state-machine docs
+- [ ] Maintain ADR index with implementation mapping
+- [ ] Publish deployment and operations guides
+- [ ] Provide stable demo environment and sample user journeys
+
+**Outcome:** Project is easier to evaluate, operate, and showcase.
+
+---
+
+## Final System Architecture (Target)
+
+When complete, the platform includes:
+- Auth
+- Catalog
+- Orders
+- Payments
+- Compliance
+- Fulfilment
+- Notifications
+- Admin Operations
+- File Storage
+- Observability
+- Background Jobs
+- Deployment
 
 ---
 

@@ -54,7 +54,10 @@ export class PrismaPaymentIntentRepository implements IPaymentIntentRepository {
 
   async findPending(): Promise<PaymentIntent[]> {
     const rows = await this.prisma.paymentIntent.findMany({
-      where: { status: PrismaPaymentIntentStatus.SUBMITTED },
+      where: {
+        status: PrismaPaymentIntentStatus.SUBMITTED,
+        method: PrismaPaymentMethod.UPI,
+      },
       orderBy: { createdAt: 'asc' },
     });
     return rows.map((row: PrismaPaymentIntentRow) => this.toDomain(row));

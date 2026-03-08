@@ -22,7 +22,7 @@ import type { UpiProofDto } from './dto/upi-proof.dto';
 import { logWithCorrelation } from '../common/logging/logger';
 
 /** Phase 6 — UPI instructions (configurable; no gateway) */
-const UPI_VPA = process.env.UPI_VPA || 'jantapharmacy@paytm';
+const UPI_VPA = process.env.UPI_VPA || '9009090467@ptyes';
 const UPI_STEPS = [
   'Open your UPI app (GPay, PhonePe, Paytm, etc.)',
   `Send payment to VPA: ${UPI_VPA}`,
@@ -48,7 +48,7 @@ export class PaymentIntentService {
 
   /**
    * Create payment intent for an order (user).
-   * COD: create VERIFIED (caller should then transition order to PAID).
+   * COD: create VERIFIED (pay at delivery, order remains CONFIRMED).
    * UPI: create PENDING, return UPI instructions.
    */
   async createForOrder(
@@ -170,7 +170,8 @@ export class PaymentIntentService {
   }
 
   /**
-   * Admin: verify payment intent (SUBMITTED → VERIFIED). Caller should then call OrderService.recordPaymentVerified(orderId).
+   * Admin: verify payment intent (SUBMITTED → VERIFIED).
+   * Payment verification is tracked in PaymentIntent; order state remains CONFIRMED.
    */
   async verify(id: string, correlationId: string): Promise<PaymentIntent> {
     const intent = await this.paymentIntentRepository.findById(id);

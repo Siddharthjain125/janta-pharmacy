@@ -32,6 +32,21 @@ import { PAYMENT_INTENT_REPOSITORY } from '../payment/repositories/payment-inten
 import { InMemoryPaymentIntentRepository } from '../payment/repositories/in-memory-payment-intent.repository';
 import { PrismaPaymentIntentRepository } from '../payment/repositories/prisma-payment-intent.repository';
 
+// Newsletter repositories
+import { NEWSLETTER_REPOSITORY } from '../newsletter/repositories/newsletter-repository.interface';
+import { InMemoryNewsletterRepository } from '../newsletter/repositories/in-memory-newsletter.repository';
+import { PrismaNewsletterRepository } from '../newsletter/repositories/prisma-newsletter.repository';
+
+// Promotion repositories
+import { PROMOTION_REPOSITORY } from '../promotions/repositories/promotion-repository.interface';
+import { InMemoryPromotionRepository } from '../promotions/repositories/in-memory-promotion.repository';
+import { PrismaPromotionRepository } from '../promotions/repositories/prisma-promotion.repository';
+
+// Health article repositories
+import { HEALTH_ARTICLE_REPOSITORY } from '../articles/repositories/health-article-repository.interface';
+import { InMemoryHealthArticleRepository } from '../articles/repositories/in-memory-health-article.repository';
+import { PrismaHealthArticleRepository } from '../articles/repositories/prisma-health-article.repository';
+
 /**
  * Repository Type Configuration
  *
@@ -152,6 +167,51 @@ export const PaymentIntentRepositoryProvider: Provider = {
       return new PrismaPaymentIntentRepository(prismaService);
     }
     return new InMemoryPaymentIntentRepository();
+  },
+  inject: [PrismaService],
+};
+
+// =============================================================================
+// Newsletter Repository Provider
+// =============================================================================
+
+export const NewsletterRepositoryProvider: Provider = {
+  provide: NEWSLETTER_REPOSITORY,
+  useFactory: (prismaService: PrismaService) => {
+    if (isPrismaEnabled()) {
+      return new PrismaNewsletterRepository(prismaService);
+    }
+    return new InMemoryNewsletterRepository();
+  },
+  inject: [PrismaService],
+};
+
+// =============================================================================
+// Promotion Repository Provider
+// =============================================================================
+
+export const PromotionRepositoryProvider: Provider = {
+  provide: PROMOTION_REPOSITORY,
+  useFactory: (prismaService: PrismaService) => {
+    if (isPrismaEnabled()) {
+      return new PrismaPromotionRepository(prismaService);
+    }
+    return new InMemoryPromotionRepository();
+  },
+  inject: [PrismaService],
+};
+
+// =============================================================================
+// Health Article Repository Provider
+// =============================================================================
+
+export const HealthArticleRepositoryProvider: Provider = {
+  provide: HEALTH_ARTICLE_REPOSITORY,
+  useFactory: (prismaService: PrismaService) => {
+    if (isPrismaEnabled()) {
+      return new PrismaHealthArticleRepository(prismaService);
+    }
+    return new InMemoryHealthArticleRepository();
   },
   inject: [PrismaService],
 };

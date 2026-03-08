@@ -22,6 +22,9 @@ export class ProductSearchCriteria {
   /** Filter by prescription requirement */
   readonly requiresPrescription: boolean | null;
 
+  /** Filter by featured flag */
+  readonly featured: boolean | null;
+
   /** Filter by active status (default: true) */
   readonly activeOnly: boolean;
 
@@ -35,6 +38,7 @@ export class ProductSearchCriteria {
     searchText?: string | null;
     category?: ProductCategory | null;
     requiresPrescription?: boolean | null;
+    featured?: boolean | null;
     activeOnly?: boolean;
     page?: number;
     limit?: number;
@@ -42,6 +46,7 @@ export class ProductSearchCriteria {
     this.searchText = params.searchText?.trim() || null;
     this.category = params.category ?? null;
     this.requiresPrescription = params.requiresPrescription ?? null;
+    this.featured = params.featured ?? null;
     this.activeOnly = params.activeOnly ?? true;
     this.page = Math.max(1, params.page ?? 1);
     this.limit = Math.min(Math.max(1, params.limit ?? 20), 100); // 1-100 range
@@ -55,6 +60,7 @@ export class ProductSearchCriteria {
       searchText?: string | null;
       category?: ProductCategory | null;
       requiresPrescription?: boolean | null;
+      featured?: boolean | null;
       activeOnly?: boolean;
       page?: number;
       limit?: number;
@@ -74,7 +80,12 @@ export class ProductSearchCriteria {
    * Check if any filters are applied
    */
   get hasFilters(): boolean {
-    return this.searchText !== null || this.category !== null || this.requiresPrescription !== null;
+    return (
+      this.searchText !== null ||
+      this.category !== null ||
+      this.requiresPrescription !== null ||
+      this.featured !== null
+    );
   }
 
   /**
@@ -92,6 +103,7 @@ export class ProductSearchCriteria {
       searchText: this.searchText,
       category: this.category,
       requiresPrescription: this.requiresPrescription,
+      featured: this.featured,
       activeOnly: this.activeOnly,
       page,
       limit,
@@ -106,6 +118,7 @@ export class ProductSearchCriteria {
       searchText: this.searchText,
       category,
       requiresPrescription: this.requiresPrescription,
+      featured: this.featured,
       activeOnly: this.activeOnly,
       page: this.page,
       limit: this.limit,

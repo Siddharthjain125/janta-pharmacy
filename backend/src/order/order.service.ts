@@ -156,52 +156,27 @@ export class OrderService {
   }
 
   /**
-   * Pay for an order
-   *
-   * Transition: CONFIRMED → PAID
-   *
-   * Business rules:
-   * - Order must be in CONFIRMED status
-   * - Only order owner can pay
-   *
-   * Note: This is the command to record payment.
-   * Actual payment processing would be handled by PaymentService.
+   * @deprecated Payment status is tracked in PaymentIntent.
+   * Kept for backward compatibility; no order state mutation occurs.
    */
   async payForOrder(orderId: string, userId: string, correlationId: string): Promise<OrderDto> {
     const order = await this.getOrderById(orderId, userId, correlationId);
-    const previousState = order.status;
-    const targetState = OrderStatus.PAID;
-
-    // Validate order is in correct state for payment
     if (order.status !== OrderStatus.CONFIRMED) {
       throw new OrderNotConfirmedException(orderId, order.status);
     }
-
-    this.validateAndLogTransition(
+    logWithCorrelation(
+      'INFO',
       correlationId,
-      orderId,
-      userId,
-      previousState,
-      targetState,
-      'PAY',
+      'Payment recorded in PaymentIntent; order state unchanged',
+      'OrderService',
+      { orderId, userId, state: order.status },
     );
-
-    const updatedOrder = await this.orderRepository.updateStatus(orderId, targetState);
-
-    this.logStateTransition(correlationId, {
-      orderId,
-      userId,
-      previousState,
-      nextState: targetState,
-      action: 'PAY',
-    });
-
-    return updatedOrder;
+    return order;
   }
 
   /**
-   * Record payment as verified (Phase 6 — admin only, after PaymentIntent VERIFIED).
-   * Transition: CONFIRMED → PAID. No ownership check; used when admin verifies UPI payment.
+   * @deprecated Payment status is tracked in PaymentIntent.
+   * Kept for backward compatibility; no order state mutation occurs.
    */
   async recordPaymentVerified(orderId: string, correlationId: string): Promise<OrderDto> {
     const order = await this.orderRepository.findById(orderId);
@@ -212,18 +187,14 @@ export class OrderService {
     if (order.status !== OrderStatus.CONFIRMED) {
       throw new OrderNotConfirmedException(orderId, order.status);
     }
-    const previousState = order.status;
-    const targetState = OrderStatus.PAID;
-    this.validateAndLogTransition(correlationId, orderId, order.userId, previousState, targetState, 'PAY');
-    const updatedOrder = await this.orderRepository.updateStatus(orderId, targetState);
-    this.logStateTransition(correlationId, {
-      orderId,
-      userId: order.userId,
-      previousState,
-      nextState: targetState,
-      action: 'PAY_VERIFIED',
-    });
-    return updatedOrder;
+    logWithCorrelation(
+      'INFO',
+      correlationId,
+      'Payment verified in PaymentIntent; order state unchanged',
+      'OrderService',
+      { orderId, userId: order.userId, state: order.status },
+    );
+    return order;
   }
 
   /**
@@ -312,7 +283,6 @@ export class OrderService {
       nextState: targetState,
       action: 'CANCEL',
     });
-
     return {
       order: updatedOrder,
       previousState,

@@ -14,7 +14,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/interfaces/auth-user.interface';
 import { PaymentIntentService } from './payment-intent.service';
-import { OrderService } from '../order/order.service';
 import { toPaymentIntentResponseDto } from './dto/payment-response.dto';
 
 /**
@@ -28,10 +27,7 @@ import { toPaymentIntentResponseDto } from './dto/payment-response.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class PaymentAdminController {
-  constructor(
-    private readonly paymentIntentService: PaymentIntentService,
-    private readonly orderService: OrderService,
-  ) {}
+  constructor(private readonly paymentIntentService: PaymentIntentService) {}
 
   @Get('pending')
   async getPending(): Promise<ApiResponse<ReturnType<typeof toPaymentIntentResponseDto>[]>> {
@@ -49,7 +45,6 @@ export class PaymentAdminController {
     @Headers('x-correlation-id') correlationId: string,
   ): Promise<ApiResponse<ReturnType<typeof toPaymentIntentResponseDto>>> {
     const intent = await this.paymentIntentService.verify(id, correlationId);
-    await this.orderService.recordPaymentVerified(intent.orderId, correlationId);
     return ApiResponse.success(toPaymentIntentResponseDto(intent), 'Payment verified successfully');
   }
 

@@ -35,6 +35,7 @@ export class CatalogController {
     @Query('search') search?: string,
     @Query('category') category?: string,
     @Query('requiresPrescription') requiresPrescription?: string,
+    @Query('featured') featured?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Headers('x-correlation-id') correlationId?: string,
@@ -44,6 +45,7 @@ export class CatalogController {
       search: search?.trim() || undefined,
       category: category?.trim() || undefined,
       requiresPrescription: this.parseBooleanParam(requiresPrescription),
+      featured: this.parseBooleanParam(featured),
       page: this.parseIntParam(page, 1),
       limit: this.parseIntParam(limit, 20),
     };

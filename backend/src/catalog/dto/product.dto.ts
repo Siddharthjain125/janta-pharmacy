@@ -19,6 +19,7 @@ export interface ProductDto {
   categoryLabel: string;
   price: PriceDto;
   requiresPrescription: boolean;
+  isFeatured: boolean;
   isActive: boolean;
 }
 
@@ -37,10 +38,12 @@ export interface PriceDto {
 export interface ProductSummaryDto {
   id: string;
   name: string;
+  description: string | null;
   category: string;
   categoryLabel: string;
   price: PriceDto;
   requiresPrescription: boolean;
+  isFeatured: boolean;
 }
 
 /**
@@ -62,6 +65,7 @@ export function toProductDto(product: {
   category: ProductCategory;
   price: { getAmount(): number; getCurrency(): string; format(): string };
   requiresPrescription: boolean;
+  isFeatured: boolean;
   isActive: boolean;
 }): ProductDto {
   return {
@@ -76,6 +80,7 @@ export function toProductDto(product: {
       formatted: product.price.format(),
     },
     requiresPrescription: product.requiresPrescription,
+    isFeatured: product.isFeatured,
     isActive: product.isActive,
   };
 }
@@ -86,13 +91,16 @@ export function toProductDto(product: {
 export function toProductSummaryDto(product: {
   id: { toString(): string };
   name: string;
+  description: string | null;
   category: ProductCategory;
   price: { getAmount(): number; getCurrency(): string; format(): string };
   requiresPrescription: boolean;
+  isFeatured: boolean;
 }): ProductSummaryDto {
   return {
     id: product.id.toString(),
     name: product.name,
+    description: product.description,
     category: product.category,
     categoryLabel: PRODUCT_CATEGORY_METADATA[product.category].label,
     price: {
@@ -101,6 +109,7 @@ export function toProductSummaryDto(product: {
       formatted: product.price.format(),
     },
     requiresPrescription: product.requiresPrescription,
+    isFeatured: product.isFeatured,
   };
 }
 

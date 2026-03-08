@@ -93,6 +93,11 @@ export class PrismaProductRepository implements IProductRepository {
       where.requiresPrescription = criteria.requiresPrescription;
     }
 
+    // Filter by featured flag
+    if (criteria.featured !== null) {
+      where.isFeatured = criteria.featured;
+    }
+
     // Text search on name and description
     if (criteria.hasSearchText) {
       const searchText = criteria.searchText!;
@@ -117,6 +122,7 @@ export class PrismaProductRepository implements IProductRepository {
         category: this.toDomainCategory(prismaProduct.category),
         price: Money.fromMinorUnits(prismaProduct.priceAmount, prismaProduct.priceCurrency),
         requiresPrescription: prismaProduct.requiresPrescription,
+        isFeatured: prismaProduct.isFeatured,
         isActive: prismaProduct.isActive,
       },
       prismaProduct.createdAt,

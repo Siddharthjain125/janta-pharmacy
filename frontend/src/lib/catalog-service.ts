@@ -31,6 +31,8 @@ export interface FetchProductsOptions {
   category?: string;
   /** Filter by prescription requirement */
   requiresPrescription?: boolean;
+  /** Filter featured products */
+  featured?: boolean;
   /** Page number (1-indexed) */
   page?: number;
   /** Items per page */
@@ -61,6 +63,10 @@ export async function fetchProducts(
   // Add prescription filter if explicitly set
   if (options.requiresPrescription !== undefined) {
     params.set('requiresPrescription', String(options.requiresPrescription));
+  }
+
+  if (options.featured !== undefined) {
+    params.set('featured', String(options.featured));
   }
 
   // Add pagination

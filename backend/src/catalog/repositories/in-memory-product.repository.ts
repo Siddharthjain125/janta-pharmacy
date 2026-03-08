@@ -89,6 +89,10 @@ export class InMemoryProductRepository implements IProductRepository {
       results = results.filter((p) => p.requiresPrescription === criteria.requiresPrescription);
     }
 
+    if (criteria.featured !== null) {
+      results = results.filter((p) => p.isFeatured === criteria.featured);
+    }
+
     return results;
   }
 
@@ -128,6 +132,7 @@ export class InMemoryProductRepository implements IProductRepository {
       category: ProductCategory;
       priceInRupees: number;
       requiresPrescription: boolean;
+      isFeatured?: boolean;
     }> = [
       {
         id: 'prod-001',
@@ -136,6 +141,7 @@ export class InMemoryProductRepository implements IProductRepository {
         category: ProductCategory.GENERAL,
         priceInRupees: 25,
         requiresPrescription: false,
+        isFeatured: true,
       },
       {
         id: 'prod-002',
@@ -160,6 +166,7 @@ export class InMemoryProductRepository implements IProductRepository {
         category: ProductCategory.PRESCRIPTION,
         priceInRupees: 85,
         requiresPrescription: true,
+        isFeatured: true,
       },
       {
         id: 'prod-005',
@@ -184,6 +191,7 @@ export class InMemoryProductRepository implements IProductRepository {
         category: ProductCategory.HEALTH_DEVICES,
         priceInRupees: 199,
         requiresPrescription: false,
+        isFeatured: true,
       },
       {
         id: 'prod-008',
@@ -200,6 +208,7 @@ export class InMemoryProductRepository implements IProductRepository {
         category: ProductCategory.SUPPLEMENTS,
         priceInRupees: 450,
         requiresPrescription: false,
+        isFeatured: true,
       },
       {
         id: 'prod-010',
@@ -245,6 +254,7 @@ export class InMemoryProductRepository implements IProductRepository {
           category: data.category,
           price: Money.fromMajorUnits(data.priceInRupees),
           requiresPrescription: data.requiresPrescription,
+          isFeatured: data.isFeatured ?? false,
           isActive: true,
         },
         now,
@@ -287,6 +297,7 @@ export class InMemoryProductRepository implements IProductRepository {
     priceInRupees: number;
     requiresPrescription: boolean;
     isActive?: boolean;
+    isFeatured?: boolean;
   }): void {
     const product = createProduct(
       {
@@ -296,6 +307,7 @@ export class InMemoryProductRepository implements IProductRepository {
         category: data.category,
         price: Money.fromMajorUnits(data.priceInRupees),
         requiresPrescription: data.requiresPrescription,
+        isFeatured: data.isFeatured ?? false,
         isActive: data.isActive ?? true,
       },
       new Date(),
@@ -317,6 +329,7 @@ export class InMemoryProductRepository implements IProductRepository {
           category: existing.category,
           price: existing.price,
           requiresPrescription: existing.requiresPrescription,
+          isFeatured: existing.isFeatured,
           isActive: false,
         },
         existing.createdAt,

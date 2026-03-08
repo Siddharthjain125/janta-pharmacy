@@ -24,6 +24,9 @@ import { PrescriptionModule } from './prescription/prescription.module';
 import { ConsultationModule } from './consultation/consultation.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { PaymentModule } from './payment/payment.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
+import { PromotionModule } from './promotions/promotion.module';
+import { ArticleModule } from './articles/article.module';
 
 // Support Services
 import { PaymentService } from './payment/payment.service';
@@ -54,6 +57,9 @@ import { AuditService } from './audit/audit.service';
     ConsultationModule,
     ComplianceModule,
     PaymentModule,
+    NewsletterModule,
+    PromotionModule,
+    ArticleModule,
   ],
   controllers: [HealthController],
   providers: [

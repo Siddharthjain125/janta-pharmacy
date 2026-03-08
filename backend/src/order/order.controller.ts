@@ -35,8 +35,8 @@ import { UpiProofDto } from '../payment/dto/upi-proof.dto';
 import {
   toPaymentIntentResponseDto,
   CreatePaymentUpiResponseDto,
+  PaymentIntentResponseDto,
 } from '../payment/dto/payment-response.dto';
-import { PaymentMethod } from '../payment/domain/payment-method';
 import { logWithCorrelation } from '../common/logging/logger';
 
 /**
@@ -229,7 +229,7 @@ export class OrderController {
    * Create payment intent (Phase 6 — manual payment v1)
    * POST /api/v1/orders/:id/payment
    *
-   * COD: creates PaymentIntent VERIFIED, transitions order CONFIRMED → PAID.
+   * COD: creates PaymentIntent VERIFIED (pay at delivery).
    * UPI: creates PaymentIntent PENDING, returns UPI instructions (VPA, steps).
    */
   @Post(':id/payment')
@@ -239,16 +239,18 @@ export class OrderController {
     @Body() dto: CreatePaymentDto,
     @CurrentUser() user: AuthUser,
     @Headers('x-correlation-id') correlationId: string,
-  ): Promise<ApiResponse<OrderDto | CreatePaymentUpiResponseDto>> {
+  ): Promise<ApiResponse<PaymentIntentResponseDto | CreatePaymentUpiResponseDto>> {
     const result = await this.paymentIntentService.createForOrder(
       orderId,
       dto.method,
       user.id,
       correlationId,
     );
-    if (dto.method === PaymentMethod.COD) {
-      const order = await this.orderService.payForOrder(orderId, user.id, correlationId);
-      return ApiResponse.success(order, 'Cash on delivery selected');
+    if (dto.method === 'COD') {
+      return ApiResponse.success(
+        toPaymentIntentResponseDto(result.paymentIntent),
+        'Cash on delivery selected',
+      );
     }
     const response: CreatePaymentUpiResponseDto = {
       paymentIntent: toPaymentIntentResponseDto(result.paymentIntent),

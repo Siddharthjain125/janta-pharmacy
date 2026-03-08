@@ -43,8 +43,8 @@ export default function OrderPaymentPage() {
     try {
       const data = await fetchOrderById(orderId);
       setOrder(data);
-      // If already paid (PAID state or payment VERIFIED), show done
-      if (data.state === 'PAID' || data.payment?.status === 'VERIFIED') {
+      // If payment is already verified, show done.
+      if (data.payment?.status === 'VERIFIED') {
         setStep('cod_done');
       }
     } catch (err) {
@@ -66,7 +66,7 @@ export default function OrderPaymentPage() {
     try {
       await createPayment(orderId, 'COD');
       setStep('cod_done');
-      setOrder((prev) => (prev ? { ...prev, state: 'PAID', payment: { method: 'COD', status: 'VERIFIED' } } : null));
+      setOrder((prev) => (prev ? { ...prev, payment: { method: 'COD', status: 'VERIFIED' } } : null));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -105,6 +105,7 @@ export default function OrderPaymentPage() {
         proofReference: proofReference.trim() || undefined,
       });
       setStep('upi_submitted');
+      setOrder((prev) => (prev ? { ...prev, payment: { method: 'UPI', status: 'SUBMITTED' } } : null));
     } catch (err) {
       setProofError(err instanceof Error ? err.message : 'Failed to submit proof. Please try again.');
     } finally {

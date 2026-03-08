@@ -26,6 +26,8 @@ export interface ProductListParams {
   category?: string;
   /** Filter by prescription requirement */
   requiresPrescription?: boolean;
+  /** Filter featured products */
+  featured?: boolean;
   /** Page number (1-indexed) */
   page?: number;
   /** Items per page */
@@ -87,6 +89,7 @@ export class CatalogQueryService {
       searchText: params.search,
       category,
       requiresPrescription: params.requiresPrescription,
+      featured: params.featured,
       activeOnly: true,
       page: params.page,
       limit: params.limit,
@@ -105,6 +108,7 @@ export class CatalogQueryService {
           search: params.search ?? null,
           category: params.category ?? null,
           requiresPrescription: params.requiresPrescription ?? null,
+          featured: params.featured ?? null,
         },
       );
     }

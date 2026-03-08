@@ -164,10 +164,12 @@ export interface Price {
 export interface ProductSummary {
   id: string;
   name: string;
+  description: string | null;
   category: string;
   categoryLabel: string;
   price: Price;
   requiresPrescription: boolean;
+  isFeatured: boolean;
 }
 
 /**
@@ -182,7 +184,30 @@ export interface Product {
   categoryLabel: string;
   price: Price;
   requiresPrescription: boolean;
+  isFeatured: boolean;
   isActive: boolean;
+}
+
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  discountPercent: number;
+  expiresAt: string;
+}
+
+export interface HealthArticleSummary {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  coverImage: string;
+  publishedAt: string;
+}
+
+export interface HealthArticle extends HealthArticleSummary {
+  content: string;
 }
 
 /**

@@ -25,6 +25,7 @@ export const ROUTES = {
   PRESCRIPTIONS: '/prescriptions',
   PRESCRIPTION_NEW: '/prescriptions/new',
   ADMIN_PRESCRIPTIONS: '/admin/prescriptions',
+  ADMIN_PAYMENTS: '/admin/payments',
 } as const;
 
 // Local storage keys

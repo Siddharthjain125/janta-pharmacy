@@ -34,6 +34,9 @@ export interface Product {
   /** Whether this product requires a prescription to purchase */
   readonly requiresPrescription: boolean;
 
+  /** Whether this product should be highlighted on homepage */
+  readonly isFeatured: boolean;
+
   /** Whether this product is currently active/available */
   readonly isActive: boolean;
 
@@ -54,6 +57,7 @@ export interface CreateProductData {
   category: ProductCategory;
   price: Money;
   requiresPrescription: boolean;
+  isFeatured?: boolean;
   isActive?: boolean;
 }
 
@@ -75,6 +79,7 @@ export function createProduct(data: CreateProductData, now: Date = new Date()): 
     category: data.category,
     price: data.price,
     requiresPrescription: data.requiresPrescription,
+    isFeatured: data.isFeatured ?? false,
     isActive: data.isActive ?? true,
     createdAt: now,
     updatedAt: now,
@@ -91,6 +96,7 @@ export function productToDTO(product: Product): {
   category: string;
   price: { amount: number; currency: string };
   requiresPrescription: boolean;
+  isFeatured: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -102,6 +108,7 @@ export function productToDTO(product: Product): {
     category: product.category,
     price: product.price.toJSON(),
     requiresPrescription: product.requiresPrescription,
+    isFeatured: product.isFeatured,
     isActive: product.isActive,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),

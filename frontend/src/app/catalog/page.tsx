@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -67,7 +67,7 @@ function buildURLParams(filters: CatalogFilters): string {
  * Cart operations require authentication.
  * All filters are synced with URL for shareability.
  */
-export default function CatalogPage() {
+function CatalogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -517,6 +517,14 @@ export default function CatalogPage() {
           </>
         )}
       </div>
+  );
+}
+
+export default function CatalogPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading catalog...</div>}>
+      <CatalogPageContent />
+    </Suspense>
   );
 }
 
